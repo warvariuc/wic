@@ -1,0 +1,10 @@
+# compiled python scripts
+*.pyc
+*.pyo
+
+# generic files to ignore
+*~
+*.lock
+*.DS_Store
+*.swp
+*.out

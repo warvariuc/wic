@@ -1,0 +1,55 @@
+One of Guido's key insights is that code is read much more often than it
+    is written.  The guidelines provided here are intended to improve the
+    readability of code and make it consistent across the wide spectrum of
+    Python code.
+
+Modules should have short, all-lowercase names.  Underscores can be used
+      in the module name if it improves readability.
+
+Avoid short (e.g. “a”, “rbarr”, “nughdeget”) names whenever possible
+
+
+Single character variable names are only okay for counters and temporaries, where the purpose of the variable is obvious
+
+
+Variables and functions start with a small letter. Each consecive word in a variable’s
+name starts with a capital letter
+
+
+Classes always start with a big letter
+
+
+Avoid abbreviations
+
+// Wrong
+short Cntr;  
+char ITEM_DELIM = '\t';  
+
+// Correct  
+short counter;  
+char itemDelimiter = '\t';  
+
+
+Keep lines shorter than 100 characters; insert breaks if necessary.
+
+
+Commas go at the end of a broken line; operators start at the beginning of the new line. The operator is at the end of the line to avoid having to scroll if your editor is too narrow.
+
+// Correct
+if (longExpression  
+    + otherLongExpression  
+    + otherOtherLongExpression) {  
+}  
+
+// Wrong  
+if (longExpression +  
+    otherLongExpression +  
+    otherOtherLongExpression) {  
+
+
+Feel free to break a rule if it makes your code look bad.
+
+http://www.python.org/dev/peps/pep-0008/
+http://qt.gitorious.org/qt/pages/QtCodingStyle
+
+
