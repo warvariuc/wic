@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\vic\wic\widgets\w_popup_calculator.ui'
+# Form implementation generated from reading ui file '/home/vic/Desktop/wic/widgets/w_popup_calculator.ui'
 #
-# Created: Tue Feb 15 09:17:13 2011
-#      by: PyQt4 UI code generator 4.8.3
+# Created: Tue Sep 13 20:30:13 2011
+#      by: PyQt4 UI code generator 4.8.5
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -17,7 +17,7 @@ except AttributeError:
 class Ui_WPopupCalculator(object):
     def setupUi(self, WPopupCalculator):
         WPopupCalculator.setObjectName(_fromUtf8("WPopupCalculator"))
-        WPopupCalculator.resize(165, 118)
+        WPopupCalculator.resize(240, 152)
         palette = QtGui.QPalette()
         brush = QtGui.QBrush(QtGui.QColor(245, 245, 245))
         brush.setStyle(QtCore.Qt.SolidPattern)
@@ -47,6 +47,7 @@ class Ui_WPopupCalculator(object):
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Window, brush)
         WPopupCalculator.setPalette(palette)
+        WPopupCalculator.setWindowTitle(QtGui.QApplication.translate("WPopupCalculator", "Калькулятор", None, QtGui.QApplication.UnicodeUTF8))
         WPopupCalculator.setStyleSheet(_fromUtf8("background-color: rgb(245, 245, 245);"))
         self.gridLayout = QtGui.QGridLayout(WPopupCalculator)
         self.gridLayout.setMargin(0)
@@ -60,10 +61,11 @@ class Ui_WPopupCalculator(object):
         self.display.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setPointSize(10)
-        font.setWeight(75)
         font.setBold(True)
+        font.setWeight(75)
         self.display.setFont(font)
         self.display.setStyleSheet(_fromUtf8("background-color: rgb(232, 232, 232);"))
+        self.display.setText(QtGui.QApplication.translate("WPopupCalculator", "0", None, QtGui.QApplication.UnicodeUTF8))
         self.display.setTextFormat(QtCore.Qt.PlainText)
         self.display.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.display.setMargin(3)
@@ -115,6 +117,7 @@ class Ui_WPopupCalculator(object):
         self.divideButton.setSizePolicy(sizePolicy)
         self.divideButton.setMinimumSize(QtCore.QSize(24, 24))
         self.divideButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.divideButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Divide", None, QtGui.QApplication.UnicodeUTF8))
         self.divideButton.setText(_fromUtf8("÷"))
         self.divideButton.setAutoRaise(True)
         self.divideButton.setObjectName(_fromUtf8("divideButton"))
@@ -127,6 +130,7 @@ class Ui_WPopupCalculator(object):
         self.squareRootButton.setSizePolicy(sizePolicy)
         self.squareRootButton.setMinimumSize(QtCore.QSize(24, 24))
         self.squareRootButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.squareRootButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Square root", None, QtGui.QApplication.UnicodeUTF8))
         self.squareRootButton.setText(_fromUtf8("√"))
         self.squareRootButton.setAutoRaise(True)
         self.squareRootButton.setObjectName(_fromUtf8("squareRootButton"))
@@ -139,6 +143,7 @@ class Ui_WPopupCalculator(object):
         self.backspaceButton.setSizePolicy(sizePolicy)
         self.backspaceButton.setMinimumSize(QtCore.QSize(24, 24))
         self.backspaceButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.backspaceButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Backspace", None, QtGui.QApplication.UnicodeUTF8))
         self.backspaceButton.setText(_fromUtf8("←"))
         self.backspaceButton.setAutoRaise(True)
         self.backspaceButton.setObjectName(_fromUtf8("backspaceButton"))
@@ -187,6 +192,7 @@ class Ui_WPopupCalculator(object):
         self.multiplyButton.setSizePolicy(sizePolicy)
         self.multiplyButton.setMinimumSize(QtCore.QSize(24, 24))
         self.multiplyButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.multiplyButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Multiply", None, QtGui.QApplication.UnicodeUTF8))
         self.multiplyButton.setText(_fromUtf8("×"))
         self.multiplyButton.setAutoRaise(True)
         self.multiplyButton.setObjectName(_fromUtf8("multiplyButton"))
@@ -211,6 +217,7 @@ class Ui_WPopupCalculator(object):
         self.percentButton.setSizePolicy(sizePolicy)
         self.percentButton.setMinimumSize(QtCore.QSize(24, 24))
         self.percentButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.percentButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Percent", None, QtGui.QApplication.UnicodeUTF8))
         self.percentButton.setText(_fromUtf8("%"))
         self.percentButton.setAutoRaise(True)
         self.percentButton.setObjectName(_fromUtf8("percentButton"))
@@ -259,6 +266,7 @@ class Ui_WPopupCalculator(object):
         self.minusButton.setSizePolicy(sizePolicy)
         self.minusButton.setMinimumSize(QtCore.QSize(24, 24))
         self.minusButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.minusButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Minus", None, QtGui.QApplication.UnicodeUTF8))
         self.minusButton.setText(_fromUtf8("−"))
         self.minusButton.setAutoRaise(True)
         self.minusButton.setObjectName(_fromUtf8("minusButton"))
@@ -283,6 +291,7 @@ class Ui_WPopupCalculator(object):
         self.clearButton.setSizePolicy(sizePolicy)
         self.clearButton.setMinimumSize(QtCore.QSize(24, 24))
         self.clearButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.clearButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Clear all (Delete)", None, QtGui.QApplication.UnicodeUTF8))
         self.clearButton.setText(_fromUtf8("C"))
         self.clearButton.setAutoRaise(True)
         self.clearButton.setObjectName(_fromUtf8("clearButton"))
@@ -295,6 +304,7 @@ class Ui_WPopupCalculator(object):
         self.changeSignButton.setSizePolicy(sizePolicy)
         self.changeSignButton.setMinimumSize(QtCore.QSize(24, 24))
         self.changeSignButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.changeSignButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Change sign", None, QtGui.QApplication.UnicodeUTF8))
         self.changeSignButton.setText(_fromUtf8("±"))
         self.changeSignButton.setAutoRaise(True)
         self.changeSignButton.setObjectName(_fromUtf8("changeSignButton"))
@@ -319,6 +329,7 @@ class Ui_WPopupCalculator(object):
         self.pointButton.setSizePolicy(sizePolicy)
         self.pointButton.setMinimumSize(QtCore.QSize(24, 24))
         self.pointButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.pointButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Decimal point", None, QtGui.QApplication.UnicodeUTF8))
         self.pointButton.setText(_fromUtf8("."))
         self.pointButton.setAutoRaise(True)
         self.pointButton.setObjectName(_fromUtf8("pointButton"))
@@ -331,6 +342,7 @@ class Ui_WPopupCalculator(object):
         self.plusButton.setSizePolicy(sizePolicy)
         self.plusButton.setMinimumSize(QtCore.QSize(24, 24))
         self.plusButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.plusButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Plus", None, QtGui.QApplication.UnicodeUTF8))
         self.plusButton.setText(_fromUtf8("+"))
         self.plusButton.setAutoRaise(True)
         self.plusButton.setObjectName(_fromUtf8("plusButton"))
@@ -343,6 +355,7 @@ class Ui_WPopupCalculator(object):
         self.equalButton.setSizePolicy(sizePolicy)
         self.equalButton.setMinimumSize(QtCore.QSize(24, 24))
         self.equalButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.equalButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Equal", None, QtGui.QApplication.UnicodeUTF8))
         self.equalButton.setText(_fromUtf8("="))
         self.equalButton.setAutoRaise(True)
         self.equalButton.setObjectName(_fromUtf8("equalButton"))
@@ -355,6 +368,7 @@ class Ui_WPopupCalculator(object):
         self.okButton.setSizePolicy(sizePolicy)
         self.okButton.setMinimumSize(QtCore.QSize(24, 24))
         self.okButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.okButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Accept (Insert)", None, QtGui.QApplication.UnicodeUTF8))
         self.okButton.setText(_fromUtf8("OK"))
         self.okButton.setAutoRaise(True)
         self.okButton.setObjectName(_fromUtf8("okButton"))
@@ -364,18 +378,5 @@ class Ui_WPopupCalculator(object):
         QtCore.QMetaObject.connectSlotsByName(WPopupCalculator)
 
     def retranslateUi(self, WPopupCalculator):
-        WPopupCalculator.setWindowTitle(QtGui.QApplication.translate("WPopupCalculator", "Калькулятор", None, QtGui.QApplication.UnicodeUTF8))
-        self.display.setText(QtGui.QApplication.translate("WPopupCalculator", "0", None, QtGui.QApplication.UnicodeUTF8))
-        self.divideButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Divide", None, QtGui.QApplication.UnicodeUTF8))
-        self.squareRootButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Square root", None, QtGui.QApplication.UnicodeUTF8))
-        self.backspaceButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Backspace", None, QtGui.QApplication.UnicodeUTF8))
-        self.multiplyButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Multiply", None, QtGui.QApplication.UnicodeUTF8))
-        self.percentButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Percent", None, QtGui.QApplication.UnicodeUTF8))
-        self.minusButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Minus", None, QtGui.QApplication.UnicodeUTF8))
-        self.clearButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Clear all (Delete)", None, QtGui.QApplication.UnicodeUTF8))
-        self.changeSignButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Change sign", None, QtGui.QApplication.UnicodeUTF8))
-        self.pointButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Decimal point", None, QtGui.QApplication.UnicodeUTF8))
-        self.plusButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Plus", None, QtGui.QApplication.UnicodeUTF8))
-        self.equalButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Equal", None, QtGui.QApplication.UnicodeUTF8))
-        self.okButton.setToolTip(QtGui.QApplication.translate("WPopupCalculator", "Accept (Insert)", None, QtGui.QApplication.UnicodeUTF8))
+        pass
 

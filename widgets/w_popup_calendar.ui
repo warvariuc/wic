@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>175</width>
-    <height>158</height>
+    <width>266</width>
+    <height>172</height>
    </rect>
   </property>
   <property name="contextMenuPolicy">
@@ -105,9 +105,6 @@
      </property>
      <property name="autoRaise">
       <bool>true</bool>
-     </property>
-     <property name="arrowType">
-      <enum>Qt::LeftArrow</enum>
      </property>
     </widget>
    </item>

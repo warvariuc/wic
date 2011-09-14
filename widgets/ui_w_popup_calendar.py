@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'D:\vic\wic\widgets\w_popup_calendar.ui'
+# Form implementation generated from reading ui file '/home/vic/Desktop/wic/widgets/w_popup_calendar.ui'
 #
-# Created: Tue Feb 15 09:17:13 2011
-#      by: PyQt4 UI code generator 4.8.3
+# Created: Tue Sep 13 20:28:53 2011
+#      by: PyQt4 UI code generator 4.8.5
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -17,8 +17,9 @@ except AttributeError:
 class Ui_WPopupCalendar(object):
     def setupUi(self, WPopupCalendar):
         WPopupCalendar.setObjectName(_fromUtf8("WPopupCalendar"))
-        WPopupCalendar.resize(175, 158)
+        WPopupCalendar.resize(266, 172)
         WPopupCalendar.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        WPopupCalendar.setWindowTitle(QtGui.QApplication.translate("WPopupCalendar", "Календарь", None, QtGui.QApplication.UnicodeUTF8))
         WPopupCalendar.setStyleSheet(_fromUtf8("background-color: rgb(245, 245, 245);"))
         self.gridLayout = QtGui.QGridLayout(WPopupCalendar)
         self.gridLayout.setMargin(0)
@@ -33,11 +34,14 @@ class Ui_WPopupCalendar(object):
         self.date.setMinimumSize(QtCore.QSize(95, 0))
         font = QtGui.QFont()
         font.setPointSize(10)
-        font.setWeight(75)
         font.setBold(True)
+        font.setWeight(75)
+        font.setKerning(True)
         self.date.setFont(font)
-        self.date.setCursor(QtCore.Qt.PointingHandCursor)
+        self.date.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.date.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.date.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Special date", "Select special date", QtGui.QApplication.UnicodeUTF8))
+        self.date.setText(QtGui.QApplication.translate("WPopupCalendar", "Selected date", None, QtGui.QApplication.UnicodeUTF8))
         self.date.setAutoRaise(True)
         self.date.setArrowType(QtCore.Qt.NoArrow)
         self.date.setObjectName(_fromUtf8("date"))
@@ -50,12 +54,13 @@ class Ui_WPopupCalendar(object):
         self.prevMonth.setSizePolicy(sizePolicy)
         self.prevMonth.setMinimumSize(QtCore.QSize(20, 22))
         self.prevMonth.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.prevMonth.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Previous month", None, QtGui.QApplication.UnicodeUTF8))
+        self.prevMonth.setText(QtGui.QApplication.translate("WPopupCalendar", "‹", None, QtGui.QApplication.UnicodeUTF8))
         self.prevMonth.setAutoRepeat(True)
         self.prevMonth.setAutoRepeatDelay(300)
         self.prevMonth.setAutoRepeatInterval(100)
         self.prevMonth.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
         self.prevMonth.setAutoRaise(True)
-        self.prevMonth.setArrowType(QtCore.Qt.LeftArrow)
         self.prevMonth.setObjectName(_fromUtf8("prevMonth"))
         self.gridLayout.addWidget(self.prevMonth, 0, 1, 1, 1)
         self.nextMonth = QtGui.QToolButton(WPopupCalendar)
@@ -66,6 +71,8 @@ class Ui_WPopupCalendar(object):
         self.nextMonth.setSizePolicy(sizePolicy)
         self.nextMonth.setMinimumSize(QtCore.QSize(20, 22))
         self.nextMonth.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.nextMonth.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Next month", None, QtGui.QApplication.UnicodeUTF8))
+        self.nextMonth.setText(QtGui.QApplication.translate("WPopupCalendar", "›", None, QtGui.QApplication.UnicodeUTF8))
         self.nextMonth.setAutoRepeat(True)
         self.nextMonth.setAutoRepeatDelay(300)
         self.nextMonth.setAutoRepeatInterval(100)
@@ -81,6 +88,8 @@ class Ui_WPopupCalendar(object):
         self.prevYear.setSizePolicy(sizePolicy)
         self.prevYear.setMinimumSize(QtCore.QSize(20, 22))
         self.prevYear.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.prevYear.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Previous year", None, QtGui.QApplication.UnicodeUTF8))
+        self.prevYear.setText(QtGui.QApplication.translate("WPopupCalendar", "‹‹", None, QtGui.QApplication.UnicodeUTF8))
         self.prevYear.setAutoRepeat(True)
         self.prevYear.setAutoRepeatInterval(200)
         self.prevYear.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
@@ -95,6 +104,8 @@ class Ui_WPopupCalendar(object):
         self.nextYear.setSizePolicy(sizePolicy)
         self.nextYear.setMinimumSize(QtCore.QSize(20, 22))
         self.nextYear.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.nextYear.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Next year", None, QtGui.QApplication.UnicodeUTF8))
+        self.nextYear.setText(QtGui.QApplication.translate("WPopupCalendar", "››", None, QtGui.QApplication.UnicodeUTF8))
         self.nextYear.setAutoRepeat(True)
         self.nextYear.setAutoRepeatInterval(200)
         self.nextYear.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
@@ -124,15 +135,5 @@ class Ui_WPopupCalendar(object):
         QtCore.QMetaObject.connectSlotsByName(WPopupCalendar)
 
     def retranslateUi(self, WPopupCalendar):
-        WPopupCalendar.setWindowTitle(QtGui.QApplication.translate("WPopupCalendar", "Календарь", None, QtGui.QApplication.UnicodeUTF8))
-        self.date.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Special date", "Select special date", QtGui.QApplication.UnicodeUTF8))
-        self.date.setText(QtGui.QApplication.translate("WPopupCalendar", "Selected date", None, QtGui.QApplication.UnicodeUTF8))
-        self.prevMonth.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Previous month", None, QtGui.QApplication.UnicodeUTF8))
-        self.prevMonth.setText(QtGui.QApplication.translate("WPopupCalendar", "‹", None, QtGui.QApplication.UnicodeUTF8))
-        self.nextMonth.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Next month", None, QtGui.QApplication.UnicodeUTF8))
-        self.nextMonth.setText(QtGui.QApplication.translate("WPopupCalendar", "›", None, QtGui.QApplication.UnicodeUTF8))
-        self.prevYear.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Previous year", None, QtGui.QApplication.UnicodeUTF8))
-        self.prevYear.setText(QtGui.QApplication.translate("WPopupCalendar", "‹‹", None, QtGui.QApplication.UnicodeUTF8))
-        self.nextYear.setToolTip(QtGui.QApplication.translate("WPopupCalendar", "Next year", None, QtGui.QApplication.UnicodeUTF8))
-        self.nextYear.setText(QtGui.QApplication.translate("WPopupCalendar", "››", None, QtGui.QApplication.UnicodeUTF8))
+        pass
 

@@ -165,10 +165,10 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.textChanged.connect(self.handleTextChanged)
         
         self.menu = QtGui.QMenu(self) # context menu
-        self.menu.addAction(QtGui.QIcon(':/icons/calculator.png'), 'Калькулятор', self.popupCalculator)
+        self.menu.addAction(QtGui.QIcon(':/icons/calculator.png'), 'Калькулятор', self.popupCalculator, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Копировать', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Вставить', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
-        self.menu.addAction(QtGui.QIcon(':/icons/fugue/cross.png'), 'Очистить', self.clear)
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Очистить', self.clear)
 
         self.showSelector = True
         self.__totalDigits = 15 # total number of digits
@@ -350,6 +350,7 @@ class WDecimalEdit(QtGui.QLineEdit):
             self.edited.emit()
 
     def popupCalculator(self):
+        self.selectAll()
         WPopupCalculator(self).show()
         
     def valueStr(self):

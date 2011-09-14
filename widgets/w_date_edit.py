@@ -175,9 +175,9 @@ class WDateEdit(QtGui.QLineEdit):
         a = ''.join(fstPart + midPart + lstPart)
         self.setText(a[0:2] + '.' + a[2:4] + '.' + a[4:])
         if curPos > 4:
-           curPos += 2 # поправка курсора из-за вставленной точки
+            curPos += 2 # поправка курсора из-за вставленной точки
         elif curPos > 2:
-           curPos += 1
+            curPos += 1
         self.setCursorPosition(curPos)
 
     def mouseDoubleClickEvent(self, mouseEvent):
@@ -230,6 +230,7 @@ class WDateEdit(QtGui.QLineEdit):
             self.setSelection(6, 4)
             
     def showPopupCalendar(self):
+        self.selectAll()
         WCalendarPopup(self).show()
 
     def getShowSelector(self): return self.selector.isVisible()        
