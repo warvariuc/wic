@@ -1,0 +1,31 @@
+Table name: name__objectid
+Field name: name__objectid_typecode
+
+Type codes:
+Integer, 1
+String, 2
+Blob, 3 - The value is a blob of data, stored exactly as it was input.
+Float,4 - The value is a floating point value, stored as an 8-byte IEEE floating point number.
+Date, 5
+Time, 6
+DateTime, 7
+
+Boolean, 8 - simple integer 0/1 - rendered as checkbox in forms
+Decimal, 9
+
+
+100+ - other table - foreign key
+
+Each table and field has its id (objectid). This allows correctly altering and merging schemas.
+
+There is no Integer field. Decimal are stored as int, in schema being indicated nuber of decimal places. So a simple integer would be a decimal with 0 decimal places.
+
+Examples of column names:
+first_name__106_2 : 'first_name' - column text name; 106 - object id in the DB; 2 - object type - string
+author__104_101 : 'author' - name; 104 - object id; 101 object type - foreign key for another table with id 101 (object type > 100)
+price__107_1_2 : 'price' - name; 107 - DB object id; 1 - object type - Decimal; 2 - decimal places for the decimal number
+
+
+Boolean - user defined type. It's a type of SqlField that has in and out processors. In processor (when writing to db) - converts value to 0-1, out processor (when reading from db) - converts 0-1 to False/True.
+Decimal. In processor - converts decimal to integer, out - converts interger to decimal.
+

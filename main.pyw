@@ -6,7 +6,7 @@ import sys
 
 if sys.hexversion < 0x03010000:
     print("At least Python 3.1 needed. Exiting.");
-    sys.exit(1) 
+    sys.exit(1)
 
 
 # monkeypatch: use cdecimal if present instead of decimal = it is much faster
@@ -22,7 +22,7 @@ app = __import__('w_app').WApp(sys.argv)
 
 QtGui.qApp.appDir = os.path.dirname(os.path.abspath(sys.argv[0]))
 sys.path.append(os.path.join(QtGui.qApp.appDir, 'widgets')) # path for searching resources and custom widgets modules
-__import__('w_widgets_rc') # load icons and possibly other resources
+import w_widgets_rc # load icons and possibly other resources
 
 
 import w_main_window
@@ -46,13 +46,13 @@ def exception_hook(exc_type, exc_value, exc_traceback): # Global function to cat
 #        '<span style="color:maroon">&nbsp;' + str(exc_value).replace('\n', '\n&nbsp;') + '</span>'
 
     QtGui.qApp.mainWindow.messagesWindow.printMessage(info)
-    
+
 sys.excepthook = exception_hook
 
 
 def loadTestConf(): # load default test configuration
     __import__('w').loadConf(os.path.join(QtGui.qApp.appDir, 'conf/'))
-    
+
 QtCore.QTimer.singleShot(0, loadTestConf) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
 
 res = app.exec() # start the event loop

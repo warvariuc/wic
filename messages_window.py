@@ -1,24 +1,24 @@
 from PyQt4 import QtCore, QtGui
 
 class MessagesWindow(QtCore.QObject):
-    def __init__(self,  main_window):
-        super().__init__(main_window)
+    def __init__(self,  mainWindow):
+        super().__init__(mainWindow)
 
-        self.main_window = main_window
-        self.dockWidget = QtGui.QDockWidget('Окно сообщений', main_window) # main_window now has to children: dock and messages window ? is this correct?
+        self.mainWindow = mainWindow
+        self.dockWidget = QtGui.QDockWidget('Окно сообщений', mainWindow) # main_window now has two children: dock and messages window ? is this correct?
         self.dockWidget.setObjectName('messagesWindowDock')
         self.dockWidget.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.text_edit = QtGui.QTextEdit(self.dockWidget)
-        self.dockWidget.setWidget(self.text_edit)
-        
-        self.text_edit.setAcceptRichText(False)
-        self.text_edit.setLineWrapMode(QtGui.QTextEdit.NoWrap)
-        self.text_edit.setReadOnly(True)
+        self.textEdit = QtGui.QTextEdit(self.dockWidget)
+        self.dockWidget.setWidget(self.textEdit)
 
-        self.text_edit.setContextMenuPolicy (QtCore.Qt.CustomContextMenu)
-        self.text_edit.customContextMenuRequested.connect (self.show_context_menu)
+        self.textEdit.setAcceptRichText(False)
+        self.textEdit.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+        self.textEdit.setReadOnly(True)
 
-    def show_context_menu(self, coord):
+        self.textEdit.setContextMenuPolicy (QtCore.Qt.CustomContextMenu)
+        self.textEdit.customContextMenuRequested.connect (self.showContextMenu)
+
+    def showContextMenu(self, coord):
         if not hasattr(self, "menu"): # create the context menu for Message Window
             self.menu = QtGui.QMenu(self.text_edit)
             self.menu.addAction('Очистить', self.text_edit.clear)
@@ -28,10 +28,10 @@ class MessagesWindow(QtCore.QObject):
         self.menu.popup(self.text_edit.mapToGlobal(coord))
 
     def printMessage(self, txt, showDateTime=False, autoPopup=True):
-        tc = self.text_edit.textCursor()
+        tc = self.textEdit.textCursor()
         tc.movePosition(QtGui.QTextCursor.End)
-        self.text_edit.setTextCursor(tc)
+        self.textEdit.setTextCursor(tc)
         if showDateTime: txt = QtCore.QDateTime.currentDateTime().toString('yyyy/MM/dd hh:mm:ss ') + txt
-        self.text_edit.insertHtml((str(txt) + '\n').replace('\n', '<br>'))
-        self.text_edit.ensureCursorVisible()
+        self.textEdit.insertHtml((str(txt) + '\n').replace('\n', '<br>'))
+        self.textEdit.ensureCursorVisible()
         if autoPopup: self.dockWidget.show()

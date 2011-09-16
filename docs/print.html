@@ -1,0 +1,24 @@
+<html>
+<head>
+<title>Exact printing</title>
+<style type="text/css" media="all">
+._box {
+	height: 141.73pt;
+	width: 283.46pt;
+	border: 1pt solid black;
+};
+</style>
+
+<head>
+<body>
+	<div class="_box">
+		Exact printing: <br>
+		This box should be 10x20cm.<br>
+		1 pt = 1/72 inch<br>
+		1 inch = 2.54 cm <br>
+		10 cm = 10 / 2.54 = 3.9370 inch = 3.9370 * 72 pt = 283.46pt<br>
+		QApplication::desktop()->physicalDpiX(); <br>
+		QApplication::desktop()->physicalDpiY();
+	</div>
+</body>
+</html>

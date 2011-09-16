@@ -1,3 +1,6 @@
+# sqlite databases
+*.sqlite
+
 # compiled python scripts
 *.pyc
 *.pyo

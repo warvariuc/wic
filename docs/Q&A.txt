@@ -1,7 +1,7 @@
 ﻿to pass - проводить (документ)
 entry - проводка
 catalog - справочник
-record - запись (элемент) справочника
+record, item - запись (элемент) справочника
 
 если дизайнер не видит виджеты, на установить пакет python2.6-dev
 http://www.riverbankcomputing.com/pipermail/pyqt/2009-June/023142.html
