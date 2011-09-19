@@ -1461,12 +1461,12 @@ class IdField(Field):
     '''Built-in id type - for each table.'''
     type = DbIntegerField(primary=True, autoincrement=True)
     def __init__(self, reference=None, primary=True, autoincrement=True):
-        pass
+        self.defaultValue = None
         
 
 
 class DecimalField(Field):
-    type = DbIntegerField
+    dbType = DbIntegerField
 
     def __init__(self, maxDigits, decimalPlaces, defaultValue):
         self.maxDigits = maxDigits
@@ -1502,11 +1502,12 @@ class Table():
         
         fields = {}
         for attrName in dir(self.__class__):
-            attr = getattr(self.__class, attrName)
-            if not hasattr(attr, '__call__'):
+            attr = getattr(self.__class__, attrName)
+            if isinstance(attr, Field):
                 fields[attrName] = attr
                 
-        for fieldName, field in fields.values():
+        for fieldName, field in fields.items():
+            #print(fieldName)
             fieldValue = kwargs.pop(fieldName, field.defaultValue)
             setattr(self, fieldName, fieldValue)
             
@@ -1548,7 +1549,8 @@ if __name__ == '__main__':
     book = Books(name='Just for Fun: The Story of an Accidental Revolutionary',
                      price='14.99', db=db) # new item in books catalog 
     print(book.id) # None - the book wasn't saved yet
-    books = ((Books.id >= 1) & (Books.price >= '0.01')).render()
+    books = ((Books.id >= 1) & (Books.price >= '0.01')) #.render()
+    print(books)
     #book.author = Authors.load(1)
     #book.save(adapter)
     #bookId = book.id
