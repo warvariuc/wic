@@ -1384,40 +1384,42 @@ class Set(object):
 
 
 class Expression():
-    def __init__(self, db, operation, first=None, second=None, type=None):
-        self.db = db
+    def __init__(self, operation, first=None, second=None, type=None):
         self.operation = operation
         self.first = first
         self.second = second
-        ### self._tablename =  first._tablename ## CHECK
-        if not type and first and hasattr(first, 'type'):
-            self.type = first.type
-        else:
-            self.type = type
+#        if not type and first and hasattr(first, 'type'):
+#            self.type = first.type
+#        else:
+#            self.type = type
 
 #    def __str__(self):
 #        return self.db._adapter.render(self, self.type)
 
-    def __and__(self, other): return Expression('AND', self, other)
+    def __and__(self, other): return Expression('AND', self, self.cast(other))
 
-    def __or__(self, other): return Expression('OR', self, other)
+    def __or__(self, other): return Expression('OR', self, self.cast(other))
     
-    def __eq__(self, value): return Expression('EQ', self, value)
+    def __eq__(self, other): return Expression('EQ', self, self.cast(other))
 
-    def __ne__(self, value): return Expression('NE', self, value)
+    def __ne__(self, other): return Expression('NE', self, self.cast(other))
 
-    def __lt__(self, value): return Expression('LT', self, value)
+    def __lt__(self, other): return Expression('LT', self, self.cast(other))
 
-    def __le__(self, value): return Expression('LE', self, value)
+    def __le__(self, other): return Expression('LE', self, self.cast(other))
 
-    def __gt__(self, value): return Expression('GT', self, value)
+    def __gt__(self, other): return Expression('GT', self, self.cast(other))
 
-    def __ge__(self, value): return Expression('GE', self, value)
+    def __ge__(self, other): return Expression('GE', self, self.cast(other))
 
+    def cast(self, value):
+        '''Converts a value to Field's comparable type.'''
+        return value
+    
     def render(self):
-        if not self.second is None:
+        if self.second is not None:
             return self.operation(self.first, self.second)
-        elif not self.first is None:
+        elif self.first is not None:
             return self.operation(self.first)
         elif not isinstance(self.operation, str):
             return self.operation()
@@ -1436,6 +1438,7 @@ class Expression():
 
 class Field(Expression):
     '''ORM table field.'''
+    
 #    def validate(self, x):
 #        '''This function is called just before writing the value to the DB.
 #        If validation if not passed it raises ValidationError.'''
@@ -1472,6 +1475,9 @@ class DecimalField(Field):
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
         self.defaultValue = defaultValue
+    
+    def cast(self, value):
+        return Decimal(value)
 
     def encode(self, x):
         '''Function which processes the value before writing it to the DB.'''
