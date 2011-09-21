@@ -1,6 +1,8 @@
 import os
 from decimal import Decimal
 import re, time, logging
+import inspect
+from pprint import pprint
 
 logger = logging.getLogger("wic.orm")
 
@@ -32,7 +34,7 @@ class DbAdapter():
     def execute(self, *a, **b):
         return self.log_execute(*a, **b)
 
-    def EQ(self, first, second=None):
+    def EQ(self, first, second):
         if second is None:
             return '(%s IS NULL)' % self.render(first)
         return '(%s = %s)' % (self.render(first), self.render(second, first.type))
@@ -47,10 +49,10 @@ class DbAdapter():
 
     def render(self, expression, field_type=None):
         if isinstance(expression, Field):
-            return str(expression)
+            return str(expression) # render field name
         elif isinstance(expression, Expression):
             if not expression.second is None:
-                return expression.op(expression.first, expression.second)
+                return expression.operation(expression.first, expression.second)
             elif not expression.first is None:
                 return expression.op(expression.first)
             elif not isinstance(expression.op, str):
@@ -1416,7 +1418,9 @@ class Expression():
         '''Converts a value to Field's comparable type.'''
         return value
     
-    def render(self):
+    def render(self, db=None):
+        '''Construct WHERE clause for this Expression.
+        db - db adapter to use for rendering. If None - use default.'''
         if self.second is not None:
             return self.operation(self.first, self.second)
         elif self.first is not None:
@@ -1438,6 +1442,9 @@ class Expression():
 
 class Field(Expression):
     '''ORM table field.'''
+    def __init__(self):
+        pass
+        #self.__name = 
     
 #    def validate(self, x):
 #        '''This function is called just before writing the value to the DB.
@@ -1504,16 +1511,12 @@ class Table():
     #__indexes = DbIndex(Table.id, primary = True)
 
     def __init__(self, **kwargs):
+        '''Initialize a new record in this table.'''
         self.dbAdapter = kwargs.pop('db', defaultDbAdapter)
-        
-        fields = {}
-        for attrName in dir(self.__class__):
-            attr = getattr(self.__class__, attrName)
-            if isinstance(attr, Field):
-                fields[attrName] = attr
+
+        fields = ((attrName, attr) for attrName, attr in inspect.getmembers(self.__class__) if isinstance(attr, Field))        
                 
-        for fieldName, field in fields.items():
-            #print(fieldName)
+        for fieldName, field in fields:
             fieldValue = kwargs.pop(fieldName, field.defaultValue)
             setattr(self, fieldName, fieldValue)
             
@@ -1557,6 +1560,10 @@ if __name__ == '__main__':
     print(book.id) # None - the book wasn't saved yet
     books = ((Books.id >= 1) & (Books.price >= '0.01')) #.render()
     print(books)
+    
+    print()
+    pprint(inspect.getmembers(Authors))
+    
     #book.author = Authors.load(1)
     #book.save(adapter)
     #bookId = book.id
