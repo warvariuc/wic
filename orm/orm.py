@@ -1,7 +1,6 @@
 import os
 from decimal import Decimal
 import re, time, logging
-import inspect
 from pprint import pprint
 
 logger = logging.getLogger("wic.orm")
@@ -1442,9 +1441,8 @@ class Expression():
 
 class Field(Expression):
     '''ORM table field.'''
-    def __init__(self):
-        pass
-        #self.__name = 
+    def __init__(self, name=None):
+        self._name = name 
     
 #    def validate(self, x):
 #        '''This function is called just before writing the value to the DB.
@@ -1470,7 +1468,8 @@ class Field(Expression):
 class IdField(Field):
     '''Built-in id type - for each table.'''
     type = DbIntegerField(primary=True, autoincrement=True)
-    def __init__(self, reference=None, primary=True, autoincrement=True):
+    def __init__(self, reference=None, primary=True, autoincrement=True, name=None):
+        super().__init__(name)
         self.defaultValue = None
         
 
@@ -1478,7 +1477,8 @@ class IdField(Field):
 class DecimalField(Field):
     dbType = DbIntegerField
 
-    def __init__(self, maxDigits, decimalPlaces, defaultValue):
+    def __init__(self, maxDigits, decimalPlaces, defaultValue, name=None):
+        super().__init__(name)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
         self.defaultValue = defaultValue
@@ -1498,8 +1498,8 @@ class DecimalField(Field):
 class StringField(Field):
     type = DbStringField
 
-    def __init__(self, maxLength, defaultValue=None):
-        #super().__init__()
+    def __init__(self, maxLength, defaultValue=None, name=None):
+        super().__init__(name)
         self.maxLength = maxLength
         self.defaultValue = defaultValue
 
@@ -1514,11 +1514,10 @@ class Table():
         '''Initialize a new record in this table.'''
         self.dbAdapter = kwargs.pop('db', defaultDbAdapter)
 
-        fields = ((attrName, attr) for attrName, attr in inspect.getmembers(self.__class__) if isinstance(attr, Field))        
-                
-        for fieldName, field in fields:
-            fieldValue = kwargs.pop(fieldName, field.defaultValue)
-            setattr(self, fieldName, fieldValue)
+        for fieldName, field in self.__class__.__dict__.items():
+            if isinstance(field, Field):
+                fieldValue = kwargs.pop(fieldName, field.defaultValue)
+                setattr(self, fieldName, fieldValue)
             
     def delete(self):
         (self.__class__.id == self.id).delete(self.dbAdapter)
@@ -1551,6 +1550,15 @@ def connect(uri, makeDefault=True):
             return dbAdapter
 
 
+# fill Field's names where not defined
+for tAttr in globals().copy().values():
+    if isinstance(tAttr, type) and issubclass(tAttr, Table):
+        for fAttrName, fAttr in tAttr.__dict__.items():
+            if isinstance(fAttr, Field):
+                if fAttr._name is None:
+                    fAttr._name = fAttrName
+                else:
+                    print('Duplicate Field {} in Table {}'.format(fAttrName, tAttr.__name__))
 
 if __name__ == '__main__':
     db = connect('sqlite://conf/databases/test.sqlite')
@@ -1561,8 +1569,6 @@ if __name__ == '__main__':
     books = ((Books.id >= 1) & (Books.price >= '0.01')) #.render()
     print(books)
     
-    print()
-    pprint(inspect.getmembers(Authors))
     
     #book.author = Authors.load(1)
     #book.save(adapter)
