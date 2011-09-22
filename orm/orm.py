@@ -1,4 +1,5 @@
-import os
+import os, inspect
+import base64, datetime
 from decimal import Decimal
 import re, time, logging
 from pprint import pprint
@@ -6,8 +7,6 @@ from pprint import pprint
 logger = logging.getLogger("wic.orm")
 
 drivers = []
-
-defaultDbAdapter = None
 
 try:
     from sqlite3 import dbapi2 as sqlite3
@@ -19,7 +18,7 @@ except ImportError:
 
 class DbAdapter():
     '''Generic DB adapter.'''
-    def __init__(self, uri):
+    def __init__(self, uri=''):
         '''URI is already without protocol.'''
         print(uri)
 
@@ -33,37 +32,88 @@ class DbAdapter():
     def execute(self, *a, **b):
         return self.log_execute(*a, **b)
 
-    def EQ(self, first, second):
-        if second is None:
-            return '(%s IS NULL)' % self.render(first)
-        return '(%s = %s)' % (self.render(first), self.render(second, first.type))
+    def AND(self, left, right):
+        '''Render the AND clause.'''
+        return '(%s AND %s)' % (self.render(left), self.render(right, left))
 
-    def NE(self, first, second=None):
-        if second is None:
-            return '(%s IS NOT NULL)' % self.render(first)
-        return '(%s <> %s)' % (self.render(first), self.render(second, first.type))
+    def OR(self, left, right):
+        '''Render the OR clause.'''
+        return '(%s OR %s)' % (self.render(left), self.render(right, left))
+    
+#    def EQ(self, first, second):
+#        if second is None:
+#            return '(%s IS NULL)' % self.render(first)
+#        return '(%s = %s)' % (self.render(first), self.render(second, first.type))
+#
+#    def NE(self, first, second=None):
+#        if second is None:
+#            return '(%s IS NOT NULL)' % self.render(first)
+#        return '(%s <> %s)' % (self.render(first), self.render(second, first.type))
 
-    def LT(self, first, second=None):
-        return '(%s < %s)' % (self.render(first), self.render(second, first.type))
+    def GT(self, left, right):
+        return '(%s > %s)' % (self.render(left), self.render(right, left))
 
-    def render(self, expression, field_type=None):
-        if isinstance(expression, Field):
-            return str(expression) # render field name
-        elif isinstance(expression, Expression):
-            if not expression.second is None:
-                return expression.operation(expression.first, expression.second)
-            elif not expression.first is None:
-                return expression.op(expression.first)
-            elif not isinstance(expression.op, str):
-                return expression.op()
-            else:
-                return '(%s)' % expression.op
-        elif field_type:
-            return self.represent(expression, field_type)
-        elif isinstance(expression, (list, tuple)):
-            return ','.join([self.represent(item, field_type) for item in expression])
-        else:
-            return str(expression)
+    def GE(self, left, right):
+        return '(%s >= %s)' % (self.render(left), self.render(right, left))
+
+    def ADD(self, left, right):
+        return '(%s + %s)' % (self.render(left), self.render(right, left))
+    
+    def render(self, value, castField=None):
+        ''''''
+        if isinstance(value, Expression): # it's an expression
+            return value.render(self)
+        else: # it's a value for a DbField
+            if castField is not None:
+                print(repr(castField))
+                assert isinstance(castField, Expression)
+                value = castField.encode(value)
+                
+                if isinstance(castField.type, DbIntegerField):
+                    return str(int(value))
+                if isinstance(castField.type, DbBlobField):
+                    return base64.b64encode(str(value))
+#            elif isinstance(dbType, DbIntegerField):
+#                if isinstance(obj, (datetime.date, datetime.datetime)):
+#                    obj = obj.isoformat()[:10]
+#                else:
+#                    obj = str(obj)
+#            elif fieldtype == 'datetime':
+#                if isinstance(obj, datetime.datetime):
+#                    obj = obj.isoformat()[:19].replace('T', ' ')
+#                elif isinstance(obj, datetime.date):
+#                    obj = obj.isoformat()[:10] + ' 00:00:00'
+#                else:
+#                    obj = str(obj)
+#            elif fieldtype == 'time':
+#                if isinstance(obj, datetime.time):
+#                    obj = obj.isoformat()[:10]
+#                else:
+#                    obj = str(obj)
+#            if not isinstance(obj, str):
+#                obj = str(obj)
+            if value is None:
+                return 'NULL'
+            return str(value)
+             
+#    def render(self, expression, field_type=None):
+#        if isinstance(expression, Field):
+#            return str(expression) # render field name
+#        elif isinstance(expression, Expression):
+#            if not expression.second is None:
+#                return expression.operation(expression.first, expression.second)
+#            elif not expression.first is None:
+#                return expression.op(expression.first)
+#            elif not isinstance(expression.op, str):
+#                return expression.op()
+#            else:
+#                return '(%s)' % expression.op
+#        elif field_type:
+#            return self.represent(expression, field_type)
+#        elif isinstance(expression, (list, tuple)):
+#            return ','.join([self.represent(item, field_type) for item in expression])
+#        else:
+#            return str(expression)
 
     def __call__(self, expression=None):
         if isinstance(expression, Table):
@@ -71,6 +121,12 @@ class DbAdapter():
         elif isinstance(expression, Field):
             expression = expression != None
         return Set(self, expression)
+
+    def integrity_error(self):
+        return self.driver.IntegrityError
+
+    def operational_error(self):
+        return self.driver.OperationalError
 
 
 class SqliteAdapter(DbAdapter):
@@ -80,22 +136,25 @@ class SqliteAdapter(DbAdapter):
 
 
 class DbField():
-    '''Native DB field.'''
+    '''Abstract native DB field.'''
 
 class DbIntegerField(DbField):
     '''Integer'''
     def __init__(self, bytesCount=None, **kwargs):
-        pass
+        super().__init__()
+        self.bytesCount = bytesCount
 
 class DbStringField(DbField):
     '''CHAR'''
-    def __init__(self, maxLength, hasFixedLength):
-        pass
+    def __init__(self, maxLength, hasFixedLength=False):
+        super().__init__()
+        self.maxLength = maxLength
+        self.hasFixedLength = hasFixedLength
 
 class DbBlobField(DbField):
     '''BLOB'''
 
-class DbText(DbField):
+class DbTextField(DbField):
     '''TEXT'''
 
 
@@ -136,7 +195,6 @@ class Set(object):
 
     def __init__(self, db, query):
         self.db = db
-        self._db = db # for backward compatibility
         self.query = query
 
     def __call__(self, query):
@@ -202,40 +260,6 @@ class Set(object):
             response.updated = None
         return response
 
-    def delete_uploaded_files(self, upload_fields=None):
-        table = self.db[self.db._adapter.tables(self.query)[0]]
-        # ## mind uploadfield==True means file is not in DB
-        if upload_fields:
-            fields = upload_fields.keys()
-        else:
-            fields = table.fields
-        fields = [f for f in fields if table[f].type == 'upload'
-                   and table[f].uploadfield == True
-                   and table[f].autodelete]
-        if not fields:
-            return
-        for record in self.select(*[table[f] for f in fields]):
-            for fieldname in fields:
-                field = table[fieldname]
-                oldname = record.get(fieldname, None)
-                if not oldname:
-                    continue
-                if upload_fields and oldname == upload_fields[fieldname]:
-                    continue
-                if field.custom_delete:
-                    field.custom_delete(oldname)
-                else:
-                    uploadfolder = field.uploadfolder
-                    if not uploadfolder:
-                        uploadfolder = os.path.join(self.db._adapter.folder, '..', 'uploads')
-                    if field.uploadseparate:
-                        items = oldname.split('.')
-                        uploadfolder = os.path.join(uploadfolder,
-                                                    "%s.%s" % (items[0], items[1]),
-                                                    items[2][:2])
-                    oldpath = os.path.join(uploadfolder, oldname)
-                    if os.path.exists(oldpath):
-                        os.unlink(oldpath)
 #
 #
 #
@@ -1385,19 +1409,19 @@ class Set(object):
 
 
 class Expression():
-    def __init__(self, operation, first=None, second=None, type=None):
+    def __init__(self, operation, left=None, right=None, type=None):
         self.operation = operation
-        self.first = first
-        self.second = second
-#        if not type and first and hasattr(first, 'type'):
-#            self.type = first.type
-#        else:
-#            self.type = type
+        self.left = left # left operand
+        self.right = right # right operand
+        if not type and left and hasattr(left, 'type'): # type - the type of the operation's result
+            self.type = left.type
+        else:
+            self.type = type
+        
 
-#    def __str__(self):
-#        return self.db._adapter.render(self, self.type)
+    def __str__(self): return self.render()
 
-    def __and__(self, other): return Expression('AND', self, self.cast(other))
+    def __and__(self, right): return Expression('AND', self, self.cast(right))
 
     def __or__(self, other): return Expression('OR', self, self.cast(other))
     
@@ -1405,57 +1429,61 @@ class Expression():
 
     def __ne__(self, other): return Expression('NE', self, self.cast(other))
 
-    def __lt__(self, other): return Expression('LT', self, self.cast(other))
-
-    def __le__(self, other): return Expression('LE', self, self.cast(other))
-
     def __gt__(self, other): return Expression('GT', self, self.cast(other))
 
     def __ge__(self, other): return Expression('GE', self, self.cast(other))
 
-    def cast(self, value):
-        '''Converts a value to Field's comparable type.'''
-        return value
+    def __lt__(self, other): return Expression('GT', self.cast(other), self) # reuse the GT code
+
+    def __le__(self, other): return Expression('GE', self.cast(other), self)
+
+    def __add__(self, other): return Expression('ADD', self, self.cast(other), self.type)
     
     def render(self, db=None):
-        '''Construct WHERE clause for this Expression.
+        '''Construct the text of the WHERE clause from this Expression.
         db - db adapter to use for rendering. If None - use default.'''
-        if self.second is not None:
-            return self.operation(self.first, self.second)
-        elif self.first is not None:
-            return self.operation(self.first)
-        elif not isinstance(self.operation, str):
-            return self.operation()
-        else:
+        db = db or defaultDbAdapter
+        try:
+            operation = getattr(db, self.operation)
+        except AttributeError:
             return '(%s)' % self.operation
-#        elif field_type:
-#            return self.represent(expression, field_type)
-#        elif isinstance(expression, (list, tuple)):
-#            return ','.join([self.represent(item, field_type) for item in expression])
-#        else:
-#            return str(expression)
+            
+        if self.right is not None:
+            return operation(self.left, self.right)
+        elif self.left is not None:
+            return operation(self.left)
+        else:
+            return operation()
 
+    def cast(self, value):
+        '''Converts a value to Field's comparable type. Default implementation.'''
+        return value
+    
+    def encode(self, x):
+        '''Function which processes the value before writing it to the DB'''
+        return x
 
+    def decode(self, x):
+        '''Function which processes the value after reading it from the DB'''
+        return x
 
 
 
 class Field(Expression):
     '''ORM table field.'''
-    def __init__(self, name=None):
+    def __init__(self, name, type, defaultValue):
+        assert isinstance(type, DbField)
+        self.type = type
         self._name = name 
+        self.defaultValue = self.cast(defaultValue)
     
+    def render(self, db=None):
+        return self._name
+        
 #    def validate(self, x):
 #        '''This function is called just before writing the value to the DB.
 #        If validation if not passed it raises ValidationError.'''
 #        return True # dummy validator which is always passed 
-#
-#    def encode(self, x):
-#        '''Function which processes the value before writing it to the DB'''
-#        return x
-#
-#    def decode(self, x):
-#        '''Function which processes the value after reading it from the DB'''
-#        return x
 
 
 #class TableIndex():
@@ -1467,21 +1495,19 @@ class Field(Expression):
 
 class IdField(Field):
     '''Built-in id type - for each table.'''
-    type = DbIntegerField(primary=True, autoincrement=True)
     def __init__(self, reference=None, primary=True, autoincrement=True, name=None):
-        super().__init__(name)
-        self.defaultValue = None
+        super().__init__(name, DbIntegerField(primary=True, autoincrement=True), None)
+        if reference is not None:
+            assert issubclass(reference, Table)
+        self.reference = reference # foreign key - referenced type of table
         
 
 
 class DecimalField(Field):
-    dbType = DbIntegerField
-
     def __init__(self, maxDigits, decimalPlaces, defaultValue, name=None):
-        super().__init__(name)
+        super().__init__(name, DbIntegerField(), defaultValue)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
-        self.defaultValue = defaultValue
     
     def cast(self, value):
         return Decimal(value)
@@ -1496,27 +1522,25 @@ class DecimalField(Field):
 
 
 class StringField(Field):
-    type = DbStringField
-
     def __init__(self, maxLength, defaultValue=None, name=None):
-        super().__init__(name)
+        super().__init__(name, DbStringField(maxLength), defaultValue)
         self.maxLength = maxLength
-        self.defaultValue = defaultValue
 
 
 
 class Table():
-    # list of present fields:
+    '''Base class for all tables.'''
     id = IdField()
     #__indexes = DbIndex(Table.id, primary = True)
 
     def __init__(self, **kwargs):
         '''Initialize a new record in this table.'''
         self.dbAdapter = kwargs.pop('db', defaultDbAdapter)
-
-        for fieldName, field in self.__class__.__dict__.items():
+        
+        # make field values 
+        for fieldName, field in inspect.getmembers(self.__class__):
             if isinstance(field, Field):
-                fieldValue = kwargs.pop(fieldName, field.defaultValue)
+                fieldValue = field.cast(kwargs.pop(fieldName, field.defaultValue))
                 setattr(self, fieldName, fieldValue)
             
     def delete(self):
@@ -1533,14 +1557,31 @@ class Authors(Table):
 class Books(Table):
     # id field is already present 
     name = StringField(maxLength=100, defaultValue='a very good book!!!')
-    price = DecimalField(maxDigits=10, decimalPlaces=2, defaultValue=Decimal('0.00')) # 2 decimal places
+    price = DecimalField(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
     author = IdField(Authors)
 
+
+def prepareModels():
+    # fill Field's names where not defined
+    for tAttr in globals().copy().values():
+        if inspect.isclass(tAttr) and issubclass(tAttr, Table):
+            for fAttrName, fAttr in tAttr.__dict__.items():
+                if isinstance(fAttr, Field):
+                    if fAttr._name is None:
+                        fAttr._name = fAttrName
+                        fAttr._table = tAttr
+                    else:
+                        print('Duplicate Field {} in Table {}'.format(fAttrName, tAttr.__name__))
+
+defaultDbAdapter = DbAdapter()
+
+prepareModels()
 
 dbAdapters = [SqliteAdapter] # available adapters
 
 def connect(uri, makeDefault=True):
-    for dbAdapterClass in dbAdapters: # search for suitable adapter by protocol
+    '''Search for suitable adapter by protocol'''
+    for dbAdapterClass in dbAdapters: 
         uriStart = dbAdapterClass.protocol + '://'
         if uri.startswith(uriStart):
             dbAdapter = dbAdapterClass(uri[len(uriStart):])
@@ -1550,23 +1591,18 @@ def connect(uri, makeDefault=True):
             return dbAdapter
 
 
-# fill Field's names where not defined
-for tAttr in globals().copy().values():
-    if isinstance(tAttr, type) and issubclass(tAttr, Table):
-        for fAttrName, fAttr in tAttr.__dict__.items():
-            if isinstance(fAttr, Field):
-                if fAttr._name is None:
-                    fAttr._name = fAttrName
-                else:
-                    print('Duplicate Field {} in Table {}'.format(fAttrName, tAttr.__name__))
 
 if __name__ == '__main__':
-    db = connect('sqlite://conf/databases/test.sqlite')
+    #db = connect('sqlite://conf/databases/test.sqlite')
+
+    author = Authors(first_name='Linus', last_name='Torvalds', id=1) # new item in books catalog 
 
     book = Books(name='Just for Fun: The Story of an Accidental Revolutionary',
-                     price='14.99', db=db) # new item in books catalog 
-    print(book.id) # None - the book wasn't saved yet
-    books = ((Books.id >= 1) & (Books.price >= '0.01')) #.render()
+                     price='14.99') # new item in books catalog 
+    print(book.id, book.name, book.price) # None - the book wasn't saved yet
+    where = ((1 <= Books.id) & (Books.id + Books.price >= '9.99'))
+    where |= (Books.author == author)
+    books = where.render()
     print(books)
     
     
