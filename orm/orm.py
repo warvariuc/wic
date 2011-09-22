@@ -18,6 +18,8 @@ except ImportError:
 
 class DbAdapter():
     '''Generic DB adapter.'''
+    protocol = 'base'
+    
     def __init__(self, uri=''):
         '''URI is already without protocol.'''
         print(uri)
@@ -40,15 +42,15 @@ class DbAdapter():
         '''Render the OR clause.'''
         return '(%s OR %s)' % (self.render(left), self.render(right, left))
     
-#    def EQ(self, first, second):
-#        if second is None:
-#            return '(%s IS NULL)' % self.render(first)
-#        return '(%s = %s)' % (self.render(first), self.render(second, first.type))
-#
-#    def NE(self, first, second=None):
-#        if second is None:
-#            return '(%s IS NOT NULL)' % self.render(first)
-#        return '(%s <> %s)' % (self.render(first), self.render(second, first.type))
+    def EQ(self, left, right):
+        if right is None:
+            return '(%s IS NULL)' % self.render(left)
+        return '(%s = %s)' % (self.render(left), self.render(right, left))
+
+    def NE(self, left, right):
+        if right is None:
+            return '(%s IS NOT NULL)' % self.render(left)
+        return '(%s <> %s)' % (self.render(left), self.render(right, left))
 
     def GT(self, left, right):
         return '(%s > %s)' % (self.render(left), self.render(right, left))
@@ -64,15 +66,67 @@ class DbAdapter():
         if isinstance(value, Expression): # it's an expression
             return value.render(self)
         else: # it's a value for a DbField
+            if value is None:
+                return 'NULL'
             if castField is not None:
-                print(repr(castField))
+                print(castField, value)
                 assert isinstance(castField, Expression)
-                value = castField.encode(value)
-                
-                if isinstance(castField.type, DbIntegerField):
-                    return str(int(value))
-                if isinstance(castField.type, DbBlobField):
-                    return base64.b64encode(str(value))
+                if isinstance(castField, Expression):
+                    castField = castField.type
+                    value = castField.encode(value)
+                    castField = castField.type
+                renderFunc = getattr(castField, self.protocol + 'Render')
+                return renderFunc(value, self)
+            return str(value)
+             
+#    def __call__(self, expression=None):
+#        if isinstance(expression, Table):
+#            expression = expression._id > 0
+#        elif isinstance(expression, Field):
+#            expression = expression != None
+#        return Set(self, expression)
+
+    def integrity_error(self):
+        return self.driver.IntegrityError
+
+    def operational_error(self):
+        return self.driver.OperationalError
+
+
+class SqliteAdapter(DbAdapter):
+    protocol = 'sqlite'
+    driver = globals().get('sqlite3', None)
+
+
+
+class DbField():
+    '''Abstract DB field, supported natively by the DB.'''
+
+class DbIntegerField(DbField):
+    '''INT'''
+    def __init__(self, bytesCount=None, **kwargs):
+        super().__init__()
+        self.bytesCount = bytesCount
+
+    def baseRender(self, value, dbAdapter):
+        return str(int(value))
+
+
+class DbStringField(DbField):
+    '''VARCHAR, CHAR'''
+    def __init__(self, maxLength, hasFixedLength=False):
+        super().__init__()
+        self.maxLength = maxLength
+        self.hasFixedLength = hasFixedLength
+
+class DbBlobField(DbField):
+    '''BLOB'''
+    def baseRender(self, value, dbAdapter):
+        return base64.b64encode(str(value))
+
+class DbTextField(DbField):
+    '''TEXT'''
+
 #            elif isinstance(dbType, DbIntegerField):
 #                if isinstance(obj, (datetime.date, datetime.datetime)):
 #                    obj = obj.isoformat()[:10]
@@ -92,80 +146,13 @@ class DbAdapter():
 #                    obj = str(obj)
 #            if not isinstance(obj, str):
 #                obj = str(obj)
-            if value is None:
-                return 'NULL'
-            return str(value)
-             
-#    def render(self, expression, field_type=None):
-#        if isinstance(expression, Field):
-#            return str(expression) # render field name
-#        elif isinstance(expression, Expression):
-#            if not expression.second is None:
-#                return expression.operation(expression.first, expression.second)
-#            elif not expression.first is None:
-#                return expression.op(expression.first)
-#            elif not isinstance(expression.op, str):
-#                return expression.op()
-#            else:
-#                return '(%s)' % expression.op
-#        elif field_type:
-#            return self.represent(expression, field_type)
-#        elif isinstance(expression, (list, tuple)):
-#            return ','.join([self.represent(item, field_type) for item in expression])
-#        else:
-#            return str(expression)
-
-    def __call__(self, expression=None):
-        if isinstance(expression, Table):
-            expression = expression._id > 0
-        elif isinstance(expression, Field):
-            expression = expression != None
-        return Set(self, expression)
-
-    def integrity_error(self):
-        return self.driver.IntegrityError
-
-    def operational_error(self):
-        return self.driver.OperationalError
-
-
-class SqliteAdapter(DbAdapter):
-    protocol = 'sqlite'
-    driver = globals().get('sqlite3', None)
-
-
-
-class DbField():
-    '''Abstract native DB field.'''
-
-class DbIntegerField(DbField):
-    '''Integer'''
-    def __init__(self, bytesCount=None, **kwargs):
-        super().__init__()
-        self.bytesCount = bytesCount
-
-class DbStringField(DbField):
-    '''CHAR'''
-    def __init__(self, maxLength, hasFixedLength=False):
-        super().__init__()
-        self.maxLength = maxLength
-        self.hasFixedLength = hasFixedLength
-
-class DbBlobField(DbField):
-    '''BLOB'''
-
-class DbTextField(DbField):
-    '''TEXT'''
 
 
 class ValidationError(Exception):
     '''This type of exception is raised when a validation didn't pass.'''
 
 
-
 regex_quotes = re.compile("'[^']*'")
-
-
 def xorify(orderby):
     if not orderby:
         return None
@@ -173,7 +160,6 @@ def xorify(orderby):
     for item in orderby[1:]:
         orderby2 = orderby2 | item
     return orderby2
-
 def raw(s): return Expression(None, s)
 
 class Set(object):
@@ -1413,14 +1399,17 @@ class Expression():
         self.operation = operation
         self.left = left # left operand
         self.right = right # right operand
-        if not type and left and hasattr(left, 'type'): # type - the type of the operation's result
-            self.type = left.type
+        if left and not type:
+            #and hasattr(left, 'type'): # type - the type of the operation's result
+            if isinstance(left, Field):
+                self.type = left
+            elif isinstance(left, Expression):
+                self.type = left.type
+            else:
+                raise Exception()
         else:
             self.type = type
         
-
-    def __str__(self): return self.render()
-
     def __and__(self, right): return Expression('AND', self, self.cast(right))
 
     def __or__(self, other): return Expression('OR', self, self.cast(other))
@@ -1437,14 +1426,15 @@ class Expression():
 
     def __le__(self, other): return Expression('GE', self.cast(other), self)
 
-    def __add__(self, other): return Expression('ADD', self, self.cast(other), self.type)
+    def __add__(self, other): return Expression('ADD', self, self.cast(other))
     
     def render(self, db=None):
         '''Construct the text of the WHERE clause from this Expression.
         db - db adapter to use for rendering. If None - use default.'''
         db = db or defaultDbAdapter
+        operation = self.operation
         try:
-            operation = getattr(db, self.operation)
+            operation = getattr(db, operation)
         except AttributeError:
             return '(%s)' % self.operation
             
@@ -1452,8 +1442,7 @@ class Expression():
             return operation(self.left, self.right)
         elif self.left is not None:
             return operation(self.left)
-        else:
-            return operation()
+        return operation()
 
     def cast(self, value):
         '''Converts a value to Field's comparable type. Default implementation.'''
@@ -1473,7 +1462,7 @@ class Field(Expression):
     '''ORM table field.'''
     def __init__(self, name, type, defaultValue):
         assert isinstance(type, DbField)
-        self.type = type
+        self.type = type # db type
         self._name = name 
         self.defaultValue = self.cast(defaultValue)
     
@@ -1510,6 +1499,9 @@ class DecimalField(Field):
         self.decimalPlaces = decimalPlaces
     
     def cast(self, value):
+        if isinstance(value, Field):
+            assert isinstance(value.type, DbIntegerField)
+            return value
         return Decimal(value)
 
     def encode(self, x):
