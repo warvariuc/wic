@@ -15,6 +15,9 @@ except ImportError:
     logger.debug('no sqlite3.dbapi2 driver')
 
 
+class ValidationError(Exception):
+    '''This type of exception is raised when a validation didn't pass.'''
+
 
 class DbAdapter():
     '''Generic DB adapter.'''
@@ -58,24 +61,38 @@ class DbAdapter():
     def GE(self, left, right):
         return '(%s >= %s)' % (self.render(left), self.render(right, left))
 
+    def LT(self, left, right):
+        return '(%s < %s)' % (self.render(left), self.render(right, left))
+
+    def LE(self, left, right):
+        return '(%s <= %s)' % (self.render(left), self.render(right, left))
+
     def ADD(self, left, right):
         return '(%s + %s)' % (self.render(left), self.render(right, left))
+    
+    def BELONGS(self, first, second):
+        if isinstance(second, str):
+            return '(%s IN (%s))' % (self.render(first), second[:-1])
+        items = ','.join(self.render(item, first) for item in second)
+        return '(%s IN (%s))' % (self.render(first), items)
     
     def render(self, value, castField=None):
         ''''''
         if isinstance(value, Expression): # it's an expression
-            return value.render(self)
+            return value._render(self) # render sub-expression
         else: # it's a value for a DbField
             if value is None:
                 return 'NULL'
             if castField is not None:
-                print(castField, value)
+#                print(castField, value)
                 assert isinstance(castField, Expression)
-                if isinstance(castField, Expression):
+                if isinstance(castField, Field):
+                    pass
+                elif isinstance(castField, Expression):
                     castField = castField.type
-                    value = castField.encode(value)
-                    castField = castField.type
-                renderFunc = getattr(castField, self.protocol + 'Render')
+                value = castField._cast(value) 
+                dbField = castField.dbtype
+                renderFunc = getattr(dbField, self.protocol + 'Render')
                 return renderFunc(value, self)
             return str(value)
              
@@ -101,16 +118,19 @@ class SqliteAdapter(DbAdapter):
 
 class DbField():
     '''Abstract DB field, supported natively by the DB.'''
+    
+    def baseRender(self, value, dbAdapter):
+        '''Abstract render of a value in a format suitable for operations with this DB field.'''
+        return str(value)
 
 class DbIntegerField(DbField):
     '''INT'''
-    def __init__(self, bytesCount=None, **kwargs):
+    def __init__(self, bytesCount, **kwargs):
         super().__init__()
         self.bytesCount = bytesCount
 
     def baseRender(self, value, dbAdapter):
         return str(int(value))
-
 
 class DbStringField(DbField):
     '''VARCHAR, CHAR'''
@@ -146,11 +166,6 @@ class DbTextField(DbField):
 #                    obj = str(obj)
 #            if not isinstance(obj, str):
 #                obj = str(obj)
-
-
-class ValidationError(Exception):
-    '''This type of exception is raised when a validation didn't pass.'''
-
 
 regex_quotes = re.compile("'[^']*'")
 def xorify(orderby):
@@ -1393,80 +1408,76 @@ class Set(object):
 #    def lastrowid(self, table):
 #        return self.cursor.lastrowid
 
+class Nil(): '''Custom None'''
 
 class Expression():
-    def __init__(self, operation, left=None, right=None, type=None):
+    def __init__(self, operation, left=Nil, right=Nil, type=None): # FIXME: type parameter not needed?
         self.operation = operation
         self.left = left # left operand
         self.right = right # right operand
-        if left and not type:
-            #and hasattr(left, 'type'): # type - the type of the operation's result
+        if left is not Nil and not type:
             if isinstance(left, Field):
                 self.type = left
             elif isinstance(left, Expression):
                 self.type = left.type
             else:
-                raise Exception()
+                raise Exception('Cast target must be an Expression/Field.')
         else:
             self.type = type
         
-    def __and__(self, right): return Expression('AND', self, self.cast(right))
-
-    def __or__(self, other): return Expression('OR', self, self.cast(other))
+    def __and__(self, other): return Expression('AND', self, other)
+    def __or__(self, other): return Expression('OR', self, other)
+    def __eq__(self, other): return Expression('EQ', self, other)
+    def __ne__(self, other): return Expression('NE', self, other)
+    def __gt__(self, other): return Expression('GT', self, other)
+    def __ge__(self, other): return Expression('GE', self, other)
+    def __lt__(self, other): return Expression('LT', self, other)
+    def __le__(self, other): return Expression('LE', self, other)
+    def __add__(self, other): return Expression('ADD', self, other)
+    def IN(self, *items):
+        '''The IN clause.''' 
+        return Expression('BELONGS', self, items)
     
-    def __eq__(self, other): return Expression('EQ', self, self.cast(other))
-
-    def __ne__(self, other): return Expression('NE', self, self.cast(other))
-
-    def __gt__(self, other): return Expression('GT', self, self.cast(other))
-
-    def __ge__(self, other): return Expression('GE', self, self.cast(other))
-
-    def __lt__(self, other): return Expression('GT', self.cast(other), self) # reuse the GT code
-
-    def __le__(self, other): return Expression('GE', self.cast(other), self)
-
-    def __add__(self, other): return Expression('ADD', self, self.cast(other))
-    
-    def render(self, db=None):
+    def _render(self, db=None):
         '''Construct the text of the WHERE clause from this Expression.
         db - db adapter to use for rendering. If None - use default.'''
         db = db or defaultDbAdapter
         operation = self.operation
-        try:
-            operation = getattr(db, operation)
-        except AttributeError:
-            return '(%s)' % self.operation
+        operation = getattr(db, operation)
+#        try:
+#            operation = getattr(db, operation)
+#        except AttributeError:
+#            return '(%s)' % self.operation
             
-        if self.right is not None:
+        if self.right is not Nil:
             return operation(self.left, self.right)
-        elif self.left is not None:
+        elif self.left is not Nil:
             return operation(self.left)
         return operation()
 
-    def cast(self, value):
+    def _cast(self, value):
         '''Converts a value to Field's comparable type. Default implementation.'''
         return value
     
-    def encode(self, x):
-        '''Function which processes the value before writing it to the DB'''
-        return x
-
-    def decode(self, x):
-        '''Function which processes the value after reading it from the DB'''
-        return x
+#    def encode(self, x):
+#        '''Function which processes the value before writing it to the DB'''
+#        return x
+#
+#    def decode(self, x):
+#        '''Function which processes the value after reading it from the DB'''
+#        return x
 
 
 
 class Field(Expression):
     '''ORM table field.'''
-    def __init__(self, name, type, defaultValue):
-        assert isinstance(type, DbField)
-        self.type = type # db type
+    def __init__(self, name, dbtype, defaultValue):
+        assert isinstance(dbtype, DbField)
+        self.dbtype = dbtype
         self._name = name 
-        self.defaultValue = self.cast(defaultValue)
+        self.defaultValue = defaultValue
     
-    def render(self, db=None):
+    def _render(self, db=None):
         return self._name
         
 #    def validate(self, x):
@@ -1481,48 +1492,60 @@ class Field(Expression):
 #        self.fields = fields # fields involded in this index
 #        self.type = type # index type: unique, primary, etc.
 
-
 class IdField(Field):
     '''Built-in id type - for each table.'''
-    def __init__(self, reference=None, primary=True, autoincrement=True, name=None):
-        super().__init__(name, DbIntegerField(primary=True, autoincrement=True), None)
-        if reference is not None:
-            assert issubclass(reference, Table)
-        self.reference = reference # foreign key - referenced type of table
+    def __init__(self, name):
+        super().__init__(name, DbIntegerField(8, primary=True, autoincrement=True), None)
         
-
-
-class DecimalField(Field):
-    def __init__(self, maxDigits, decimalPlaces, defaultValue, name=None):
-        super().__init__(name, DbIntegerField(), defaultValue)
-        self.maxDigits = maxDigits
-        self.decimalPlaces = decimalPlaces
-    
-    def cast(self, value):
-        if isinstance(value, Field):
-            assert isinstance(value.type, DbIntegerField)
-            return value
-        return Decimal(value)
-
-    def encode(self, x):
-        '''Function which processes the value before writing it to the DB.'''
-        return int(x * (10 ** self.decimalPlaces))
-
-    def decode(self, x):
-        '''Function which processes the value after reading it from the DB'''
-        return Decimal(x / (10 ** self.decimalPlaces))
-
 
 class StringField(Field):
     def __init__(self, maxLength, defaultValue=None, name=None):
-        super().__init__(name, DbStringField(maxLength), defaultValue)
         self.maxLength = maxLength
+        super().__init__(name, DbStringField(maxLength), defaultValue)
 
+class DecimalFieldI(Field):
+    '''Decimals stored as 8 byte INT (up to 18 digits).
+    TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
+    def __init__(self, maxDigits, decimalPlaces, defaultValue, name=None):
+        self.maxDigits = maxDigits
+        self.decimalPlaces = decimalPlaces
+        super().__init__(name, DbIntegerField(8), defaultValue)
+    
+    def _cast(self, value):
+        if isinstance(value, Field):
+            if not isinstance(value, DecimalFieldI):
+                raise SyntaxError('Only DecimalFieldI cooperands are supported.')
+            if value.decimalPlaces != self.decimalPlaces:
+                raise SyntaxError('Cooperand field must have the same number of decimal places.')
+            return value
+        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after decimal point
+
+#    def encode(self, x):
+#        '''Function which processes the value before writing it to the DB.'''
+#        return int(x * (10 ** self.decimalPlaces))
+#
+#    def decode(self, x):
+#        '''Function which processes the value after reading it from the DB'''
+#        return Decimal(x / (10 ** self.decimalPlaces))
+
+
+class ReferenceField(Field):
+    '''Foreign key - stores id of a record in another table.'''
+    def __init__(self, table, name=None, index=False):
+        # if table is None - this field makes additional db field for holding table id
+        assert issubclass(table, Table)
+        self.table = table # foreign key - referenced type of table
+        super().__init__(name, DbIntegerField(8, primary=True, autoincrement=True), None)
+        
+    def _cast(self, value):
+        if isinstance(value, Table):
+            return value.id
+        return value
 
 
 class Table():
     '''Base class for all tables.'''
-    id = IdField()
+    id = IdField('id')
     #__indexes = DbIndex(Table.id, primary = True)
 
     def __init__(self, **kwargs):
@@ -1532,7 +1555,7 @@ class Table():
         # make field values 
         for fieldName, field in inspect.getmembers(self.__class__):
             if isinstance(field, Field):
-                fieldValue = field.cast(kwargs.pop(fieldName, field.defaultValue))
+                fieldValue = field._cast(kwargs.pop(fieldName, field.defaultValue))
                 setattr(self, fieldName, fieldValue)
             
     def delete(self):
@@ -1549,21 +1572,27 @@ class Authors(Table):
 class Books(Table):
     # id field is already present 
     name = StringField(maxLength=100, defaultValue='a very good book!!!')
-    price = DecimalField(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
-    author = IdField(Authors)
+    price = DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
+    old_price = DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
+    author = ReferenceField(Authors)
 
 
 def prepareModels():
     # fill Field's names where not defined
     for tAttr in globals().copy().values():
-        if inspect.isclass(tAttr) and issubclass(tAttr, Table):
+        if inspect.isclass(tAttr) and issubclass(tAttr, Table) and tAttr is not Table:
             for fAttrName, fAttr in tAttr.__dict__.items():
                 if isinstance(fAttr, Field):
-                    if fAttr._name is None:
-                        fAttr._name = fAttrName
-                        fAttr._table = tAttr
-                    else:
-                        print('Duplicate Field {} in Table {}'.format(fAttrName, tAttr.__name__))
+                    if not fAttrName.islower():
+                        raise Exception('Field names must be lowercase. Field `{}` in Table `{}`'.format(fAttrName, tAttr.__name__))
+                    if fAttrName.startswith('_'):
+                        raise Exception('Field names can not start with `_`. Field `{}` in Table `{}`'.format(fAttrName, tAttr.__name__))
+                    if fAttr._name is not None:
+                        raise Exception('Duplicate Field `{}` in Table `{}`'.format(fAttrName, tAttr.__name__))
+                    if isinstance(fAttr, IdField) and fAttrName != 'id':
+                        fAttrName += '_id'
+                    fAttr._name = fAttrName
+                    fAttr._table = tAttr
 
 defaultDbAdapter = DbAdapter()
 
@@ -1592,11 +1621,12 @@ if __name__ == '__main__':
     book = Books(name='Just for Fun: The Story of an Accidental Revolutionary',
                      price='14.99') # new item in books catalog 
     print(book.id, book.name, book.price) # None - the book wasn't saved yet
-    where = ((1 <= Books.id) & (Books.id + Books.price >= '9.99'))
-    where |= (Books.author == author)
-    books = where.render()
-    print(books)
+    print(((Books.price != None) & (Books.price > Books.old_price))._render())
+
+    where = ((Books.author == author) | ((1 <= Books.id) & (Books.price > 9.99)))
+    print(where._render())
     
+    print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render())
     
     #book.author = Authors.load(1)
     #book.save(adapter)
