@@ -1,9 +1,7 @@
 import re
 from pprint import pprint
 
-from orm.adapters import SqliteAdapter
-from orm.tables import Table
-from orm.fields import Expression, IdField, StringField, DecimalFieldI, ReferenceField
+from orm import SqliteAdapter, Table, Expression, IdField, StringField, DecimalFieldI, ReferenceField
 
 
 

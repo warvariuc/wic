@@ -1,3 +1,7 @@
+'''This module contains database adapters, which incapsulate all operations specific to a certain database.
+All other ORM modules should be database agnostic.'''
+
+import base64
 import time
 import orm
 
@@ -9,6 +13,7 @@ try:
     drivers.append('SQLite3')
 except ImportError:
     orm.logger.debug('no sqlite3.dbapi2 driver')
+
 
 
 class DbAdapter():
@@ -69,7 +74,7 @@ class DbAdapter():
         return '(%s IN (%s))' % (self.render(first), items)
     
     def render(self, value, castField=None):
-        ''''''
+        '''Render of a value in a format suitable for operations with this DB field'''
         if isinstance(value, orm.Expression): # it's an expression
             return value._render(self) # render sub-expression
         else: # it's a value for a DbField
@@ -82,11 +87,37 @@ class DbAdapter():
                     pass
                 elif isinstance(castField, orm.Expression):
                     castField = castField.type
-                value = castField._cast(value) 
-                dbField = castField.dbtype
-                renderFunc = getattr(dbField, self.protocol + 'Render')
-                return renderFunc(value, self)
+                value = castField._cast(value)
+                return self._render(value, castField.dbtype) 
             return str(value)
+        
+    def _render(self, value, dbType):
+        if isinstance(dbType, orm.DbIntegerField):
+            return str(int(value))
+        if isinstance(dbType, orm.DbBlobField):
+            return base64.b64encode(str(value))
+        return str(value)  
+
+#            elif isinstance(dbType, DbIntegerField):
+#                if isinstance(obj, (datetime.date, datetime.datetime)):
+#                    obj = obj.isoformat()[:10]
+#                else:
+#                    obj = str(obj)
+#            elif fieldtype == 'datetime':
+#                if isinstance(obj, datetime.datetime):
+#                    obj = obj.isoformat()[:19].replace('T', ' ')
+#                elif isinstance(obj, datetime.date):
+#                    obj = obj.isoformat()[:10] + ' 00:00:00'
+#                else:
+#                    obj = str(obj)
+#            elif fieldtype == 'time':
+#                if isinstance(obj, datetime.time):
+#                    obj = obj.isoformat()[:10]
+#                else:
+#                    obj = str(obj)
+#            if not isinstance(obj, str):
+#                obj = str(obj)
+        
              
 #    def __call__(self, expression=None):
 #        if isinstance(expression, Table):
@@ -95,10 +126,10 @@ class DbAdapter():
 #            expression = expression != None
 #        return Set(self, expression)
 
-    def integrity_error(self):
+    def IntegrityError(self): 
         return self.driver.IntegrityError
-
-    def operational_error(self):
+    
+    def OperationalError(self): 
         return self.driver.OperationalError
 
 

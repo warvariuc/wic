@@ -1,4 +1,3 @@
-import base64
 from decimal import Decimal
 import orm
 
@@ -6,9 +5,7 @@ import orm
 class DbField():
     '''Abstract DB field, supported natively by the DB.'''
     
-    def baseRender(self, value, dbAdapter):
-        '''Abstract render of a value in a format suitable for operations with this DB field.'''
-        return str(value)
+        
 
 class DbIntegerField(DbField):
     '''INT'''
@@ -16,8 +13,6 @@ class DbIntegerField(DbField):
         super().__init__()
         self.bytesCount = bytesCount
 
-    def baseRender(self, value, dbAdapter):
-        return str(int(value))
 
 class DbStringField(DbField):
     '''VARCHAR, CHAR'''
@@ -25,11 +20,11 @@ class DbStringField(DbField):
         super().__init__()
         self.maxLength = maxLength
         self.hasFixedLength = hasFixedLength
+        
 
 class DbBlobField(DbField):
     '''BLOB'''
-    def baseRender(self, value, dbAdapter):
-        return base64.b64encode(str(value))
+
 
 class DbTextField(DbField):
     '''TEXT'''
@@ -175,27 +170,3 @@ class ReferenceField(Field):
 class ValidationError(Exception):
     '''This type of exception is raised when a validation didn't pass.'''
 
-
-
-
-
-
-#            elif isinstance(dbType, DbIntegerField):
-#                if isinstance(obj, (datetime.date, datetime.datetime)):
-#                    obj = obj.isoformat()[:10]
-#                else:
-#                    obj = str(obj)
-#            elif fieldtype == 'datetime':
-#                if isinstance(obj, datetime.datetime):
-#                    obj = obj.isoformat()[:19].replace('T', ' ')
-#                elif isinstance(obj, datetime.date):
-#                    obj = obj.isoformat()[:10] + ' 00:00:00'
-#                else:
-#                    obj = str(obj)
-#            elif fieldtype == 'time':
-#                if isinstance(obj, datetime.time):
-#                    obj = obj.isoformat()[:10]
-#                else:
-#                    obj = str(obj)
-#            if not isinstance(obj, str):
-#                obj = str(obj)

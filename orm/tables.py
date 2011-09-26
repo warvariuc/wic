@@ -1,25 +1,6 @@
 import inspect
-
 import orm
 
-
-
-#def prepareModels():
-#    # fill Field's names where not defined
-#    for tAttr in globals().copy().values():
-#        if inspect.isclass(tAttr) and issubclass(tAttr, Table) and tAttr is not Table:
-#            for fAttrName, fAttr in tAttr.__dict__.items():
-#                if isinstance(fAttr, Field):
-#                    if not fAttrName.islower():
-#                        raise Exception('Field names must be lowercase. Field `{}` in Table `{}`'.format(fAttrName, tAttr.__name__))
-#                    if fAttrName.startswith('_'):
-#                        raise Exception('Field names can not start with `_`. Field `{}` in Table `{}`'.format(fAttrName, tAttr.__name__))
-#                    if fAttr._name is not None:
-#                        raise Exception('Duplicate Field `{}` in Table `{}`'.format(fAttrName, tAttr.__name__))
-#                    if isinstance(fAttr, IdField) and fAttrName != 'id':
-#                        fAttrName += '_id'
-#                    fAttr._name = fAttrName
-#                    fAttr._table = tAttr
 
 class TableMetaClass(type):
     '''Metaclass for all tables.'''
@@ -27,7 +8,7 @@ class TableMetaClass(type):
     def __new__(cls, name, bases, attrs):
         newClass = type.__new__(cls, name, bases, attrs)
         
-        if 'Table' in globals(): # only Table subclasses
+        if 'Table' in globals(): # only Table subclasses. if Table is not defined - __new__ is called for it
             for attrName, attr in newClass.__dict__.items():
                 if isinstance(attr, orm.Field):
                     if not attrName.islower():
@@ -45,11 +26,9 @@ class TableMetaClass(type):
 
 
 
-
-
-
 class Table(metaclass=TableMetaClass):
-    '''Base class for all tables.'''
+    '''Base class for all tables. Class attributes - the fields. 
+    Instance attributes with the same names - the values for the corresponding fields.'''
     id = orm.IdField('id')
     #__indexes = DbIndex(Table.id, primary = True)
 
@@ -57,7 +36,7 @@ class Table(metaclass=TableMetaClass):
         '''Initialize a new record in this table.'''
         self.dbAdapter = kwargs.pop('db', orm.defaultDbAdapter)
         
-        # make field values 
+        # make values for fields 
         for fieldName, field in inspect.getmembers(self.__class__):
             if isinstance(field, orm.Field):
                 fieldValue = field._cast(kwargs.pop(fieldName, field.defaultValue))
