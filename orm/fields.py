@@ -4,20 +4,22 @@ import orm
 
 class DbField():
     '''Abstract DB field, supported natively by the DB.'''
+    def __init__(self, name=None, **kwargs):
+        self.name = name
     
         
 
 class DbIntegerField(DbField):
     '''INT'''
     def __init__(self, bytesCount, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
         self.bytesCount = bytesCount
 
 
 class DbStringField(DbField):
     '''VARCHAR, CHAR'''
-    def __init__(self, maxLength, hasFixedLength=False):
-        super().__init__()
+    def __init__(self, maxLength, hasFixedLength=False, **kwargs):
+        super().__init__(**kwargs)
         self.maxLength = maxLength
         self.hasFixedLength = hasFixedLength
         
@@ -94,9 +96,9 @@ class Expression():
 
 class Field(Expression):
     '''ORM table field.'''
-    def __init__(self, name, dbtype, defaultValue):
-        assert isinstance(dbtype, DbField)
-        self.dbtype = dbtype
+    def __init__(self, name, dbField, defaultValue):
+        assert isinstance(dbField, DbField)
+        self.dbField = dbField
         self._name = name 
         self.defaultValue = defaultValue
     
@@ -123,16 +125,16 @@ class IdField(Field):
 
 class StringField(Field):
     def __init__(self, maxLength, defaultValue=None, name=None):
-        self.maxLength = maxLength
         super().__init__(name, DbStringField(maxLength), defaultValue)
+        self.maxLength = maxLength
 
 class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
     def __init__(self, maxDigits, decimalPlaces, defaultValue, name=None):
+        super().__init__(name, DbIntegerField(8), defaultValue)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
-        super().__init__(name, DbIntegerField(8), defaultValue)
     
     def _cast(self, value):
         if isinstance(value, Field):
@@ -141,7 +143,7 @@ class DecimalFieldI(Field):
             if value.decimalPlaces != self.decimalPlaces:
                 raise SyntaxError('Cooperand field must have the same number of decimal places.')
             return value
-        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after decimal point
+        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
 
 #    def encode(self, x):
 #        '''Function which processes the value before writing it to the DB.'''
@@ -157,8 +159,8 @@ class ReferenceField(Field):
     def __init__(self, table, name=None, index=False):
         # if table is None - this field makes additional db field for holding table id
         assert issubclass(table, orm.tables.Table)
+        super().__init__(name, DbIntegerField(8), None)
         self.table = table # foreign key - referenced type of table
-        super().__init__(name, DbIntegerField(8, primary=True, autoincrement=True), None)
         
     def _cast(self, value):
         if isinstance(value, orm.tables.Table):

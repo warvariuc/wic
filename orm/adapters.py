@@ -18,21 +18,24 @@ except ImportError:
 
 class DbAdapter():
     '''Generic DB adapter.'''
-    protocol = 'base'
     
     def __init__(self, uri=''):
         '''URI is already without protocol.'''
         print(uri)
+        db = None # DB connection
 
     def logExecute(self, *a, **b):
-        self.db._lastsql = a[0]
+        lastsql = a[0]
         t0 = time.time()
         ret = self.cursor.execute(*a, **b)
-        self.db._timings.append((a[0], time.time() - t0))
+        self.db._timings.append((lastsql, time.time() - t0))
         return ret
+    
+    def getLastSql(self):
+        return self.db._timings[-1][0]
 
     def execute(self, *a, **b):
-        return self.log_execute(*a, **b)
+        return self.logExecute(*a, **b)
 
     def AND(self, left, right):
         '''Render the AND clause.'''
@@ -75,26 +78,26 @@ class DbAdapter():
     
     def render(self, value, castField=None):
         '''Render of a value in a format suitable for operations with this DB field'''
-        if isinstance(value, orm.Expression): # it's an expression
+        if isinstance(value, orm.fields.Expression): # it's an expression
             return value._render(self) # render sub-expression
         else: # it's a value for a DbField
-            if value is None:
-                return 'NULL'
-            if castField is not None:
+            if value is not None and castField is not None:
 #                print(castField, value)
-                assert isinstance(castField, orm.Expression)
-                if isinstance(castField, orm.Field):
+                assert isinstance(castField, orm.fields.Expression)
+                if isinstance(castField, orm.fields.Field):
                     pass
-                elif isinstance(castField, orm.Expression):
+                elif isinstance(castField, orm.fields.Expression):
                     castField = castField.type
                 value = castField._cast(value)
-                return self._render(value, castField.dbtype) 
-            return str(value)
+                return self._render(value, castField.dbField) 
+            return self._render(value, None)
         
-    def _render(self, value, dbType):
-        if isinstance(dbType, orm.DbIntegerField):
+    def _render(self, value, dbField):
+        if value is None:
+            return 'NULL'
+        if isinstance(dbField, orm.fields.DbIntegerField):
             return str(int(value))
-        if isinstance(dbType, orm.DbBlobField):
+        if isinstance(dbField, orm.fields.DbBlobField):
             return base64.b64encode(str(value))
         return str(value)  
 
@@ -134,5 +137,4 @@ class DbAdapter():
 
 
 class SqliteAdapter(DbAdapter):
-    protocol = 'sqlite'
-    driver = globals().get('sqlite3', None)
+    driver = globals().get('sqlite3')

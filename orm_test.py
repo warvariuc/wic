@@ -1,7 +1,7 @@
 import re
 from pprint import pprint
 
-from orm import SqliteAdapter, Table, Expression, IdField, StringField, DecimalFieldI, ReferenceField
+from orm import SqliteAdapter, Table, IdField, StringField, DecimalFieldI, ReferenceField
 
 
 
@@ -1267,12 +1267,12 @@ class Books(Table):
 
 
 
-dbAdapters = [SqliteAdapter] # available adapters
+ADAPTERS = dict(sqlite = SqliteAdapter) # available adapters
 
 def connect(uri, makeDefault=True):
     '''Search for suitable adapter by protocol'''
-    for dbAdapterClass in dbAdapters: 
-        uriStart = dbAdapterClass.protocol + '://'
+    for dbType, dbAdapterClass in ADAPTERS.items(): 
+        uriStart = dbType + '://'
         if uri.startswith(uriStart):
             dbAdapter = dbAdapterClass(uri[len(uriStart):])
             if makeDefault:
