@@ -16,7 +16,7 @@ except ImportError:
 
 
 
-class DbAdapter():
+class Adapter():
     '''Generic DB adapter.'''
     
     def __init__(self, uri=''):
@@ -92,12 +92,12 @@ class DbAdapter():
                 return self._render(value, castField.dbField) 
             return self._render(value, None)
         
-    def _render(self, value, dbField):
+    def _render(self, value, column):
         if value is None:
             return 'NULL'
-        if isinstance(dbField, orm.fields.DbIntegerField):
+        if isinstance(column, orm.fields.IntColumn):
             return str(int(value))
-        if isinstance(dbField, orm.fields.DbBlobField):
+        if isinstance(column, orm.fields.BlobColumn):
             return base64.b64encode(str(value))
         return str(value)  
 
@@ -136,7 +136,7 @@ class DbAdapter():
         return self.driver.OperationalError
 
 
-class SqliteAdapter(DbAdapter):
+class SqliteAdapter(Adapter):
     driver = globals().get('sqlite3')
 
 

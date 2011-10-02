@@ -2,38 +2,39 @@ from decimal import Decimal
 import orm
 
 
-class DbField():
-    '''Abstract DB field, supported natively by the DB.'''
+class Column():
+    '''Abstract DB column, supported natively by the DB.'''
     def __init__(self, name=None, **kwargs):
         self.name = name
     
         
 
-class DbIntegerField(DbField):
-    '''INT'''
+class IntColumn(Column):
+    '''INT column type.'''
     def __init__(self, name, bytesCount, **kwargs):
         super().__init__(name, **kwargs)
         self.bytesCount = bytesCount
 
 
-class DbStringField(DbField):
-    '''VARCHAR, CHAR'''
+class CharColumn(Column):
+    '''CHAR, VARCHAR'''
     def __init__(self, name, maxLength, hasFixedLength=False, **kwargs):
         super().__init__(name, **kwargs)
         self.maxLength = maxLength
         self.hasFixedLength = hasFixedLength
         
 
-class DbBlobField(DbField):
+class BlobColumn(Column):
     '''BLOB'''
 
 
-class DbTextField(DbField):
+class TextColumn(Column):
     '''TEXT'''
 
 
 
 class Nil(): '''Custom None'''
+    
 
 class Expression():
     def __init__(self, operation, left=Nil, right=Nil, type=None): # FIXME: type parameter not needed?
@@ -102,7 +103,7 @@ class Field(Expression):
 
     def _init(self, fieldName, tableClass, dbField, defaultValue):
         '''This is called by the Table metaclass to initialize the Field after a Table class is created.'''
-        assert isinstance(dbField, DbField)
+        assert isinstance(dbField, Column)
         self.table = tableClass
         self.name = fieldName
         dbFieldName = fieldName
@@ -130,20 +131,21 @@ class Field(Expression):
 class IdField(Field):
     '''Built-in id type - for each table.'''
     def _init(self, fieldName, tableClass):
-        super()._init(fieldName, tableClass, DbIntegerField(fieldName, 8, primary=True, autoincrement=True), None)
+        super()._init(fieldName, tableClass, IntColumn(fieldName, 8, primary=True, autoincrement=True), None)
         
 
 class StringField(Field):
     def _init(self, fieldName, tableClass, maxLength, defaultValue=None):
-        super()._init(fieldName, tableClass, DbStringField(fieldName, maxLength), defaultValue)
+        super()._init(fieldName, tableClass, CharColumn(fieldName, maxLength), defaultValue)
         self.maxLength = maxLength
+
 
 class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
     def _init(self, fieldName, tableClass, maxDigits, decimalPlaces, defaultValue):
         
-        super()._init(fieldName, tableClass, DbIntegerField(fieldName, 8), defaultValue)
+        super()._init(fieldName, tableClass, IntColumn(fieldName, 8), defaultValue)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
     
@@ -169,7 +171,7 @@ class ReferenceField(Field):
     '''Foreign key - stores id of a record in another table.'''
     def _init(self, fieldName, tableClass, referencedTable, index=False):
         # if table is None - this field makes additional db field for holding table id
-        super()._init(fieldName, tableClass, DbIntegerField(fieldName, 8), None)
+        super()._init(fieldName, tableClass, IntColumn(fieldName, 8), None)
         self.table = referencedTable # foreign key - referenced type of table
         
     def _cast(self, value):
@@ -178,16 +180,27 @@ class ReferenceField(Field):
         return value
 
 
+class TableIdField(Field):
+    '''This field stores id of a given table in this DB.'''
+    def _init(self, fieldName, tableClass, referencedTable, index=False):
+        super()._init(fieldName, tableClass, IntColumn(fieldName, 2), None)
+        
+    def _cast(self, value):
+        if isinstance(value, orm.Table):
+            return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
+        return value
+
+
 class ReferenceField2(Field):
     '''Foreign key - stores id of a record in another table.'''
-    def __init__(self, table, name=None, index=False):
+    def _init(self, fieldName, tableClass, referencedTable, index=False):
+        super()._init(fieldName, tableClass, IntColumn(fieldName, 2), None)
         # if table is None - this field makes additional db field for holding table id
-        if table is not None:
-            assert issubclass(table, orm.tables.Table)
+        tableIdFieldName = fieldName + 'TableId'
             
-        tableId = DbIntegerField(name, 2) # two bytes for keeping id of a table in this DB
-        itemId = DbIntegerField(name, 8)
-        super().__init__(DbIntegerField(name, 8), None)
+        tableId = IntColumn(name, 2) # two bytes for keeping id of a table in this DB
+        itemId = IntColumn(name, 8)
+        super().__init__(IntColumn(name, 8), None)
         self.table = table # foreign key - referenced type of table
         
     def _cast(self, value):
