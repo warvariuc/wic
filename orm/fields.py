@@ -6,22 +6,23 @@ import orm
 
 class Column():
     '''Abstract DB column, supported natively by the DB.'''
-    def __init__(self, name=None, primary=False, index=False, unique=False, **kwargs):
+    def __init__(self, name, field):
         self.name = name
+        self.field = field 
         
 
 class IntColumn(Column):
     '''INT column type.'''
-    def __init__(self, name, bytesCount, autoincrement=False, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name, field, bytesCount, autoincrement=False, **kwargs):
+        super().__init__(name, field)
         self.bytesCount = bytesCount
         self.autoincrement = autoincrement
 
 
 class CharColumn(Column):
     '''CHAR, VARCHAR'''
-    def __init__(self, name, maxLength, hasFixedLength=False, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name, field, maxLength, hasFixedLength=False, **kwargs):
+        super().__init__(name, field)
         self.maxLength = maxLength
         self.hasFixedLength = hasFixedLength
         
@@ -100,18 +101,19 @@ class Expression():
 class Field(Expression):
     '''ORM table field.'''
     def __init__(self, *args, **kwargs):
+        self.name = kwargs.pop('name', None)
+        self.table = kwargs.pop('table', None)
         self._initArgs = args # field will be initalized using these params later, when the class is created
         self._initKwargs = kwargs 
 
-    def _init(self, fieldName, tableClass, column, defaultValue):
+    def _init(self, column, defaultValue, primary=False, index=False, unique=False):
         '''This is called by the Table metaclass to initialize the Field after a Table subclass is created.'''
-        self.table = tableClass
-        self.name = fieldName
+        del self._initArgs, self._initKwargs
         self.column = column
         self.defaultValue = defaultValue
-        del self._initArgs, self._initKwargs
+        # TODO: do something with indexes
             
-    def _render(self, db=None): # db - not needed?
+    def _render(self, adapter=None): # adapter - not needed?
         return self.column.name
         
 #    def validate(self, x):
@@ -128,16 +130,16 @@ class Field(Expression):
 
 
 class StringField(Field):
-    def _init(self, fieldName, tableClass, maxLength, defaultValue=None):
-        super()._init(fieldName, tableClass, CharColumn(fieldName, maxLength), defaultValue)
+    def _init(self, maxLength, defaultValue=None,  primary=False, index=False, unique=False):
+        super()._init(CharColumn(self.name, self, maxLength), defaultValue, primary=primary, index=index, unique=unique)
         self.maxLength = maxLength
 
 
 class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
-    def _init(self, fieldName, tableClass, maxDigits, decimalPlaces, defaultValue):
-        super()._init(fieldName, tableClass, IntColumn(fieldName, 8), defaultValue)
+    def _init(self, maxDigits, decimalPlaces, defaultValue, primary=False, index=False, unique=False):
+        super()._init(IntColumn(self.name, self, 8), defaultValue, primary=primary, index=index, unique=unique)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
     
@@ -161,14 +163,14 @@ class DecimalFieldI(Field):
 
 class IdField(Field):
     '''Built-in id type - for each table.'''
-    def _init(self, fieldName, tableClass):
-        super()._init(fieldName, tableClass, IntColumn(fieldName, 8, primary=True, autoincrement=True), None)
+    def _init(self):
+        super()._init(IntColumn(self.name, self, 8, autoincrement=True), None, primary=True)
         
 
 class ItemField(Field):
     '''Foreign key - stores id of a row in another table.'''
-    def _init(self, fieldName, tableClass, referTable):
-        super()._init(fieldName, tableClass, IntColumn(fieldName + '_id', 8), None)
+    def _init(self, referTable, index=False, unique=False):
+        super()._init(IntColumn(self.name + '_id', self, 8), None, index=index, unique=unique)
         self.table = referTable # foreign key - referenced type of table
         
     def _cast(self, value):
@@ -179,8 +181,8 @@ class ItemField(Field):
 
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
-    def _init(self, fieldName, tableClass):
-        super()._init(fieldName, tableClass, IntColumn(fieldName + '_tid', 2), None)
+    def _init(self, index=False):
+        super()._init(IntColumn(self.name + '_id', self, 2), None, index=index)
         
     def _cast(self, value):
         if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
@@ -190,16 +192,18 @@ class TableIdField(Field):
 
 class AnyItemField(Field):
     '''This field stores id of a row of any table.'''
-    def _init(self, fieldName, tableClass):
-        super()._init(fieldName, tableClass, None, None)
+    def _init(self, index=False, unique=False):
+        super()._init(None, None)
             
-        tableIdField = TableIdField()
-        tableIdField._init(fieldName, tableClass)
-        setattr(tableClass, tableIdField.name, tableIdField)
+        tableIdField = TableIdField(name=self.name + '_table', table=self.table)
+        tableIdField._init()
+        setattr(self.table, tableIdField.name, tableIdField)
         
-        itemIdField = ItemField()
-        itemIdField._init(fieldName, tableClass, None)
-        setattr(tableClass, fieldName, itemIdField)
+        itemIdField = ItemField(name=self.name + '_item', table=self.table)
+        itemIdField._init(None) # no refered table
+        setattr(self.table, itemIdField.name, itemIdField)
+        
+        #self.table._indexes.update()
         
         self.tableIdField = tableIdField
         self.itemIdField = itemIdField
