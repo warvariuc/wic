@@ -140,9 +140,9 @@ class SqliteAdapter(Adapter):
     driver = globals().get('sqlite3')
 
 
-#
-#
-#
+
+
+
 #class BaseAdapter(ConnectionPool):
 #
 #    driver = None
@@ -178,39 +178,6 @@ class SqliteAdapter(Adapter):
 #
 #    def operational_error(self):
 #        return self.driver.OperationalError
-#
-#    def file_exists(self, filename):
-#        """
-#        to be used ONLY for files that on GAE may not be on filesystem
-#        """
-#        return os.path.exists(filename)
-#
-#    def file_open(self, filename, mode='rb', lock=True):
-#        """
-#        to be used ONLY for files that on GAE may not be on filesystem
-#        """
-#        fileobj = open(filename, mode)
-#        if have_portalocker and lock:
-#            if mode in ('r', 'rb'):
-#                portalocker.lock(fileobj, portalocker.LOCK_SH)
-#            elif mode in ('w', 'wb', 'a'):
-#                portalocker.lock(fileobj, portalocker.LOCK_EX)
-#            else:
-#                fileobj.close()
-#                raise RuntimeError("Unsupported file_open mode")
-#        return fileobj
-#
-#    def file_close(self, fileobj, unlock=True):
-#        """
-#        to be used ONLY for files that on GAE may not be on filesystem
-#        """
-#        if fileobj:
-#            if have_portalocker and unlock:
-#                portalocker.unlock(fileobj)
-#            fileobj.close()
-#
-#    def file_delete(self, filename):
-#        os.unlink(filename)
 #
 #    def __init__(self, db, uri, pool_size=0, folder=None, db_codec='UTF-8',
 #                 credential_decoder=lambda x:x, driver_args={},

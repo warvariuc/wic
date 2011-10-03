@@ -15,9 +15,12 @@ class TableMeta(type):
                     if not fieldName.islower() or fieldName.startswith('_'):
                         raise Exception('Field `{}` in Table `{}`: Field names must be lowercase and must not start with `_`.'.format(fieldName, name))
                     field_ = field.__class__() # recreate the field - to handle correctly inheritance
+                    #orm.fields.Field._init(fieldName, newClass)
+                    #field_._init(*field._initArgs, **field._initKwargs) # and initialize it
                     field_._init(fieldName, newClass, *field._initArgs, **field._initKwargs) # and initialize it
                     setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
-        
+            if not hasattr(newClass, '_tableId'):
+                raise Exception('Table ID not set in {}!'.format(newClass))
         return newClass
 
 

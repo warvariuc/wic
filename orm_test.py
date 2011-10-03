@@ -18,8 +18,8 @@ class Books(orm.Table):
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
     price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
     old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
-    author = orm.ReferField(Authors)
-    fan = orm.fields.ReferField2() # None means that this field may contain reference to any other table in the DB
+    author = orm.ItemField(Authors)
+    fan = orm.fields.AnyItemField() # None means that this field may contain reference to any other table in the DB
 
 
 

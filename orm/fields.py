@@ -1,18 +1,21 @@
 from decimal import Decimal
+import inspect
 import orm
+
 
 
 class Column():
     '''Abstract DB column, supported natively by the DB.'''
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, name=None, primary=False, index=False, unique=False, **kwargs):
         self.name = name
         
 
 class IntColumn(Column):
     '''INT column type.'''
-    def __init__(self, name, bytesCount, **kwargs):
+    def __init__(self, name, bytesCount, autoincrement=False, **kwargs):
         super().__init__(name, **kwargs)
         self.bytesCount = bytesCount
+        self.autoincrement = autoincrement
 
 
 class CharColumn(Column):
@@ -123,11 +126,6 @@ class Field(Expression):
 #        self.fields = fields # fields involded in this index
 #        self.type = type # index type: unique, primary, etc.
 
-class IdField(Field):
-    '''Built-in id type - for each table.'''
-    def _init(self, fieldName, tableClass):
-        super()._init(fieldName, tableClass, IntColumn(fieldName, 8, primary=True, autoincrement=True), None)
-        
 
 class StringField(Field):
     def _init(self, fieldName, tableClass, maxLength, defaultValue=None):
@@ -139,7 +137,6 @@ class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
     def _init(self, fieldName, tableClass, maxDigits, decimalPlaces, defaultValue):
-        
         super()._init(fieldName, tableClass, IntColumn(fieldName, 8), defaultValue)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
@@ -162,10 +159,15 @@ class DecimalFieldI(Field):
 #        return Decimal(x / (10 ** self.decimalPlaces))
 
 
-class ReferField(Field):
+class IdField(Field):
+    '''Built-in id type - for each table.'''
+    def _init(self, fieldName, tableClass):
+        super()._init(fieldName, tableClass, IntColumn(fieldName, 8, primary=True, autoincrement=True), None)
+        
+
+class ItemField(Field):
     '''Foreign key - stores id of a row in another table.'''
-    def _init(self, fieldName, tableClass, referTable=None):
-        # if table is None - this field makes additional db field for holding table id
+    def _init(self, fieldName, tableClass, referTable):
         super()._init(fieldName, tableClass, IntColumn(fieldName + '_id', 8), None)
         self.table = referTable # foreign key - referenced type of table
         
@@ -181,12 +183,12 @@ class TableIdField(Field):
         super()._init(fieldName, tableClass, IntColumn(fieldName + '_tid', 2), None)
         
     def _cast(self, value):
-        if isinstance(value, orm.Table):
+        if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
         return value
 
 
-class ReferField2(Field):
+class AnyItemField(Field):
     '''This field stores id of a row of any table.'''
     def _init(self, fieldName, tableClass):
         super()._init(fieldName, tableClass, None, None)
@@ -195,22 +197,23 @@ class ReferField2(Field):
         tableIdField._init(fieldName, tableClass)
         setattr(tableClass, tableIdField.name, tableIdField)
         
-        itemIdField = ReferField()
-        itemIdField._init(fieldName, tableClass)
+        itemIdField = ItemField()
+        itemIdField._init(fieldName, tableClass, None)
         setattr(tableClass, fieldName, itemIdField)
         
         self.tableIdField = tableIdField
         self.itemIdField = itemIdField
 
-        
     def _cast(self, value):
-        if isinstance(value, orm.tables.Table):
+        if isinstance(value, orm.Table):
             return value.id
         return value
 
     def __eq__(self, other): 
         assert isinstance(other, orm.Table)
-        return Expression('AND', Expression('EQ', self.tableIdField, other._tableId), Expression('EQ', self.itemIdField, other.id))
+        return Expression('AND', 
+                          Expression('EQ', self.tableIdField, other._tableId), 
+                          Expression('EQ', self.itemIdField, other.id))
 
 
 class ValidationError(Exception): # TODO: make a separate module validators
