@@ -6,7 +6,6 @@ class Column():
     '''Abstract DB column, supported natively by the DB.'''
     def __init__(self, name=None, **kwargs):
         self.name = name
-    
         
 
 class IntColumn(Column):
@@ -67,7 +66,7 @@ class Expression():
     def _render(self, db=None):
         '''Construct the text of the WHERE clause from this Expression.
         db - db adapter to use for rendering. If None - use default.'''
-        db = db or orm.defaultDbAdapter
+        db = db or orm.defaultAdapter
         operation = self.operation
         operation = getattr(db, operation)
 #        try:
@@ -101,20 +100,16 @@ class Field(Expression):
         self._initArgs = args # field will be initalized using these params later, when the class is created
         self._initKwargs = kwargs 
 
-    def _init(self, fieldName, tableClass, dbField, defaultValue):
-        '''This is called by the Table metaclass to initialize the Field after a Table class is created.'''
-        assert isinstance(dbField, Column)
+    def _init(self, fieldName, tableClass, column, defaultValue):
+        '''This is called by the Table metaclass to initialize the Field after a Table subclass is created.'''
         self.table = tableClass
         self.name = fieldName
-        dbFieldName = fieldName
-        if isinstance(self, ReferenceField):
-            dbFieldName += '_id'
-        dbField.name = dbFieldName
-        self.dbField = dbField
+        self.column = column
         self.defaultValue = defaultValue
+        del self._initArgs, self._initKwargs
             
-    def _render(self, db=None):
-        return self.dbField.name
+    def _render(self, db=None): # db - not needed?
+        return self.column.name
         
 #    def validate(self, x):
 #        '''This function is called just before writing the value to the DB.
@@ -167,12 +162,12 @@ class DecimalFieldI(Field):
 #        return Decimal(x / (10 ** self.decimalPlaces))
 
 
-class ReferenceField(Field):
-    '''Foreign key - stores id of a record in another table.'''
-    def _init(self, fieldName, tableClass, referencedTable, index=False):
+class ReferField(Field):
+    '''Foreign key - stores id of a row in another table.'''
+    def _init(self, fieldName, tableClass, referTable=None):
         # if table is None - this field makes additional db field for holding table id
-        super()._init(fieldName, tableClass, IntColumn(fieldName, 8), None)
-        self.table = referencedTable # foreign key - referenced type of table
+        super()._init(fieldName, tableClass, IntColumn(fieldName + '_id', 8), None)
+        self.table = referTable # foreign key - referenced type of table
         
     def _cast(self, value):
         if isinstance(value, orm.Table):
@@ -182,8 +177,8 @@ class ReferenceField(Field):
 
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
-    def _init(self, fieldName, tableClass, referencedTable, index=False):
-        super()._init(fieldName, tableClass, IntColumn(fieldName, 2), None)
+    def _init(self, fieldName, tableClass):
+        super()._init(fieldName, tableClass, IntColumn(fieldName + '_tid', 2), None)
         
     def _cast(self, value):
         if isinstance(value, orm.Table):
@@ -191,17 +186,22 @@ class TableIdField(Field):
         return value
 
 
-class ReferenceField2(Field):
-    '''Foreign key - stores id of a record in another table.'''
-    def _init(self, fieldName, tableClass, referencedTable, index=False):
-        super()._init(fieldName, tableClass, IntColumn(fieldName, 2), None)
-        # if table is None - this field makes additional db field for holding table id
-        tableIdFieldName = fieldName + 'TableId'
+class ReferField2(Field):
+    '''This field stores id of a row of any table.'''
+    def _init(self, fieldName, tableClass):
+        super()._init(fieldName, tableClass, None, None)
             
-        tableId = IntColumn(name, 2) # two bytes for keeping id of a table in this DB
-        itemId = IntColumn(name, 8)
-        super().__init__(IntColumn(name, 8), None)
-        self.table = table # foreign key - referenced type of table
+        tableIdField = TableIdField()
+        tableIdField._init(fieldName, tableClass)
+        setattr(tableClass, tableIdField.name, tableIdField)
+        
+        itemIdField = ReferField()
+        itemIdField._init(fieldName, tableClass)
+        setattr(tableClass, fieldName, itemIdField)
+        
+        self.tableIdField = tableIdField
+        self.itemIdField = itemIdField
+
         
     def _cast(self, value):
         if isinstance(value, orm.tables.Table):
@@ -209,11 +209,10 @@ class ReferenceField2(Field):
         return value
 
     def __eq__(self, other): 
-        #return Expression('EQ', self, other)
         assert isinstance(other, orm.Table)
         return Expression('AND', Expression('EQ', self.tableIdField, other._tableId), Expression('EQ', self.itemIdField, other.id))
 
 
-class ValidationError(Exception):
+class ValidationError(Exception): # TODO: make a separate module validators
     '''This type of exception is raised when a validation didn't pass.'''
 

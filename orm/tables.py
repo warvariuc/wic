@@ -3,7 +3,7 @@ import re
 import orm
 
 
-class TableType(type):
+class TableMeta(type):
     '''Metaclass for all tables.'''
     
     def __new__(cls, name, bases, attrs):
@@ -12,19 +12,16 @@ class TableType(type):
         if 'Table' in globals(): # only Table subclasses. if Table is not defined - __new__ is called for it
             for fieldName, field in list(inspect.getmembers(newClass)):
                 if isinstance(field, orm.fields.Field):
-                    if not fieldName.islower():
-                        raise Exception('Field names must be lowercase. Field `{}` in Table `{}`'.format(fieldName, name))
-                    if fieldName.startswith('_'):
-                        raise Exception('Field names can not start with `_`. Field `{}` in Table `{}`'.format(fieldName, name))
-                    field = field.__class__(*field._initArgs, **field._initKwargs) # recreate the field - to handle correctly inheritance
-                    field._init(fieldName, newClass, *field._initArgs, **field._initKwargs)
-                    setattr(newClass, fieldName, field) # each class
-                    del field._initArgs, field._initKwargs
+                    if not fieldName.islower() or fieldName.startswith('_'):
+                        raise Exception('Field `{}` in Table `{}`: Field names must be lowercase and must not start with `_`.'.format(fieldName, name))
+                    field_ = field.__class__() # recreate the field - to handle correctly inheritance
+                    field_._init(fieldName, newClass, *field._initArgs, **field._initKwargs) # and initialize it
+                    setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
         
         return newClass
 
 
-class Table(metaclass=TableType):
+class Table(metaclass=TableMeta):
     '''Base class for all tables. Class attributes - the fields. 
     Instance attributes with the same names - the values for the corresponding fields.'''
     id = orm.IdField() # this field is present in all tables
@@ -32,7 +29,7 @@ class Table(metaclass=TableType):
 
     def __init__(self, **kwargs):
         '''Initialize a new record in this table.'''
-        self.dbAdapter = kwargs.pop('db', orm.defaultDbAdapter)
+        self.adapter = kwargs.pop('db', orm.defaultAdapter)
         
         # make values for fields 
         for fieldName, field in inspect.getmembers(self.__class__):
@@ -41,7 +38,7 @@ class Table(metaclass=TableType):
                 setattr(self, fieldName, fieldValue)
             
     def delete(self):
-        (self.__class__.id == self.id).delete(self.dbAdapter)
+        (self.__class__.id == self.id).delete(self.adapter)
 
 
 

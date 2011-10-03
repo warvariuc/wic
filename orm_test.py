@@ -5,6 +5,7 @@ import orm
 
 class Authors(orm.Table):
     ''''''
+    _tableId = 1
     # id field is already present 
     first_name = orm.StringField(maxLength=100)
     last_name = orm.StringField(maxLength=100)
@@ -12,12 +13,13 @@ class Authors(orm.Table):
 
 class Books(orm.Table):
     ''''''
+    _tableId = 2
     # id field is already present 
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
     price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
     old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
-    author = orm.ReferenceField(Authors)
-    #fan = ReferenceField(None) # None means that this field may contain reference to any other table in the DB
+    author = orm.ReferField(Authors)
+    fan = orm.fields.ReferField2() # None means that this field may contain reference to any other table in the DB
 
 
 
@@ -50,6 +52,8 @@ where = ((Books.author == author) | ((1 <= Books.id) & (Books.price > 9.99)))
 print(where._render())
 
 print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render())
+
+print(((Books.fan == author) | ((1 <= Books.id) & (Books.price > 9.99)))._render())
 
 #book.author = Authors.load(1)
 #book.save(adapter)

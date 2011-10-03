@@ -22,7 +22,7 @@ class Adapter():
     def __init__(self, uri=''):
         '''URI is already without protocol.'''
         print(uri)
-        db = None # DB connection
+        self.dbConnection = None # DB connection
 
     def logExecute(self, *a, **b):
         lastsql = a[0]
@@ -89,7 +89,7 @@ class Adapter():
                 elif isinstance(castField, orm.fields.Expression):
                     castField = castField.type
                 value = castField._cast(value)
-                return self._render(value, castField.dbField) 
+                return self._render(value, castField.column) 
             return self._render(value, None)
         
     def _render(self, value, column):
