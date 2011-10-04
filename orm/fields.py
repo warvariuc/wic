@@ -174,7 +174,7 @@ class ItemField(Field):
         self.table = referTable # foreign key - referenced type of table
         
     def _cast(self, value):
-        if isinstance(value, orm.Table):
+        if isinstance(value, orm.Catalog):
             return value.id
         return value
 
@@ -185,7 +185,7 @@ class TableIdField(Field):
         super()._init(IntColumn(self.name + '_id', self, 2), None, index=index)
         
     def _cast(self, value):
-        if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
+        if isinstance(value, orm.Catalog) or (inspect.isclass(value) and issubclass(value, orm.Catalog)):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
         return value
 
@@ -209,12 +209,12 @@ class AnyItemField(Field):
         self.itemIdField = itemIdField
 
     def _cast(self, value):
-        if isinstance(value, orm.Table):
+        if isinstance(value, orm.Catalog):
             return value.id
         return value
 
     def __eq__(self, other): 
-        assert isinstance(other, orm.Table)
+        assert isinstance(other, orm.Catalog)
         return Expression('AND', 
                           Expression('EQ', self.tableIdField, other._tableId), 
                           Expression('EQ', self.itemIdField, other.id))

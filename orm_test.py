@@ -3,16 +3,16 @@ from pprint import pprint
 import orm
 
 
-class Authors(orm.Table):
-    ''''''
+class Authors(orm.Catalog):
+    '''Authors catalog'''
     _tableId = 1
     # id field is already present 
     first_name = orm.StringField(maxLength=100)
     last_name = orm.StringField(maxLength=100)
 
 
-class Books(orm.Table):
-    ''''''
+class Books(orm.Catalog):
+    '''Books catalog'''
     _tableId = 2
     # id field is already present 
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
