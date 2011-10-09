@@ -102,19 +102,26 @@ class Field(Expression):
     '''ORM table field.'''
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop('name', None)
-        self.table = kwargs.pop('table', None)
+        self.table = kwargs.pop('table', None) # part of which table is this field
         self._initArgs = args # field will be initalized using these params later, when the class is created
         self._initKwargs = kwargs 
 
-    def _init(self, column, defaultValue, primary=False, index=False, unique=False):
+    def _init(self, column, defaultValue, index=''):
         '''This is called by the Table metaclass to initialize the Field after a Table subclass is created.'''
         del self._initArgs, self._initKwargs
         self.column = column
         self.defaultValue = defaultValue
-        # TODO: do something with indexes
+        
+        if index:
+            if index == True:
+                index = 'index'
+            self.table._indexes.append(orm.Index([self], index))
             
     def _render(self, adapter=None): # adapter - not needed?
         return self.column.name
+    
+    def __str__(self):
+        return '{}.{}'.format(self.table.__name__, self.name)
         
 #    def validate(self, x):
 #        '''This function is called just before writing the value to the DB.
@@ -122,24 +129,24 @@ class Field(Expression):
 #        return True # dummy validator which is always passed 
 
 
-#class TableIndex():
-#    '''Defines an index.'''
-#    def __init__(self, fields, type):
-#        self.fields = fields # fields involded in this index
-#        self.type = type # index type: unique, primary, etc.
-
-
 class StringField(Field):
-    def _init(self, maxLength, defaultValue=None,  primary=False, index=False, unique=False):
-        super()._init(CharColumn(self.name, self, maxLength), defaultValue, primary=primary, index=index, unique=unique)
+    def _init(self, maxLength, defaultValue=None,  index=''):
+        super()._init(CharColumn(self.name, self, maxLength), defaultValue, index)
         self.maxLength = maxLength
+
+
+class IntegerField(Field):
+    def _init(self, bytesCount, defaultValue=None, autoincrement=False, index=''):
+        super()._init(IntColumn(self.name, self, bytesCount, autoincrement), defaultValue, index)
+        self.bytesCount = bytesCount
+        self.autoincrement = autoincrement
 
 
 class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
-    def _init(self, maxDigits, decimalPlaces, defaultValue, primary=False, index=False, unique=False):
-        super()._init(IntColumn(self.name, self, 8), defaultValue, primary=primary, index=index, unique=unique)
+    def _init(self, maxDigits, decimalPlaces, defaultValue, index=''):
+        super()._init(IntColumn(self.name, self, 8), defaultValue, index)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
     
@@ -164,36 +171,36 @@ class DecimalFieldI(Field):
 class IdField(Field):
     '''Built-in id type - for each table.'''
     def _init(self):
-        super()._init(IntColumn(self.name, self, 8, autoincrement=True), None, primary=True)
+        super()._init(IntColumn(self.name, self, 8, autoincrement=True), None, 'primary')
         
 
 class ItemField(Field):
     '''Foreign key - stores id of a row in another table.'''
-    def _init(self, referTable, index=False, unique=False):
-        super()._init(IntColumn(self.name + '_id', self, 8), None, index=index, unique=unique)
-        self.table = referTable # foreign key - referenced type of table
+    def _init(self, referTable, index=''):
+        super()._init(IntColumn(self.name + '_id', self, 8), None, index)
+        self.refTable = referTable # foreign key - referenced type of table
         
     def _cast(self, value):
-        if isinstance(value, orm.Catalog):
+        if isinstance(value, orm.Table):
             return value.id
         return value
 
 
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
-    def _init(self, index=False):
-        super()._init(IntColumn(self.name + '_id', self, 2), None, index=index)
+    def _init(self, index=''):
+        super()._init(IntColumn(self.name + '_id', self, 2), None, index)
         
     def _cast(self, value):
-        if isinstance(value, orm.Catalog) or (inspect.isclass(value) and issubclass(value, orm.Catalog)):
+        if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
         return value
 
 
 class AnyItemField(Field):
     '''This field stores id of a row of any table.'''
-    def _init(self, index=False, unique=False):
-        super()._init(None, None)
+    def _init(self, index=''):
+        super()._init(None, None) # no column, but later we create two fields
             
         tableIdField = TableIdField(name=self.name + '_table', table=self.table)
         tableIdField._init()
@@ -209,17 +216,13 @@ class AnyItemField(Field):
         self.itemIdField = itemIdField
 
     def _cast(self, value):
-        if isinstance(value, orm.Catalog):
+        if isinstance(value, orm.Table):
             return value.id
         return value
 
     def __eq__(self, other): 
-        assert isinstance(other, orm.Catalog)
+        assert isinstance(other, orm.Table)
         return Expression('AND', 
                           Expression('EQ', self.tableIdField, other._tableId), 
                           Expression('EQ', self.itemIdField, other.id))
-
-
-class ValidationError(Exception): # TODO: make a separate module validators
-    '''This type of exception is raised when a validation didn't pass.'''
 

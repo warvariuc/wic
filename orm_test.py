@@ -3,7 +3,7 @@ from pprint import pprint
 import orm
 
 
-class Authors(orm.Catalog):
+class Authors(orm.Table):
     '''Authors catalog'''
     _tableId = 1
     # id field is already present 
@@ -11,29 +11,26 @@ class Authors(orm.Catalog):
     last_name = orm.StringField(maxLength=100)
 
 
-class Books(orm.Catalog):
+class Books(orm.Table):
     '''Books catalog'''
     _tableId = 2
     # id field is already present 
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
-    price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
+    price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00', index=True) # 2 decimal places
     old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
-    author = orm.ItemField(Authors)
+    author = orm.ItemField(Authors, index=True)
     fan = orm.fields.AnyItemField() # None means that this field may contain reference to any other table in the DB
 
-
+#    _indexes = [orm.Index([author, fan])]
 
 ADAPTERS = dict(sqlite=orm.SqliteAdapter) # available adapters
 
-def connect(uri, makeDefault=True):
+def connect(uri):
     '''Search for suitable adapter by protocol'''
     for dbType, dbAdapterClass in ADAPTERS.items(): 
         uriStart = dbType + '://'
         if uri.startswith(uriStart):
             dbAdapter = dbAdapterClass(uri[len(uriStart):])
-            if makeDefault:
-                global defaultDbAdapter
-                defaultDbAdapter = dbAdapter
             return dbAdapter
 
 
@@ -54,6 +51,13 @@ print(where._render())
 print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render())
 
 print(((Books.fan == author) | ((1 <= Books.id) & (Books.price > 9.99)))._render())
+
+print('\nBooks indexes:')
+for index in Books._indexes:
+    print('   ', index)
+    
+print()
+print(Books.author)
 
 #book.author = Authors.load(1)
 #book.save(adapter)

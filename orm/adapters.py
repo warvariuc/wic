@@ -76,6 +76,9 @@ class Adapter():
         items = ','.join(self.render(item, first) for item in second)
         return '(%s IN (%s))' % (self.render(first), items)
     
+    def PRIMARY_KEY(self, key):
+        return 'PRIMARY KEY(%s)' % key
+
     def render(self, value, castField=None):
         '''Render of a value in a format suitable for operations with this DB field'''
         if isinstance(value, orm.fields.Expression): # it's an expression
@@ -134,6 +137,10 @@ class Adapter():
     
     def OperationalError(self): 
         return self.driver.OperationalError
+
+    def getTableCreateStatement(self, table):
+        '''Get CREATE TABLE statement for this adapter'''
+        raise NotImplemented
 
 
 class SqliteAdapter(Adapter):
@@ -202,122 +209,122 @@ class SqliteAdapter(Adapter):
 #        return '%s_sequence' % tablename
 #
 #
-#    def create_table(self, table, migrate=True, fake_migrate=False, polymodel=None):
-#        fields = []
-#        sql_fields = {}
-#        sql_fields_aux = {}
-#        TFK = {}
-#        tablename = table._tablename
-#        sortable = 0
-#        for field in table:
-#            sortable += 1
-#            k = field.name
-#            if isinstance(field.type, SQLCustomType):
-#                ftype = field.type.native or field.type.type
-#            elif field.type.startswith('reference'):
-#                referenced = field.type[10:].strip()
-#                constraint_name = self.constraint_name(tablename, field.name)
-#                if hasattr(table, '_primarykey'):
-#                    rtablename, rfieldname = referenced.split('.')
-#                    rtable = table._db[rtablename]
-#                    rfield = rtable[rfieldname]
-#                    # must be PK reference or unique
-#                    if rfieldname in rtable._primarykey or rfield.unique:
-#                        ftype = self.types[rfield.type[:9]] % dict(length=rfield.length)
-#                        # multicolumn primary key reference?
-#                        if not rfield.unique and len(rtable._primarykey) > 1 :
-#                            # then it has to be a table level FK
-#                            if rtablename not in TFK:
-#                                TFK[rtablename] = {}
-#                            TFK[rtablename][rfieldname] = field.name
-#                        else:
-#                            ftype = ftype + \
-#                                self.types['reference FK'] % dict(\
-#                                constraint_name=constraint_name,
-#                                table_name=tablename,
-#                                field_name=field.name,
-#                                foreign_key='%s (%s)' % (rtablename, rfieldname),
-#                                on_delete_action=field.ondelete)
-#                else:
-#                    # make a guess here for circular references
-#                    id_fieldname = referenced in table._db and table._db[referenced]._id.name or 'id'
-#                    ftype = self.types[field.type[:9]]\
-#                        % dict(table_name=tablename,
-#                               field_name=field.name,
-#                               constraint_name=constraint_name,
-#                               foreign_key=referenced + ('(%s)' % id_fieldname),
-#                               on_delete_action=field.ondelete)
-#            elif field.type.startswith('list:reference'):
-#                ftype = self.types[field.type[:14]]
-#            elif field.type.startswith('decimal'):
-#                precision, scale = map(int, field.type[8:-1].split(','))
-#                ftype = self.types[field.type[:7]] % \
-#                    dict(precision=precision, scale=scale)
-#            elif not field.type in self.types:
-#                raise SyntaxError('Field: unknown field type: %s for %s' % (field.type, field.name))
-#            else:
-#                ftype = self.types[field.type]\
-#                     % dict(length=field.length)
-#            if not field.type.startswith('id') and not field.type.startswith('reference'):
-#                if field.notnull:
-#                    ftype += ' NOT NULL'
-#                else:
-#                    ftype += self.ALLOW_NULL()
-#                if field.unique:
-#                    ftype += ' UNIQUE'
-#
-#            # add to list of fields
-#            sql_fields[field.name] = dict(sortable=sortable,
-#                                          type=str(field.type),
-#                                          sql=ftype)
-#
-#            if isinstance(field.default, (str, int, float)):
-#                # caveat: sql_fields and sql_fields_aux differ for default values
-#                # sql_fields is used to trigger migrations and sql_fields_aux
-#                # are used for create table
-#                # the reason is that we do not want to trigger a migration simply
-#                # because a default value changes
-#                not_null = self.NOT_NULL(field.default, field.type)
-#                ftype = ftype.replace('NOT NULL', not_null)
-#            sql_fields_aux[field.name] = dict(sql=ftype)
-#
-#            fields.append('%s %s' % (field.name, ftype))
-#        other = ';'
-#
-#        # backend-specific extensions to fields
-#        if self.dbengine == 'mysql':
-#            if not hasattr(table, "_primarykey"):
-#                fields.append('PRIMARY KEY(%s)' % table._id.name)
-#            other = ' ENGINE=InnoDB CHARACTER SET utf8;'
-#
-#        fields = ',\n    '.join(fields)
-#        for rtablename in TFK:
-#            rfields = TFK[rtablename]
-#            pkeys = table._db[rtablename]._primarykey
-#            fkeys = [ rfields[k] for k in pkeys ]
-#            fields = fields + ',\n    ' + \
-#                     self.types['reference TFK'] % \
-#                     dict(table_name=tablename,
-#                     field_name=', '.join(fkeys),
-#                     foreign_table=rtablename,
-#                     foreign_key=', '.join(pkeys),
-#                     on_delete_action=field.ondelete)
-#
-#        if hasattr(table, '_primarykey'):
-#            query = '''CREATE TABLE %s(\n    %s,\n    %s) %s''' % \
-#                (tablename, fields, self.PRIMARY_KEY(', '.join(table._primarykey)), other)
-#        else:
-#            query = '''CREATE TABLE %s(\n    %s\n)%s''' % \
-#                (tablename, fields, other)
-#
+    def create_table(self, table, migrate=True, fake_migrate=False, polymodel=None):
+        fields = []
+        sql_fields = {}
+        sql_fields_aux = {}
+        TFK = {}
+        tablename = table._tablename
+        sortable = 0
+        for field in table:
+            sortable += 1
+            k = field.name
+            if isinstance(field.type, SQLCustomType):
+                ftype = field.type.native or field.type.type
+            elif field.type.startswith('reference'):
+                referenced = field.type[10:].strip()
+                constraint_name = self.constraint_name(tablename, field.name)
+                if hasattr(table, '_primarykey'):
+                    rtablename, rfieldname = referenced.split('.')
+                    rtable = table._db[rtablename]
+                    rfield = rtable[rfieldname]
+                    # must be PK reference or unique
+                    if rfieldname in rtable._primarykey or rfield.unique:
+                        ftype = self.types[rfield.type[:9]] % dict(length=rfield.length)
+                        # multicolumn primary key reference?
+                        if not rfield.unique and len(rtable._primarykey) > 1 :
+                            # then it has to be a table level FK
+                            if rtablename not in TFK:
+                                TFK[rtablename] = {}
+                            TFK[rtablename][rfieldname] = field.name
+                        else:
+                            ftype = ftype + \
+                                self.types['reference FK'] % dict(\
+                                constraint_name=constraint_name,
+                                table_name=tablename,
+                                field_name=field.name,
+                                foreign_key='%s (%s)' % (rtablename, rfieldname),
+                                on_delete_action=field.ondelete)
+                else:
+                    # make a guess here for circular references
+                    id_fieldname = referenced in table._db and table._db[referenced]._id.name or 'id'
+                    ftype = self.types[field.type[:9]]\
+                        % dict(table_name=tablename,
+                               field_name=field.name,
+                               constraint_name=constraint_name,
+                               foreign_key=referenced + ('(%s)' % id_fieldname),
+                               on_delete_action=field.ondelete)
+            elif field.type.startswith('list:reference'):
+                ftype = self.types[field.type[:14]]
+            elif field.type.startswith('decimal'):
+                precision, scale = map(int, field.type[8:-1].split(','))
+                ftype = self.types[field.type[:7]] % \
+                    dict(precision=precision, scale=scale)
+            elif not field.type in self.types:
+                raise SyntaxError('Field: unknown field type: %s for %s' % (field.type, field.name))
+            else:
+                ftype = self.types[field.type]\
+                     % dict(length=field.length)
+            if not field.type.startswith('id') and not field.type.startswith('reference'):
+                if field.notnull:
+                    ftype += ' NOT NULL'
+                else:
+                    ftype += self.ALLOW_NULL()
+                if field.unique:
+                    ftype += ' UNIQUE'
+
+            # add to list of fields
+            sql_fields[field.name] = dict(sortable=sortable,
+                                          type=str(field.type),
+                                          sql=ftype)
+
+            if isinstance(field.default, (str, int, float)):
+                # caveat: sql_fields and sql_fields_aux differ for default values
+                # sql_fields is used to trigger migrations and sql_fields_aux
+                # are used for create table
+                # the reason is that we do not want to trigger a migration simply
+                # because a default value changes
+                not_null = self.NOT_NULL(field.default, field.type)
+                ftype = ftype.replace('NOT NULL', not_null)
+            sql_fields_aux[field.name] = dict(sql=ftype)
+
+            fields.append('%s %s' % (field.name, ftype))
+        other = ';'
+
+        # backend-specific extensions to fields
+        if self.dbengine == 'mysql':
+            if not hasattr(table, "_primarykey"):
+                fields.append('PRIMARY KEY(%s)' % table._id.name)
+            other = ' ENGINE=InnoDB CHARACTER SET utf8;'
+
+        fields = ',\n    '.join(fields)
+        for rtablename in TFK:
+            rfields = TFK[rtablename]
+            pkeys = table._db[rtablename]._primarykey
+            fkeys = [ rfields[k] for k in pkeys ]
+            fields = fields + ',\n    ' + \
+                     self.types['reference TFK'] % \
+                     dict(table_name=tablename,
+                     field_name=', '.join(fkeys),
+                     foreign_table=rtablename,
+                     foreign_key=', '.join(pkeys),
+                     on_delete_action=field.ondelete)
+
+        if hasattr(table, '_primarykey'):
+            query = '''CREATE TABLE %s(\n    %s,\n    %s) %s''' % \
+                (tablename, fields, self.PRIMARY_KEY(', '.join(table._primarykey)), other)
+        else:
+            query = '''CREATE TABLE %s(\n    %s\n)%s''' % \
+                (tablename, fields, other)
+
 #        if self.uri.startswith('sqlite:///'):
 #            path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
 #            dbpath = self.uri[9:self.uri.rfind('/')].decode('utf8').encode(path_encoding)
 #        else:
 #            dbpath = self.folder
-#
-#        if not migrate:
-#            return query
+
+        if not migrate:
+            return query
 #        elif self.uri.startswith('sqlite:memory'):
 #            table._dbt = None
 #        elif isinstance(migrate, str):
