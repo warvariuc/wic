@@ -19,7 +19,7 @@ class Books(orm.Table):
     price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00', index=True) # 2 decimal places
     old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
     author = orm.ItemField(Authors, index=True)
-    fan = orm.fields.AnyItemField() # None means that this field may contain reference to any other table in the DB
+    fan = orm.fields.AnyItemField(index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])]
 

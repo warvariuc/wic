@@ -67,6 +67,9 @@ class Index():
         assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
         assert fields, 'You did not indicate which fields to index.'
         
+        if type == True:
+            type = 'index'
+            
         if name == '':
             for field in fields:
                 name += field.name + '_'

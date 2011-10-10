@@ -113,8 +113,6 @@ class Field(Expression):
         self.defaultValue = defaultValue
         
         if index:
-            if index == True:
-                index = 'index'
             self.table._indexes.append(orm.Index([self], index))
             
     def _render(self, adapter=None): # adapter - not needed?
@@ -202,18 +200,17 @@ class AnyItemField(Field):
     def _init(self, index=''):
         super()._init(None, None) # no column, but later we create two fields
             
-        tableIdField = TableIdField(name=self.name + '_table', table=self.table)
+        tableIdField = TableIdField(name=self.name + '_tid', table=self.table)
         tableIdField._init()
         setattr(self.table, tableIdField.name, tableIdField)
         
-        itemIdField = ItemField(name=self.name + '_item', table=self.table)
+        itemIdField = ItemField(name=self.name + '_id', table=self.table)
         itemIdField._init(None) # no refered table
         setattr(self.table, itemIdField.name, itemIdField)
         
-        #self.table._indexes.update()
+        self.table._indexes.append(orm.Index([tableIdField, itemIdField], index))
         
-        self.tableIdField = tableIdField
-        self.itemIdField = itemIdField
+        self._fields = dict(tableId=tableIdField, itemId=itemIdField)
 
     def _cast(self, value):
         if isinstance(value, orm.Table):
@@ -223,6 +220,6 @@ class AnyItemField(Field):
     def __eq__(self, other): 
         assert isinstance(other, orm.Table)
         return Expression('AND', 
-                          Expression('EQ', self.tableIdField, other._tableId), 
-                          Expression('EQ', self.itemIdField, other.id))
+                          Expression('EQ', self._fields['tableId'], other._tableId), 
+                          Expression('EQ', self._fields['itemId'], other.id))
 
