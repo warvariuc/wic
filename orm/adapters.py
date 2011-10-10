@@ -98,9 +98,9 @@ class Adapter():
     def _render(self, value, column):
         if value is None:
             return 'NULL'
-        if isinstance(column, orm.fields.IntColumn):
+        if column.type == 'int':
             return str(int(value))
-        if isinstance(column, orm.fields.BlobColumn):
+        if column.type == 'blob':
             return base64.b64encode(str(value))
         return str(value)  
 
@@ -140,7 +140,45 @@ class Adapter():
 
     def getTableCreateStatement(self, table):
         '''Get CREATE TABLE statement for this adapter'''
+        # TODO: table.__doc__ - use as comment for the table 
         raise NotImplemented
+
+    types = {
+        'boolean': 'CHAR(1)',
+        'string': 'CHAR(%(length)s)',
+        'text': 'TEXT',
+        'password': 'CHAR(%(length)s)',
+        'blob': 'BLOB',
+        'upload': 'CHAR(%(length)s)',
+        'integer': 'INTEGER',
+        'double': 'DOUBLE',
+        'decimal': 'DOUBLE',
+        'date': 'DATE',
+        'time': 'TIME',
+        'datetime': 'TIMESTAMP',
+        'id': 'INTEGER PRIMARY KEY AUTOINCREMENT',
+        'reference': 'INTEGER REFERENCES %(foreign_key)s ON DELETE %(on_delete_action)s',
+        'list:integer': 'TEXT',
+        'list:string': 'TEXT',
+        'list:reference': 'TEXT',
+        }
+
+    def columnInt(self, maxDigits, unsigned=False, **kwargs):
+        '''INT column type.'''
+        maxNumber = int('9' * maxDigits)
+        bytesCount = (len(bin(maxNumber)) - 2 + (not unsigned)) // 8
+        return ''
+    
+    def columnDecimal(self, maxDigits, decimalPlaces=0, **kwargs):
+        '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). The ranges of values for the arguments in MySQL 5.1 are as follows:
+        M is the maximum number of digits (the precision). It has a range of 1 to 65. (Older versions of MySQL permitted a range of 1 to 254.)
+        D is the number of digits to the right of the decimal point (the scale). It has a range of 0 to 30 and must be no larger than M.'''
+        return 'DECIMAL (%s, %s)' % (maxDigits, decimalPlaces)
+    
+    def columnChar(self, maxLength, lengthFixed=False, **kwargs):
+        '''CHAR, VARCHAR'''
+        return ''
+            
 
 
 class SqliteAdapter(Adapter):
@@ -148,7 +186,14 @@ class SqliteAdapter(Adapter):
 
 
 
-
+class Column():
+    '''Abstract DB column, supported natively by the DB.'''
+    def __init__(self, name, type, field, **kwargs):
+        self.name = name
+        self.type = type
+        self.field = field
+        self.__dict__.update(kwargs) 
+        
 
 #class BaseAdapter(ConnectionPool):
 #

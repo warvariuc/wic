@@ -3,39 +3,6 @@ import inspect
 import orm
 
 
-
-class Column():
-    '''Abstract DB column, supported natively by the DB.'''
-    def __init__(self, name, field):
-        self.name = name
-        self.field = field 
-        
-
-class IntColumn(Column):
-    '''INT column type.'''
-    def __init__(self, name, field, bytesCount, autoincrement=False, **kwargs):
-        super().__init__(name, field)
-        self.bytesCount = bytesCount
-        self.autoincrement = autoincrement
-
-
-class CharColumn(Column):
-    '''CHAR, VARCHAR'''
-    def __init__(self, name, field, maxLength, hasFixedLength=False, **kwargs):
-        super().__init__(name, field)
-        self.maxLength = maxLength
-        self.hasFixedLength = hasFixedLength
-        
-
-class BlobColumn(Column):
-    '''BLOB'''
-
-
-class TextColumn(Column):
-    '''TEXT'''
-
-
-
 class Nil(): '''Custom None'''
     
 
@@ -129,13 +96,13 @@ class Field(Expression):
 
 class StringField(Field):
     def _init(self, maxLength, defaultValue=None,  index=''):
-        super()._init(CharColumn(self.name, self, maxLength), defaultValue, index)
+        super()._init(orm.adapters.Column(self.name, 'char', self, maxLength=maxLength), defaultValue, index)
         self.maxLength = maxLength
 
 
 class IntegerField(Field):
     def _init(self, bytesCount, defaultValue=None, autoincrement=False, index=''):
-        super()._init(IntColumn(self.name, self, bytesCount, autoincrement), defaultValue, index)
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount, autoincrement), defaultValue, index)
         self.bytesCount = bytesCount
         self.autoincrement = autoincrement
 
@@ -144,7 +111,7 @@ class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
     def _init(self, maxDigits, decimalPlaces, defaultValue, index=''):
-        super()._init(IntColumn(self.name, self, 8), defaultValue, index)
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8), defaultValue, index)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
     
@@ -169,13 +136,13 @@ class DecimalFieldI(Field):
 class IdField(Field):
     '''Built-in id type - for each table.'''
     def _init(self):
-        super()._init(IntColumn(self.name, self, 8, autoincrement=True), None, 'primary')
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8, autoincrement=True), None, 'primary')
         
 
 class ItemField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index=''):
-        super()._init(IntColumn(self.name + '_id', self, 8), None, index)
+        super()._init(orm.adapters.Column(self.name + '_id', 'int', self, bytesCount=8), None, index)
         self.refTable = referTable # foreign key - referenced type of table
         
     def _cast(self, value):
@@ -187,7 +154,7 @@ class ItemField(Field):
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
     def _init(self, index=''):
-        super()._init(IntColumn(self.name + '_id', self, 2), None, index)
+        super()._init(orm.adapters.Column(self.name + '_id', 'int', self, bytesCount=2), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
