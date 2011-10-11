@@ -16,20 +16,38 @@ class TableMeta(type):
             for index in newClass._indexes :
                 assert isinstance(index, Index), 'Found a non Index in the _indexes.'
                 
-            for fieldName, field in newClass.getFields().items():
-                if not fieldName.islower() or fieldName.startswith('_'):
-                    raise Exception('Field `{}` in Table `{}`: field names must be lowercase and must not start with `_`.'.format(fieldName, name))
-                field_ = field.__class__() # recreate the field - to handle correctly inheritance
-                field_.name = fieldName
-                field_.table = newClass
-                field_._init(*field._initArgs, **field._initKwargs) # and initialize it
-                setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
+            for fieldName, field in inspect.getmembers(newClass):
+                if isinstance(field, orm.fields.Field):
+                    if not fieldName.islower() or fieldName.startswith('_'):
+                        raise Exception('Field `{}` in Table `{}`: field names must be lowercase and must not start with `_`.'.format(fieldName, name))
+                    field_ = field.__class__() # recreate the field - to handle correctly inheritance
+                    field_.name = fieldName
+                    field_.table = newClass
+                    field_._init(*field._initArgs, **field._initKwargs) # and initialize it
+                    setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
+                    
         return newClass
+
+    def __getitem__(self, key):
+        '''Able to do Table['field_name'].'''
+        attr = getattr(self, key, None)
+        if isinstance(attr, orm.fields.Field):
+            return attr
+        raise KeyError('Could not find field {} in table {}'.format(key, self.__name__))
+        
+                 
+    def __iter__(self):
+        for attrName in self.__dict__:
+            try:
+                yield self[attrName]
+            except KeyError:
+                pass 
+
 
 
 class Table(metaclass=TableMeta):
     '''Base class for all tables. Class attributes - the fields. 
-    Instance attributes with the same names - the values for the corresponding fields.'''
+    Instance (item) attributes with the same names - the values for the corresponding fields.'''
     id = orm.IdField() # this field is present in all tables
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
 
@@ -43,20 +61,23 @@ class Table(metaclass=TableMeta):
                 fieldValue = field._cast(kwargs.pop(fieldName, field.defaultValue))
                 setattr(self, fieldName, fieldValue)
     
-    @classmethod
-    def getFields(cls):
-        return {fieldName: field for fieldName, field in inspect.getmembers(cls) 
-                if isinstance(field, orm.fields.Field)}
-            
     def delete(self):
         (self.__class__.id == self.id).delete(self.adapter)
         
     def save(self):
         (self.__class__.id == self.id).update(self.adapter)
 
+    def __iter__(self):
+        for field in self.__class__:
+            yield (field.name, getattr(self, field.name))
+            
     @classmethod
     def getCreateStatement(cls, adapter):
         return adapter.getTableCreateStatement(cls)
+    
+    def __str__(self):
+        return self.__class__.__name__ + '(' + \
+            ', '.join('%s=%r' % value for value in self) + ')' 
 
 
 class Index():

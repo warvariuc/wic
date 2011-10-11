@@ -54,10 +54,21 @@ print(((Books.fan == author) | ((1 <= Books.id) & (Books.price > 9.99)))._render
 
 print('\nBooks indexes:')
 for index in Books._indexes:
-    print('   ', index)
+    print(' ', index)
     
 print()
 print(Books.author)
+
+print('\nBooks fields:')
+for i in Books:
+    print(' ', i)
+
+print('\nA Books item values:')
+for i in book:
+    print(' ', i)
+
+print('\nTextual representation of an item:')
+print(book)
 
 #book.author = Authors.load(1)
 #book.save(adapter)
