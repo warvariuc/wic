@@ -1,0 +1,41 @@
+#mysql
+
+delimiter $$
+
+CREATE TABLE `products` (
+  `product_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `brand_id` int(10) unsigned NOT NULL,
+  `category_id` int(10) unsigned NOT NULL,
+  `shop_id` int(10) unsigned NOT NULL,
+  `name` varchar(255) COLLATE utf8_bin NOT NULL,
+  `description` text COLLATE utf8_bin NOT NULL,
+  `price` decimal(18,2) unsigned DEFAULT '0.00' COMMENT 'Values for DECIMAL columns in MySQL 5.1 are stored using a binary format that packs nine decimal digits into 4 bytes.',
+  `original_url` varchar(255) COLLATE utf8_bin NOT NULL COMMENT 'Original url of the product in store',
+  `ratings_sum` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `ratings_count` int(10) unsigned NOT NULL DEFAULT '0',
+  `thumbnail_url` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `deleted` tinyint(4) NOT NULL DEFAULT '0' COMMENT 'Describes if product is already deleted',
+  `sphinx` text COLLATE utf8_bin COMMENT 'Additional info stored here for sphinx indexing',
+  `date_added` datetime NOT NULL,
+  `date_checked` datetime NOT NULL,
+  `thumbnail_downloaded` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `clicks` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `store_rating_sum` bigint(20) unsigned NOT NULL DEFAULT '0' COMMENT 'Item''s rating from store',
+  `store_rating_count` int(10) unsigned NOT NULL DEFAULT '0',
+  `auction` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `comments_count` int(10) unsigned DEFAULT NULL,
+  `object_id` varchar(32) COLLATE utf8_bin NOT NULL,
+  `expire_time` datetime DEFAULT NULL,
+  `current_bid` decimal(18,2) unsigned DEFAULT '0.00',
+  PRIMARY KEY (`product_id`),
+  KEY `brand_id` (`brand_id`),
+  KEY `category_id` (`category_id`),
+  KEY `shop_id` (`shop_id`),
+  CONSTRAINT `brand_id` FOREIGN KEY (`brand_id`) REFERENCES `brands` (`brand_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `category_id` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `shop_id` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Sold items'$$
+
+# sqlite:
+CREATE TABLE "authors" ("id" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "first_name" VARCHAR, "last_name" VARCHAR, "birth_date" DATETIME);
+CREATE TABLE "books" ("id" INTEGER PRIMARY KEY  NOT NULL ,"name" VARCHAR NOT NULL ,"price" INTEGER,"author" INTEGER,"_price" DECIMAL(10, 2));
