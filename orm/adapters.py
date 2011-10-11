@@ -70,7 +70,7 @@ class Adapter():
     def ADD(self, left, right):
         return '(%s + %s)' % (self.render(left), self.render(right, left))
     
-    def BELONGS(self, first, second):
+    def IN(self, first, second):
         if isinstance(second, str):
             return '(%s IN (%s))' % (self.render(first), second[:-1])
         items = ','.join(self.render(item, first) for item in second)
@@ -83,7 +83,7 @@ class Adapter():
         '''Render of a value in a format suitable for operations with this DB field'''
         if isinstance(value, orm.fields.Expression): # it's an expression
             return value._render(self) # render sub-expression
-        else: # it's a value for a DbField
+        else: # it's a value for a DB column
             if value is not None and castField is not None:
 #                print(castField, value)
                 assert isinstance(castField, orm.fields.Expression)

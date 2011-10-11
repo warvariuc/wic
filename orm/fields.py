@@ -30,9 +30,10 @@ class Expression():
     def __lt__(self, other): return Expression('LT', self, other)
     def __le__(self, other): return Expression('LE', self, other)
     def __add__(self, other): return Expression('ADD', self, other)
+    
     def IN(self, *items):
         '''The IN clause.''' 
-        return Expression('BELONGS', self, items)
+        return Expression('IN', self, items)
     
     def _render(self, db=None):
         '''Construct the text of the WHERE clause from this Expression.
