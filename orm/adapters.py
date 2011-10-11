@@ -97,11 +97,10 @@ class Adapter():
         
     def _render(self, value, column):
         if value is None:
-            return 'NULL'
-        if column.type == 'int':
-            return str(int(value))
-        if column.type == 'blob':
-            return base64.b64encode(str(value))
+            return self.NULL()
+        renderFunc = getattr(self, 'render' + column.type.capitalize(), None)
+        if hasattr(renderFunc, '__call__'): 
+            return renderFunc(value)
         return str(value)  
 
 #            elif isinstance(dbType, DbIntegerField):
@@ -163,11 +162,20 @@ class Adapter():
         'list:reference': 'TEXT',
         }
 
+    def NULL(self):   
+        return 'NULL'
+        
     def columnInt(self, maxDigits, unsigned=False, **kwargs):
         '''INT column type.'''
         maxNumber = int('9' * maxDigits)
         bytesCount = (len(bin(maxNumber)) - 2 + (not unsigned)) // 8
         return ''
+    
+    def renderInt(self, value):
+        return str(int(value))
+
+    def renderBlob(self, value):
+        return base64.b64encode(str(value))
     
     def columnDecimal(self, maxDigits, decimalPlaces=0, **kwargs):
         '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). The ranges of values for the arguments in MySQL 5.1 are as follows:

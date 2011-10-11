@@ -21,7 +21,7 @@ class Books(orm.Table):
     author = orm.ItemField(Authors, index=True)
     fan = orm.fields.AnyItemField(index=True) # None means that this field may contain reference to any other table in the DB
 
-#    _indexes = [orm.Index([author, fan])]
+#    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
 
 ADAPTERS = dict(sqlite=orm.SqliteAdapter) # available adapters
 
@@ -56,7 +56,7 @@ print('\nBooks indexes:')
 for index in Books._indexes:
     print(' ', index)
     
-print()
+print('\nTextual representation of a field:')
 print(Books.author)
 
 print('\nBooks fields:')
@@ -66,6 +66,9 @@ for i in Books:
 print('\nA Books item values:')
 for i in book:
     print(' ', i)
+
+print('\nTextual representation of a Table:')
+print(Books)
 
 print('\nTextual representation of an item:')
 print(book)

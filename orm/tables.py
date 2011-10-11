@@ -29,7 +29,7 @@ class TableMeta(type):
         return newClass
 
     def __getitem__(self, key):
-        '''Able to do Table['field_name'].'''
+        '''Get a Table Field by name - Table['field_name'].'''
         attr = getattr(self, key, None)
         if isinstance(attr, orm.fields.Field):
             return attr
@@ -37,11 +37,15 @@ class TableMeta(type):
         
                  
     def __iter__(self):
+        '''Get Table fields.'''
         for attrName in self.__dict__:
             try:
                 yield self[attrName]
             except KeyError:
                 pass 
+
+    def __str__(self):
+        return self.__name__ 
 
 
 
@@ -58,7 +62,7 @@ class Table(metaclass=TableMeta):
         # make values for fields 
         for fieldName, field in inspect.getmembers(self.__class__):
             if isinstance(field, orm.fields.Field):
-                fieldValue = field._cast(kwargs.pop(fieldName, field.defaultValue))
+                fieldValue = kwargs.pop(fieldName, field.defaultValue)
                 setattr(self, fieldName, fieldValue)
     
     def delete(self):
@@ -67,12 +71,19 @@ class Table(metaclass=TableMeta):
     def save(self):
         (self.__class__.id == self.id).update(self.adapter)
 
+    def __getitem__(self, key):
+        '''Get an Item value by Field name - Item['field_name'].'''
+        self.__class__[key] # be sure that key is name of a field
+        return getattr(self, key)
+
     def __iter__(self):
+        '''Get item values.'''
         for field in self.__class__:
             yield (field.name, getattr(self, field.name))
             
     @classmethod
     def getCreateStatement(cls, adapter):
+        '''CREATE TABLE statement for the given DB.'''
         return adapter.getTableCreateStatement(cls)
     
     def __str__(self):
