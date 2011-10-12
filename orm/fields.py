@@ -41,10 +41,6 @@ class Expression():
         db = db or orm.defaultAdapter
         operation = self.operation
         operation = getattr(db, operation)
-#        try:
-#            operation = getattr(db, operation)
-#        except AttributeError:
-#            return '(%s)' % self.operation
             
         if self.right is not Nil:
             return operation(self.left, self.right)
@@ -72,7 +68,9 @@ class Field(Expression):
         self.name = kwargs.pop('name', None)
         self.table = kwargs.pop('table', None) # part of which table is this field
         self._initArgs = args # field will be initalized using these params later, when the class is created
-        self._initKwargs = kwargs 
+        self._initKwargs = kwargs
+        orm._fieldsCount += 1
+        self._orderNo = orm._fieldsCount  
 
     def _init(self, column, defaultValue, index=''):
         '''This is called by the Table metaclass to initialize the Field after a Table subclass is created.'''
@@ -155,7 +153,7 @@ class ItemField(Field):
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
     def _init(self, index=''):
-        super()._init(orm.adapters.Column(self.name + '_tid', 'int', self, bytesCount=2), None, index)
+        super()._init(orm.adapters.Column(self.name + '_id', 'int', self, bytesCount=2), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
@@ -168,11 +166,11 @@ class AnyItemField(Field):
     def _init(self, index=''):
         super()._init(None, None) # no column, but later we create two fields
             
-        tableIdField = TableIdField(name=self.name, table=self.table)
+        tableIdField = TableIdField(name=self.name + '_table', table=self.table)
         tableIdField._init()
         setattr(self.table, tableIdField.name, tableIdField)
         
-        itemIdField = ItemField(name=self.name, table=self.table)
+        itemIdField = ItemField(name=self.name + '_item', table=self.table)
         itemIdField._init(None) # no refered table
         setattr(self.table, itemIdField.name, itemIdField)
         

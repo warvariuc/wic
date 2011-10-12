@@ -16,15 +16,18 @@ class TableMeta(type):
             for index in newClass._indexes :
                 assert isinstance(index, Index), 'Found a non Index in the _indexes.'
                 
-            for fieldName, field in inspect.getmembers(newClass):
-                if isinstance(field, orm.fields.Field):
-                    if not fieldName.islower() or fieldName.startswith('_'):
-                        raise Exception('Field `{}` in Table `{}`: field names must be lowercase and must not start with `_`.'.format(fieldName, name))
-                    field_ = field.__class__() # recreate the field - to handle correctly inheritance
-                    field_.name = fieldName
-                    field_.table = newClass
-                    field_._init(*field._initArgs, **field._initKwargs) # and initialize it
-                    setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
+            fields = [(fieldName, field) for fieldName, field in inspect.getmembers(newClass)
+                        if isinstance(field, orm.fields.Field)]
+            fields.sort(key=lambda f: f[1]._orderNo)
+            
+            for fieldName, field in fields:
+                if not fieldName.islower() or fieldName.startswith('_'):
+                    raise Exception('Field `{}` in Table `{}`: field names must be lowercase and must not start with `_`.'.format(fieldName, name))
+                field_ = field.__class__() # recreate the field - to handle correctly inheritance
+                field_.name = fieldName
+                field_.table = newClass
+                field_._init(*field._initArgs, **field._initKwargs) # and initialize it
+                setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
                     
         return newClass
 
@@ -38,14 +41,18 @@ class TableMeta(type):
                  
     def __iter__(self):
         '''Get Table fields.'''
+        fields = []
         for attrName in self.__dict__:
             try:
-                yield self[attrName]
+                fields.append(self[attrName])
             except KeyError:
                 pass 
+        fields.sort(key=lambda field: field._orderNo)
+        for field in fields:
+            yield field
 
     def __str__(self):
-        return self.__name__ 
+        return self.__name__.lower() 
 
 
 
@@ -54,6 +61,11 @@ class Table(metaclass=TableMeta):
     Instance (item) attributes with the same names - the values for the corresponding fields.'''
     id = orm.IdField() # this field is present in all tables
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
+
+    def __new__(cls, *args, **kwargs):
+        obj = super().__new__(cls, *args, **kwargs)
+        print(args, kwargs)
+        return obj
 
     def __init__(self, **kwargs):
         '''Initialize a new record of this table.'''
@@ -84,7 +96,7 @@ class Table(metaclass=TableMeta):
     @classmethod
     def getCreateStatement(cls, adapter):
         '''CREATE TABLE statement for the given DB.'''
-        return adapter.getTableCreateStatement(cls)
+        return adapter.getCreateTableQuery(cls)
     
     def __str__(self):
         return self.__class__.__name__ + '(' + \
@@ -94,10 +106,21 @@ class Table(metaclass=TableMeta):
 class Index():
     '''Defines a DB table index.
     type: index, unique, fulltext, spatial
+    sort: asc, desc
     method: btree, hash, gist, and gin'''
-    def __init__(self, fields, type='index', name='', method='', prefixLength=None, **kwargs):
+    def __init__(self, fields, type='index', name='', sortOrders=None, prefixLengths=None, method='', **kwargs):
         assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
         assert fields, 'You did not indicate which fields to index.'
+        table = fields[0].table
+        for field in fields:
+            assert isinstance(field, orm.fields.Field)
+            if field.table is not table:
+                raise AssertionError('Indexed fields should be from the same table!') 
+        sortOrders = sortOrders or ['asc'] * len(fields) 
+        prefixLengths = prefixLengths or [0] * (len(fields))
+        assert isinstance(sortOrders, (list, tuple)), 'Sort orders must be a list.'
+        assert isinstance(prefixLengths, (list, tuple)), 'Prefix lengths must be a list.'
+        assert len(fields) == len(sortOrders) == len(prefixLengths), 'Lists of fields, sort orders and prefix lengths must be the same.'
         
         if type == True:
             type = 'index'
@@ -109,8 +132,10 @@ class Index():
         self.name = name
         self.fields = fields # fields involved in this index
         self.type = type # index type: unique, primary, etc.
+        self.prefixLengths = prefixLengths # prefix lengths
+        self.sortOrders = sortOrders # sort direction: asc, desc
         self.method = method # if empty - will be used default for this type of DB
-        self.__dict__.update(kwargs) # other parameters for a specific DB adapter
+        self.other = kwargs # other parameters for a specific DB adapter
     
     def __str__(self):
         return '{} `{}` ON ({}) {}'.format(self.type, self.name, 

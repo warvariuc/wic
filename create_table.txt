@@ -1,9 +1,8 @@
 #mysql
-
 delimiter $$
 
 CREATE TABLE `products` (
-  `product_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `product_id` int(31) unsigned NOT NULL AUTO_INCREMENT,
   `brand_id` int(10) unsigned NOT NULL,
   `category_id` int(10) unsigned NOT NULL,
   `shop_id` int(10) unsigned NOT NULL,
@@ -28,6 +27,7 @@ CREATE TABLE `products` (
   `expire_time` datetime DEFAULT NULL,
   `current_bid` decimal(18,2) unsigned DEFAULT '0.00',
   PRIMARY KEY (`product_id`),
+  UNIQUE KEY `sdfg` (`shop_id`,`object_id`),
   KEY `brand_id` (`brand_id`),
   KEY `category_id` (`category_id`),
   KEY `shop_id` (`shop_id`),
@@ -36,6 +36,32 @@ CREATE TABLE `products` (
   CONSTRAINT `shop_id` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Sold items'$$
 
+
+
+
+
+
+
 # sqlite:
+
 CREATE TABLE "authors" ("id" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL , "first_name" VARCHAR, "last_name" VARCHAR, "birth_date" DATETIME);
 CREATE TABLE "books" ("id" INTEGER PRIMARY KEY  NOT NULL ,"name" VARCHAR NOT NULL ,"price" INTEGER,"author" INTEGER,"_price" DECIMAL(10, 2));
+CREATE INDEX "1" ON "authors" ("birth_date" ASC);
+CREATE INDEX "ddd" ON "authors" ("first_name" ASC, "last_name" DESC);
+CREATE UNIQUE INDEX "i4" ON "authors" ("last_name" DESC);
+
+
+# primary key on multiple columns
+CREATE TABLE something ( column1 INTEGER not null , column2 INTEGER not null , value, PRIMARY KEY ( column1,column2));
+
+
+#postgres
+
+CREATE TABLE public.test_table
+(col1 int8 NOT NULL,
+col2 char(25),
+col3 varchar(25),
+col4 numeric(10),
+col5 date,
+PRIMARY KEY (col1),
+UNIQUE (col3))
