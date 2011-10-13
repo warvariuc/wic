@@ -61,14 +61,14 @@ print(Books.getCreateStatement(orm.defaultAdapter))
 
 #print(Authors.id.table, Books.id.table) # though id is inehrited from base model - you can see that now each table has its personal id field
 
-author = Authors(first_name='Linus', last_name='Torvalds', id=1) # new item in books catalog 
+author = Authors.new(dbAdapter, first_name='Linus', last_name='Torvalds', id=1) # new item in books catalog 
 
-book = Books(name='Just for Fun: The Story of an Accidental Revolutionary',
+book = Books.new(dbAdapter, name='Just for Fun: The Story of an Accidental Revolutionary',
                  price='14.99') # new item in books catalog 
 
-print('\nA Books item values:')
-for i in book:
-    print(' ', i)
+#print('\nA Books item values:')
+#for i in book:
+#    print(' ', i)
 
 print('\nTextual representation of an item:')
 print(book)

@@ -55,52 +55,71 @@ class TableMeta(type):
         return self.__name__.lower() 
 
 
+class class_or_instance_method():
+    '''If you decorate a method with this - it will pass as the first argument instance or class.'''
+    def __init__(self, method):
+        self.method = method
+    
+    def __get__(self, obj, objtype):
+        x = obj or objtype
+        def wrapped(*args, **kwargs):
+            return self.method(x, *args, **kwargs)
+        return wrapped        
+
 
 class Table(metaclass=TableMeta):
     '''Base class for all tables. Class attributes - the fields. 
-    Instance (item) attributes with the same names - the values for the corresponding fields.'''
+    Instance of this class are WHERE queries on this table.'''
     id = orm.IdField() # this field is present in all tables
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
 
-    def __new__(cls, *args, **kwargs):
-        obj = super().__new__(cls, *args, **kwargs)
-        print(args, kwargs)
-        return obj
+    def __init__(self, expression):
+        assert isinstance(expression, orm.fields.Expression)
+        self.where = expression
 
-    def __init__(self, **kwargs):
-        '''Initialize a new record of this table.'''
-        self.adapter = kwargs.pop('db', orm.defaultAdapter) # in which db?
-        
-        # make values for fields 
-        for fieldName, field in inspect.getmembers(self.__class__):
-            if isinstance(field, orm.fields.Field):
-                fieldValue = kwargs.pop(fieldName, field.defaultValue)
-                setattr(self, fieldName, fieldValue)
-    
-    def delete(self):
-        (self.__class__.id == self.id).delete(self.adapter)
-        
-    def save(self):
-        (self.__class__.id == self.id).update(self.adapter)
-
-    def __getitem__(self, key):
-        '''Get an Item value by Field name - Item['field_name'].'''
-        self.__class__[key] # be sure that key is name of a field
-        return getattr(self, key)
-
-    def __iter__(self):
-        '''Get item values.'''
-        for field in self.__class__:
-            yield (field.name, getattr(self, field.name))
-            
     @classmethod
     def getCreateStatement(cls, adapter):
         '''CREATE TABLE statement for the given DB.'''
         return adapter.getCreateTableQuery(cls)
     
+    @classmethod
+    def new(cls, adapter, **kwargs):
+        '''Create new item of this Table'''
+        return Item(cls, adapter, **kwargs)
+    
+    @class_or_instance_method
+    def select(self, where=None):
+        if where is None:
+            assert isinstance(self, Table), 'Provide a WHERE expression.'
+            where = self.where                
+        assert isinstance(where, orm.fields.Expression)
+        return []
+
+
+
+class Item():
+    '''Row/record of a Table - new or existing.'''
+    def __init__(self, _table, _adapter, **kwargs):
+        '''Initialize a new record of the given table in the given database.'''
+        assert inspect.isclass(_table) and issubclass(_table, Table)
+        
+        self._table = _table
+        self._adapter = _adapter # in which db?
+        
+        for field in _table: # make values for fields
+            setattr(self, field.name, kwargs.pop(field.name, field.defaultValue))
+    
+    def delete(self):
+        #self._table(self._table.id == self.id).delete(self._adapter)
+        self._table(id=self.id).delete(self._adapter)
+        
+    def save(self):
+        (self._table.id == self.id).update(self._adapter)
+
     def __str__(self):
-        return self.__class__.__name__ + '(' + \
-            ', '.join('%s=%r' % value for value in self) + ')' 
+        return '%s(%s)' % (self._table.__name__, 
+            ', '.join('%s=%r' % (field.name, getattr(self, field.name))
+                       for field in self._table)) 
 
 
 class Index():

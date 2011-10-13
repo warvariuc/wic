@@ -89,12 +89,11 @@ class Adapter():
             return value._render(self) # render sub-expression
         else: # it's a value for a DB column
             if value is not None and castField is not None:
-#                print(castField, value)
                 assert isinstance(castField, orm.fields.Expression)
-                if isinstance(castField, orm.fields.Field):
-                    pass
-                elif isinstance(castField, orm.fields.Expression):
-                    castField = castField.type
+                if isinstance(castField, orm.fields.Field): # Field - subclass of Expression
+                    pass # TODO: JOIN
+                else: # is the Expression itself
+                    castField = castField.type # expression right operand type
                 value = castField._cast(value)
                 return self._render(value, castField.column) 
             return self._render(value, None)
@@ -128,13 +127,6 @@ class Adapter():
 #                obj = str(obj)
         
              
-#    def __call__(self, expression=None):
-#        if isinstance(expression, Table):
-#            expression = expression._id > 0
-#        elif isinstance(expression, Field):
-#            expression = expression != None
-#        return Set(self, expression)
-
     def IntegrityError(self): 
         return self.driver.IntegrityError
     

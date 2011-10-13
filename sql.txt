@@ -1,3 +1,7 @@
+SELECT a.first_name AS f FROM authors AS a
+JOIN books AS b
+ON b.author = a.id
+
 #mysql
 delimiter $$
 

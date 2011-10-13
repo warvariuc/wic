@@ -133,7 +133,7 @@ class DecimalFieldI(Field):
 
 
 class IdField(Field):
-    '''Built-in id type - for each table.'''
+    '''ID - implicitly present in each table.'''
     def _init(self):
         super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8, autoincrement=True), None, 'primary')
         
@@ -145,8 +145,9 @@ class ItemField(Field):
         self.refTable = referTable # foreign key - referenced type of table
         
     def _cast(self, value):
-        if isinstance(value, orm.Table):
-            return value.id
+        '''Convert a value into another value wihch is ok for this Field.'''
+        if isinstance(value, orm.Item):
+            return value.id # ItemField() == Item() -> ItemField() == Item().id
         return value
 
 
