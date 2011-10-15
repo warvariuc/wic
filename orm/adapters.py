@@ -18,7 +18,6 @@ except ImportError:
 
 class Adapter():
     '''Generic DB adapter.'''
-    
     def __init__(self, uri='', connect=True):
         '''URI is already without protocol.'''
         print(uri)
@@ -80,7 +79,7 @@ class Adapter():
     def IN(self, first, second):
         if isinstance(second, str):
             return '(%s IN (%s))' % (self.render(first), second[:-1])
-        items = ','.join(self.render(item, first) for item in second)
+        items = ', '.join(self.render(item, first) for item in second)
         return '(%s IN (%s))' % (self.render(first), items)
     
     def render(self, value, castField=None):
@@ -95,7 +94,11 @@ class Adapter():
                 else: # is the Expression itself
                     castField = castField.type # expression right operand type
                 value = castField._cast(value)
-                return self._render(value, castField.column) 
+                try:
+                    return self._render(value, castField.column)
+                except:
+                    print('Check %r._cast().' % castField)
+                    raise
             return self._render(value, None)
         
     def _render(self, value, column):
@@ -170,7 +173,7 @@ class Adapter():
         return ''
 
     def getCreateTableQuery(self, table):
-        '''Get CREATE TABLE statement for this adapter'''
+        '''Get CREATE TABLE statement for this database'''
         assert inspect.isclass(table) and issubclass(table, orm.Table)
         
         columns = self._getCreateTableColumns(table)

@@ -85,7 +85,7 @@ class Table(metaclass=TableMeta):
     @classmethod
     def new(cls, adapter, **kwargs):
         '''Create new item of this Table'''
-        return Item(cls, adapter, **kwargs)
+        return Record(cls, adapter, **kwargs)
     
     @class_or_instance_method
     def select(self, where=None):
@@ -97,7 +97,7 @@ class Table(metaclass=TableMeta):
 
 
 
-class Item():
+class Record():
     '''Row/record of a Table - new or existing.'''
     def __init__(self, _table, _adapter, **kwargs):
         '''Initialize a new record of the given table in the given database.'''

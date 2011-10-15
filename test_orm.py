@@ -18,8 +18,8 @@ class Books(orm.Table):
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
     price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00', index=True) # 2 decimal places
     old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
-    author = orm.ItemField(Authors, index=True)
-    fan = orm.fields.AnyItemField(index=True) # None means that this field may contain reference to any other table in the DB
+    author = orm.RecordIdField(Authors, index=True)
+    fan = orm.fields.RecordIdField(None, index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
 

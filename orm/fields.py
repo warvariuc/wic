@@ -7,6 +7,7 @@ class Nil(): '''Custom None'''
     
 
 class Expression():
+    '''Expression - pair of operands and operation on them.'''
     def __init__(self, operation, left=Nil, right=Nil, type=None): # FIXME: type parameter not needed?
         self.operation = operation
         self.left = left # left operand
@@ -21,26 +22,35 @@ class Expression():
         else:
             self.type = type
         
-    def __and__(self, other): return Expression('AND', self, other)
-    def __or__(self, other): return Expression('OR', self, other)
-    def __eq__(self, other): return Expression('EQ', self, other)
-    def __ne__(self, other): return Expression('NE', self, other)
-    def __gt__(self, other): return Expression('GT', self, other)
-    def __ge__(self, other): return Expression('GE', self, other)
-    def __lt__(self, other): return Expression('LT', self, other)
-    def __le__(self, other): return Expression('LE', self, other)
-    def __add__(self, other): return Expression('ADD', self, other)
+    def __and__(self, other): 
+        return Expression('AND', self, other)
+    def __or__(self, other): 
+        return Expression('OR', self, other)
+    def __eq__(self, other): 
+        return Expression('EQ', self, other)
+    def __ne__(self, other): 
+        return Expression('NE', self, other)
+    def __gt__(self, other): 
+        return Expression('GT', self, other)
+    def __ge__(self, other): 
+        return Expression('GE', self, other)
+    def __lt__(self, other): 
+        return Expression('LT', self, other)
+    def __le__(self, other): 
+        return Expression('LE', self, other)
+    def __add__(self, other): 
+        return Expression('ADD', self, other)
     
     def IN(self, *items):
         '''The IN clause.''' 
         return Expression('IN', self, items)
     
-    def _render(self, db=None):
+    def _render(self, adapter=None):
         '''Construct the text of the WHERE clause from this Expression.
-        db - db adapter to use for rendering. If None - use default.'''
-        db = db or orm.defaultAdapter
+        adapter - db adapter to use for rendering. If None - use default.'''
+        adapter = adapter or orm.defaultAdapter
         operation = self.operation
-        operation = getattr(db, operation)
+        operation = getattr(adapter, operation)
             
         if self.right is not Nil:
             return operation(self.left, self.right)
@@ -138,7 +148,7 @@ class IdField(Field):
         super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8, autoincrement=True), None, 'primary')
         
 
-class ItemField(Field):
+class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index=''):
         super()._init(orm.adapters.Column(self.name + '_id', 'int', self, bytesCount=8), None, index)
@@ -146,7 +156,7 @@ class ItemField(Field):
         
     def _cast(self, value):
         '''Convert a value into another value wihch is ok for this Field.'''
-        if isinstance(value, orm.Item):
+        if isinstance(value, orm.Record):
             return value.id # ItemField() == Item() -> ItemField() == Item().id
         return value
 
@@ -162,7 +172,8 @@ class TableIdField(Field):
         return value
 
 
-class AnyItemField(Field):
+# TODO: AnyRecordIdField - replace it with RecordIdField(None)
+class AnyRecordIdField(Field):
     '''This field stores id of a row of any table.'''
     def _init(self, index=''):
         super()._init(None, None) # no column, but later we create two fields
@@ -171,13 +182,13 @@ class AnyItemField(Field):
         tableIdField._init()
         setattr(self.table, tableIdField.name, tableIdField)
         
-        itemIdField = ItemField(name=self.name + '_item', table=self.table)
-        itemIdField._init(None) # no refered table
-        setattr(self.table, itemIdField.name, itemIdField)
+        recordIdField = RecordIdField(name=self.name + '_item', table=self.table)
+        recordIdField._init(None) # no refered table
+        setattr(self.table, recordIdField.name, recordIdField)
         
-        self.table._indexes.append(orm.Index([tableIdField, itemIdField], index))
+        self.table._indexes.append(orm.Index([tableIdField, recordIdField], index))
         
-        self._fields = dict(tableId=tableIdField, itemId=itemIdField)
+        self._fields = dict(tableId=tableIdField, itemId=recordIdField)
 
     def _cast(self, value):
         if isinstance(value, orm.Table):
@@ -189,4 +200,3 @@ class AnyItemField(Field):
         return Expression('AND', 
                   Expression('EQ', self._fields['tableId'], other._tableId), 
                   Expression('EQ', self._fields['itemId'], other.id))
-
