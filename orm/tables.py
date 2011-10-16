@@ -76,7 +76,7 @@ class Table(metaclass=TableMeta):
         return Record(cls, adapter, **kwargs)
     
     @orm.class_or_instance_method
-    def select(self, where=None):
+    def select(self, adapter, where=None, join=()):
         if where is None:
             assert isinstance(self, Table), 'Provide a WHERE expression.'
             where = self.where                

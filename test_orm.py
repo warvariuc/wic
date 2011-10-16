@@ -81,7 +81,7 @@ print(where._render())
 
 print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render())
 
-print(repr(Books.author.referTable))
+print(Books(Books.price > 5).select(dbAdapter, join=[Authors]))
 
 #print(Books((Books.fan == author) | ((1 <= Books.id) & (Books.price > 9.99)))._render())
 

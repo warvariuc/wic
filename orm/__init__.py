@@ -19,10 +19,11 @@ class class_or_instance_method():
     def __init__(self, method):
         self.method = method
     
-    def __get__(self, obj, objtype):
-        x = obj or objtype
+    def __get__(self, obj, objType):
+        if obj is None:
+            obj = objType
         def wrapped(*args, **kwargs):
-            return self.method(x, *args, **kwargs)
+            return self.method(obj, *args, **kwargs)
         return wrapped        
 
 

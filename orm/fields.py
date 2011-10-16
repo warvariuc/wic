@@ -49,8 +49,7 @@ class Expression():
         '''Construct the text of the WHERE clause from this Expression.
         adapter - db adapter to use for rendering. If None - use default.'''
         adapter = adapter or orm.defaultAdapter
-        operation = self.operation
-        operation = getattr(adapter, operation)
+        operation = getattr(adapter, self.operation)
             
         if self.right is not Nil:
             return operation(self.left, self.right)
@@ -62,14 +61,6 @@ class Expression():
         '''Converts a value to Field's comparable type. Default implementation.'''
         return value
     
-#    def encode(self, x):
-#        '''Function which processes the value before writing it to the DB'''
-#        return x
-#
-#    def decode(self, x):
-#        '''Function which processes the value after reading it from the DB'''
-#        return x
-
 
 
 class Field(Expression):
@@ -92,16 +83,11 @@ class Field(Expression):
             self.table._indexes.append(orm.Index([self], index))
             
     def _render(self, adapter=None): # adapter - not needed?
-        return self.column.name
+        return '%s.%s' % (self.table, self.column.name)
     
     def __str__(self):
         return '{}.{}'.format(self.table.__name__, self.name)
         
-#    def validate(self, x):
-#        '''This function is called just before writing the value to the DB.
-#        If validation if not passed it raises ValidationError.'''
-#        return True # dummy validator which is always passed 
-
 
 class StringField(Field):
     def _init(self, maxLength, defaultValue=None,  index=''):
@@ -133,14 +119,6 @@ class DecimalFieldI(Field):
             return value
         return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
 
-#    def encode(self, x):
-#        '''Function which processes the value before writing it to the DB.'''
-#        return int(x * (10 ** self.decimalPlaces))
-#
-#    def decode(self, x):
-#        '''Function which processes the value after reading it from the DB'''
-#        return Decimal(x / (10 ** self.decimalPlaces))
-
 
 class IdField(Field):
     '''ID - implicitly present in each table.'''
@@ -164,8 +142,12 @@ class RecordIdField(Field):
     def _cast(self, value):
         '''Convert a value into another value wihch is ok for this Field.'''
         if isinstance(value, orm.Record):
-            return value.id # ItemField() == Item() -> ItemField() == Item().id
-        return value
+            value = value.id # ItemField() == Item() -> ItemField() == Item().id
+            
+        try:
+            return int(value)
+        except ValueError:
+            raise SyntaxError('Record ID must be an integer.')
 
 
 class TableIdField(Field):
@@ -179,9 +161,9 @@ class TableIdField(Field):
         return value
 
 
-# TODO: AnyRecordIdField - replace it with RecordIdField(None)
 class AnyRecordIdField(Field):
-    '''This field stores id of a row of any table.'''
+    '''This field stores id of a row of any table.
+    It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID.'''
     def _init(self, index=''):
         super()._init(None, None) # no column, but later we create two fields
             
