@@ -18,7 +18,7 @@ class Books(orm.Table):
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
     price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00', index=True) # 2 decimal places
     old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
-    author = orm.RecordIdField(Authors, index=True)
+    author = orm.RecordIdField('Authors', index=True)
     fan = orm.fields.RecordIdField(None, index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
@@ -80,6 +80,8 @@ where = ((Books.author == author) | ((1 <= Books.id) & (Books.price > 9.99)))
 print(where._render())
 
 print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render())
+
+print(repr(Books.author.referTable))
 
 #print(Books((Books.fan == author) | ((1 <= Books.id) & (Books.price > 9.99)))._render())
 

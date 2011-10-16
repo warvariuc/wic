@@ -152,7 +152,14 @@ class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index=''):
         super()._init(orm.adapters.Column(self.name + '_id', 'int', self, bytesCount=8), None, index)
-        self.refTable = referTable # foreign key - referenced type of table
+        self._referTable = referTable # foreign key - referenced type of table
+        
+    def getReferTable(self):
+        if isinstance(self._referTable, orm.Table): 
+            return self._referTable
+        return orm.getObjectByPath(self._referTable, self.table.__module__)
+    
+    referTable = property(getReferTable)
         
     def _cast(self, value):
         '''Convert a value into another value wihch is ok for this Field.'''

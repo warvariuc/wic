@@ -23,7 +23,7 @@ class TableMeta(type):
             for fieldName, field in fields:
                 if not fieldName.islower() or fieldName.startswith('_'):
                     raise Exception('Field `{}` in Table `{}`: field names must be lowercase and must not start with `_`.'.format(fieldName, name))
-                field_ = field.__class__() # recreate the field - to handle correctly inheritance
+                field_ = field.__class__() # recreate the field - to handle correctly inheritance of Tables
                 field_.name = fieldName
                 field_.table = newClass
                 field_._init(*field._initArgs, **field._initKwargs) # and initialize it
@@ -55,18 +55,6 @@ class TableMeta(type):
         return self.__name__.lower() 
 
 
-class class_or_instance_method():
-    '''If you decorate a method with this - it will pass as the first argument instance or class.'''
-    def __init__(self, method):
-        self.method = method
-    
-    def __get__(self, obj, objtype):
-        x = obj or objtype
-        def wrapped(*args, **kwargs):
-            return self.method(x, *args, **kwargs)
-        return wrapped        
-
-
 class Table(metaclass=TableMeta):
     '''Base class for all tables. Class attributes - the fields. 
     Instance of this class are WHERE queries on this table.'''
@@ -87,7 +75,7 @@ class Table(metaclass=TableMeta):
         '''Create new item of this Table'''
         return Record(cls, adapter, **kwargs)
     
-    @class_or_instance_method
+    @orm.class_or_instance_method
     def select(self, where=None):
         if where is None:
             assert isinstance(self, Table), 'Provide a WHERE expression.'
