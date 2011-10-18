@@ -27,7 +27,7 @@ class class_or_instance_method():
         return wrapped        
 
 
-from orm.fields import IdField, StringField, DecimalFieldI, RecordIdField, AnyRecordIdField
+from orm.fields import Expression, Field, IdField, StringField, DecimalFieldI, RecordIdField, AnyRecordIdField
 from orm.tables import Table, Record, Index
 from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter as _Adapter
 

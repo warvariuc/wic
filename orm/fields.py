@@ -86,7 +86,7 @@ class Field(Expression):
         return '%s.%s' % (self.table, self.column.name)
     
     def __str__(self):
-        return '{}.{}'.format(self.table.__name__, self.name)
+        return '{}.{}'.format(self.table, self.name)
         
 
 class StringField(Field):

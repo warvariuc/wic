@@ -47,7 +47,7 @@ class TableMeta(type):
                 fields.append(self[attrName])
             except KeyError:
                 pass 
-        fields.sort(key=lambda field: field._orderNo)
+        fields.sort(key=lambda field: field._orderNo) # sort by creation order - because __dict__ is unordered
         for field in fields:
             yield field
 
@@ -77,11 +77,16 @@ class Table(metaclass=TableMeta):
     
     @orm.class_or_instance_method
     def select(self, adapter, where=None, join=()):
-        if where is None:
-            assert isinstance(self, Table), 'Provide a WHERE expression.'
-            where = self.where                
-        assert isinstance(where, orm.fields.Expression)
-        return []
+        if isinstance(self, Table): # it's an instance of Table
+            table = self.__class__
+            where = self.where
+        else: # it's a Table
+            assert where is not None, 'Provide a WHERE expression.'
+            table = self
+        assert isinstance(where, orm.fields.Expression), 'WHERE should be an Expression.'
+        fields = map(str, table) # list of fields to select
+        table = str(table)
+        return list(fields) #adapter.makeSelectQuery(table, fields, where)
 
 
 

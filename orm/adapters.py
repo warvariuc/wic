@@ -220,6 +220,146 @@ class Adapter():
             return 'VARCHAR(%i)' % maxLength
             
 
+    def _select(self, where, fields, orderby=False, limitby=False, join=False, distinct=False, groupby=False, 
+                having=False, left=False):
+        # ## if not fields specified take them all from the requested tables
+        tablenames = self.tables(where) # get tables involved in the query
+        where = self.filter_tenant(where, tablenames) # process the query ???
+        if not fields:
+            for table in tablenames:
+                for field in self.db[table]:
+                    fields.append(field)
+        else:
+            for field in fields:
+                if isinstance(field, str) and table_field.match(field):
+                    tn, fn = field.split('.')
+                    field = self.db[tn][fn]
+                for tablename in self.tables(field):
+                    if not tablename in tablenames:
+                        tablenames.append(tablename)
+        if not tablenames:
+            raise SyntaxError('Set: no tables selected')
+        sql_f = ', '.join(map(self.render, fields))
+        self._colnames = [c.strip() for c in sql_f.split(', ')]
+        if where:
+            sql_w = ' WHERE ' + self.render(where)
+        else:
+            sql_w = ''
+        sql_o = ''
+        sql_s = ''
+        if distinct is True:
+            sql_s += 'DISTINCT'
+        elif distinct:
+            sql_s += 'DISTINCT ON (%s)' % distinct
+        inner_join = join
+        if inner_join:
+            icommand = self.JOIN()
+            if not isinstance(inner_join, (tuple, list)):
+                inner_join = [inner_join]
+            ijoint = [t._tablename for t in inner_join if not isinstance(t, orm.Expression)]
+            ijoinon = [t for t in inner_join if isinstance(t, orm.Expression)]
+            ijoinont = [t.first._tablename for t in ijoinon]
+            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
+        if left:
+            join = left
+            command = self.LEFT_JOIN()
+            if not isinstance(join, (tuple, list)):
+                join = [join]
+            joint = [t._tablename for t in join if not isinstance(t, orm.Expression)]
+            joinon = [t for t in join if isinstance(t, orm.Expression)]
+            #patch join+left patch (solves problem with ordering in left joins)
+            tables_to_merge = {}
+            [tables_to_merge.update(dict.fromkeys(self.tables(t))) for t in joinon]
+            joinont = [t.first._tablename for t in joinon]
+            [tables_to_merge.pop(t) for t in joinont if t in tables_to_merge]
+            important_tablenames = joint + joinont + tables_to_merge.keys()
+            excluded = [t for t in tablenames if not t in important_tablenames ]
+        def alias(t):
+            return str(self.db[t])
+        if inner_join and not left:
+            sql_t = ', '.join(alias(t) for t in iexcluded)
+            for t in ijoinon:
+                sql_t += ' %s %s' % (icommand, str(t))
+        elif not inner_join and left:
+            sql_t = ', '.join([alias(t) for t in excluded + tables_to_merge.keys()])
+            if joint:
+                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
+            for t in joinon:
+                sql_t += ' %s %s' % (command, str(t))
+        elif inner_join and left:
+            sql_t = ','.join([alias(t) for t in excluded + \
+                                  tables_to_merge.keys() if t in iexcluded ])
+            for t in ijoinon:
+                sql_t += ' %s %s' % (icommand, str(t))
+            if joint:
+                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
+            for t in joinon:
+                sql_t += ' %s %s' % (command, str(t))
+        else:
+            sql_t = ', '.join(alias(t) for t in tablenames)
+        if groupby:
+            if isinstance(groupby, (list, tuple)):
+                groupby = xorify(groupby)
+            sql_o += ' GROUP BY %s' % self.render(groupby)
+            if having:
+                sql_o += ' HAVING %s' % having
+        if orderby:
+            if isinstance(orderby, (list, tuple)):
+                orderby = xorify(orderby)
+            if str(orderby) == '<random>':
+                sql_o += ' ORDER BY %s' % self.RANDOM()
+            else:
+                sql_o += ' ORDER BY %s' % self.render(orderby)
+        if limitby:
+            if not orderby and tablenames:
+                sql_o += ' ORDER BY %s' % ', '.join(['%s.%s' % (t, x) for t in tablenames for x in ((hasattr(self.db[t], '_primarykey') and self.db[t]._primarykey) or [self.db[t]._id.name])])
+            # oracle does not support limitby
+        return self.select_limitby(sql_s, sql_f, sql_t, sql_w, sql_o, limitby)
+
+    def select_limitby(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitby):
+        if limitby:
+            (lmin, lmax) = limitby
+            sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
+        return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
+
+    def select(self, query, fields, attributes):
+        sql = self._select(query, fields, attributes)
+        self.execute(sql)
+        rows = list(self.cursor.fetchall())
+        limitby = attributes.get('limitby', (0,))
+        rows = self.rowslice(rows, limitby[0], None)
+        return self.parse(rows, self._colnames)
+
+    def _count(self, where, distinct=None):
+        tablenames = map(str, self.getExpressionTables(where))
+        if where:
+            sql_w = ' WHERE ' + self.render(where)
+        else:
+            sql_w = ''
+        sql_t = ','.join(tablenames)
+        if distinct:
+            if isinstance(distinct, (list, tuple)):
+                distinct = xorify(distinct)
+            sql_d = self.render(distinct)
+            return 'SELECT COUNT(DISTINCT %s) FROM %s%s;' % (sql_d, sql_t, sql_w)
+        return 'SELECT COUNT(*) FROM %s%s;' % (sql_t, sql_w)
+
+    def count(self, query, distinct=None):
+        self.execute(self._count(query, distinct))
+        return self.cursor.fetchone()[0]
+
+
+    def getExpressionTables(self, expression):
+        '''Get tables involved in WHERE expression.'''
+        tables = set()
+        if isinstance(expression, orm.Field):
+            tables.add(expression.table)
+        elif isinstance(expression, orm.Expression):
+            tables = tables.union(self.tables(expression.first))
+            tables = tables.union(self.tables(expression.second))
+        return tables
+
+
 
 class SqliteAdapter(Adapter):
     driver = globals().get('sqlite3')
@@ -271,6 +411,7 @@ class SqliteAdapter(Adapter):
         return 'INTEGER'
 
 
+
 class MysqlAdapter(Adapter):
     driver = globals().get('mysqldb')
     
@@ -287,6 +428,15 @@ class Column():
         self.field = field
         self.props = kwargs # properties 
         
+
+
+def xorify(orderBy):
+    if not orderBy:
+        return None
+    orderBy2 = orderBy[0]
+    for item in orderBy[1:]:
+        orderBy2 = orderBy2 | item
+    return orderBy2
 
 #class BaseAdapter(ConnectionPool):
 #
@@ -623,13 +773,6 @@ class Column():
                                                'distinct', 'having', 'join')):
             raise SyntaxError('invalid select attribute: %s' % key)
         # ## if not fields specified take them all from the requested tables
-        new_fields = []
-        for item in fields:
-            if isinstance(item, SQLALL):
-                new_fields += item.table
-            else:
-                new_fields.append(item)
-        fields = new_fields
         tablenames = self.tables(query) # get tables involved in the query
         query = self.filter_tenant(query, tablenames) # process the query ???
         if not fields:
