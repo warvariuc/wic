@@ -36,7 +36,7 @@ class TableMeta(type):
         attr = getattr(self, key, None)
         if isinstance(attr, orm.fields.Field):
             return attr
-        raise KeyError('Could not find field {} in table {}'.format(key, self.__name__))
+        raise KeyError('Could not find field %s in table %s' % (key, self.__name__))
         
                  
     def __iter__(self):

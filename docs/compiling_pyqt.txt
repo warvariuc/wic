@@ -1,0 +1,57 @@
+http://blindvic.blogspot.com/2011/09/today-i-wanted-to-use-pyqt4-with-python.html
+
+Installing PyQt4 for Python3 on Ubuntu
+Today i wanted to use PyQt4 with Python 3 on my Kubuntu machine.
+Here i log my actions.
+
+Install packages needed for compiling (i am not sure these are all needed):
+sudo apt-get install build-essential python3-dev libqt4-dev
+
+Download sources of the latest SIP - sip-4.12.4.tar.gz (Linux, UNIX, MacOS/X source).
+Unpack them and enter the directory:
+vic@wic:~/Desktop/sip-4.12.4$ python3 configure.py
+This is SIP 4.12.4 for Python 3.2 on linux2.
+The SIP code generator will be installed in /usr/bin.
+...
+Creating sip module Makefile...
+vic@wic:~/Desktop/sip-4.12.4$ make
+make[1]: Entering directory `/home/vic/Desktop/sip-4.12.4/sipgen'
+...
+make[1]: Leaving directory `/home/vic/Desktop/sip-4.12.4/siplib'
+vic@wic:~/Desktop/sip-4.12.4$ sudo make install
+make[1]: Entering directory `/home/vic/Desktop/sip-4.12.4/sipgen'
+...
+cp -f /home/vic/Desktop/sip-4.12.4/sipdistutils.py /usr/lib/python3/dist-packages/sipdistutils.py
+vic@wic:~/Desktop/sip-4.12.4$
+
+Download the sources of the latest PyQt - PyQt-x11-gpl-4.8.5.tar.gz (Linux, UNIX source), and install it:
+vic@wic:~/Desktop/PyQt-x11-gpl-4.8.5$ python3 configure.py
+Determining the layout of your Qt installation...
+This is the GPL version of PyQt 4.8.5 (licensed under the GNU General Public License) for Python 3.2 on linux2.
+
+Type '2' to view the GPL v2 license.
+Type '3' to view the GPL v3 license.
+Type 'yes' to accept the terms of the license.
+Type 'no' to decline the terms of the license.
+Do you accept the terms of the license? yes
+Found the license file pyqt-gpl.sip.
+Checking to see if the QtGui module should be built...
+...
+Checking to see if the dbus support module should be built...
+The Python dbus module doesn't seem to be installed.
+Qt v4.7.2 free edition is being used.
+SIP 4.12.4 is being used.
+The Qt header files are in /usr/include/qt4.
+...
+Creating pyqtconfig.py...
+vic@wic:~/Desktop/PyQt-x11-gpl-4.8.5$ make
+make[1]: Entering directory `/home/vic/Desktop/PyQt-x11-gpl-4.8.5/qpy'
+...
+make[1]: Leaving directory `/home/vic/Desktop/PyQt-x11-gpl-4.8.5/designer'
+vic@wic:~/Desktop/PyQt-x11-gpl-4.8.5$ sudo make install
+make[1]: Entering directory `/home/vic/Desktop/PyQt-x11-gpl-4.8.5/qpy'
+...
+cp -f PyQt4.api /usr/share/qt4/qsci/api/python/PyQt4.api
+vic@wic:~/Desktop/PyQt-x11-gpl-4.8.5$
+
+Notice, that i am launching python3 instead of python.

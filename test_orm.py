@@ -38,25 +38,25 @@ def connect(uri):
 dbAdapter = connect('mysql://conf/databases/test.sqlite')
 orm.defaultAdapter = dbAdapter
 
-print('\nBooks indexes:')
-for index in Books._indexes:
-    print(' ', index)
-    
-print('\nTextual representation of a field:')
-print(Books.author)
-
-print('\nBooks fields:')
-for i in Books:
-    print(' ', i)
-
-print('\nTextual representation of a Table:')
-print(Books)
-
-print('\nCREATE TABLE query for Authors table:')
-print(Authors.getCreateStatement(orm.defaultAdapter))
-
-print('\nCREATE TABLE query for Books table:')
-print(Books.getCreateStatement(orm.defaultAdapter))
+#print('\nBooks indexes:')
+#for index in Books._indexes:
+#    print(' ', index)
+#    
+#print('\nTextual representation of a field:')
+#print(Books.author)
+#
+#print('\nBooks fields:')
+#for i in Books:
+#    print(' ', i)
+#
+#print('\nTextual representation of a Table:')
+#print(Books)
+#
+#print('\nCREATE TABLE query for Authors table:')
+#print(Authors.getCreateStatement(orm.defaultAdapter))
+#
+#print('\nCREATE TABLE query for Books table:')
+#print(Books.getCreateStatement(orm.defaultAdapter))
 
 
 #print(Authors.id.table, Books.id.table) # though id is inehrited from base model - you can see that now each table has its personal id field
@@ -81,7 +81,10 @@ print(where._render())
 
 print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render())
 
-print(Books(Books.price > 5).select(dbAdapter, join=[Authors]))
+print('\nSELECT query:')
+print(dbAdapter._select((Books.price > 5), limitby=(0,10)))
+
+#print(Books(Books.price > 5).select(dbAdapter, join=[Authors]))
 
 #print(Books((Books.fan == author) | ((1 <= Books.id) & (Books.price > 9.99)))._render())
 

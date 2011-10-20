@@ -3,6 +3,7 @@ All other ORM modules should be database agnostic.'''
 
 import base64
 import time, inspect
+from collections import OrderedDict
 import orm
 
 
@@ -188,6 +189,9 @@ class Adapter():
     def NULL(self):   
         return 'NULL'
         
+    def RANDOM(self):
+        return 'RANDOM()'
+
     def typeInt(self, bytesCount=4, intMap = [(1, 'TINYINT'), (2, 'SMALLINT'), 
                     (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')], autoincrement=False, **kwargs):
         '''INT column type.'''
@@ -220,27 +224,26 @@ class Adapter():
             return 'VARCHAR(%i)' % maxLength
             
 
-    def _select(self, where, fields, orderby=False, limitby=False, join=False, distinct=False, groupby=False, 
+    def _select(self, where, fields=None, orderby=False, limitby=False, join=False, distinct=False, groupby=False, 
                 having=False, left=False):
-        # ## if not fields specified take them all from the requested tables
-        tablenames = self.tables(where) # get tables involved in the query
-        where = self.filter_tenant(where, tablenames) # process the query ???
-        if not fields:
-            for table in tablenames:
-                for field in self.db[table]:
+        fields = fields or []
+        tables = self.getExpressionTables(where) # get tables involved in the query
+        #where = self.filter_tenant(where, tablenames) # process the query ???
+        if not fields: # if not fields specified take them all from the requested tables
+            for table in tables:
+                for field in table:
                     fields.append(field)
         else:
             for field in fields:
-                if isinstance(field, str) and table_field.match(field):
-                    tn, fn = field.split('.')
-                    field = self.db[tn][fn]
-                for tablename in self.tables(field):
-                    if not tablename in tablenames:
-                        tablenames.append(tablename)
-        if not tablenames:
-            raise SyntaxError('Set: no tables selected')
-        sql_f = ', '.join(map(self.render, fields))
-        self._colnames = [c.strip() for c in sql_f.split(', ')]
+                assert isinstance(field, orm.Field)
+#                if isinstance(field, str) and table_field.match(field):
+#                    tn, fn = field.split('.')
+#                    field = self.db[tn][fn]
+                tables |= self.getExpressionTables(field)
+        if not tables:
+            raise SyntaxError('SELECT: no tables involved.')
+        columns = OrderedDict(zip(map(self.render, fields), fields))
+        sql_f = ', '.join(columns)
         if where:
             sql_w = ' WHERE ' + self.render(where)
         else:
@@ -251,70 +254,68 @@ class Adapter():
             sql_s += 'DISTINCT'
         elif distinct:
             sql_s += 'DISTINCT ON (%s)' % distinct
-        inner_join = join
-        if inner_join:
-            icommand = self.JOIN()
-            if not isinstance(inner_join, (tuple, list)):
-                inner_join = [inner_join]
-            ijoint = [t._tablename for t in inner_join if not isinstance(t, orm.Expression)]
-            ijoinon = [t for t in inner_join if isinstance(t, orm.Expression)]
-            ijoinont = [t.first._tablename for t in ijoinon]
-            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
-        if left:
-            join = left
-            command = self.LEFT_JOIN()
-            if not isinstance(join, (tuple, list)):
-                join = [join]
-            joint = [t._tablename for t in join if not isinstance(t, orm.Expression)]
-            joinon = [t for t in join if isinstance(t, orm.Expression)]
-            #patch join+left patch (solves problem with ordering in left joins)
-            tables_to_merge = {}
-            [tables_to_merge.update(dict.fromkeys(self.tables(t))) for t in joinon]
-            joinont = [t.first._tablename for t in joinon]
-            [tables_to_merge.pop(t) for t in joinont if t in tables_to_merge]
-            important_tablenames = joint + joinont + tables_to_merge.keys()
-            excluded = [t for t in tablenames if not t in important_tablenames ]
-        def alias(t):
-            return str(self.db[t])
-        if inner_join and not left:
-            sql_t = ', '.join(alias(t) for t in iexcluded)
-            for t in ijoinon:
-                sql_t += ' %s %s' % (icommand, str(t))
-        elif not inner_join and left:
-            sql_t = ', '.join([alias(t) for t in excluded + tables_to_merge.keys()])
-            if joint:
-                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
-            for t in joinon:
-                sql_t += ' %s %s' % (command, str(t))
-        elif inner_join and left:
-            sql_t = ','.join([alias(t) for t in excluded + \
-                                  tables_to_merge.keys() if t in iexcluded ])
-            for t in ijoinon:
-                sql_t += ' %s %s' % (icommand, str(t))
-            if joint:
-                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
-            for t in joinon:
-                sql_t += ' %s %s' % (command, str(t))
-        else:
-            sql_t = ', '.join(alias(t) for t in tablenames)
+#        inner_join = join
+#        if inner_join:
+#            icommand = self.JOIN()
+#            if not isinstance(inner_join, (tuple, list)):
+#                inner_join = [inner_join]
+#            ijoint = [t._tablename for t in inner_join if not isinstance(t, orm.Expression)]
+#            ijoinon = [t for t in inner_join if isinstance(t, orm.Expression)]
+#            ijoinont = [t.first._tablename for t in ijoinon]
+#            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
+#        if left:
+#            join = left
+#            command = self.LEFT_JOIN()
+#            if not isinstance(join, (tuple, list)):
+#                join = [join]
+#            joint = [t._tablename for t in join if not isinstance(t, orm.Expression)]
+#            joinon = [t for t in join if isinstance(t, orm.Expression)]
+#            #patch join+left patch (solves problem with ordering in left joins)
+#            tables_to_merge = {}
+#            [tables_to_merge.update(dict.fromkeys(self.tables(t))) for t in joinon]
+#            joinont = [t.first._tablename for t in joinon]
+#            [tables_to_merge.pop(t) for t in joinont if t in tables_to_merge]
+#            important_tablenames = joint + joinont + tables_to_merge.keys()
+#            excluded = [t for t in tablenames if not t in important_tablenames ]
+#        def alias(t):
+#            return str(self.db[t])
+#        if inner_join and not left:
+#            sql_t = ', '.join(alias(t) for t in iexcluded)
+#            for t in ijoinon:
+#                sql_t += ' %s %s' % (icommand, str(t))
+#        elif not inner_join and left:
+#            sql_t = ', '.join([alias(t) for t in excluded + tables_to_merge.keys()])
+#            if joint:
+#                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
+#            for t in joinon:
+#                sql_t += ' %s %s' % (command, str(t))
+#        elif inner_join and left:
+#            sql_t = ','.join([alias(t) for t in excluded + \
+#                                  tables_to_merge.keys() if t in iexcluded ])
+#            for t in ijoinon:
+#                sql_t += ' %s %s' % (icommand, str(t))
+#            if joint:
+#                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
+#            for t in joinon:
+#                sql_t += ' %s %s' % (command, str(t))
+#        else:
+#            sql_t = ', '.join(alias(t) for t in tablenames)
+        sql_t = ', '.join(map(str, tables))
         if groupby:
-            if isinstance(groupby, (list, tuple)):
-                groupby = xorify(groupby)
+            groupby = xorify(groupby)
             sql_o += ' GROUP BY %s' % self.render(groupby)
             if having:
                 sql_o += ' HAVING %s' % having
         if orderby:
-            if isinstance(orderby, (list, tuple)):
-                orderby = xorify(orderby)
+            orderby = xorify(orderby)
             if str(orderby) == '<random>':
                 sql_o += ' ORDER BY %s' % self.RANDOM()
             else:
                 sql_o += ' ORDER BY %s' % self.render(orderby)
         if limitby:
-            if not orderby and tablenames:
-                sql_o += ' ORDER BY %s' % ', '.join(['%s.%s' % (t, x) for t in tablenames for x in ((hasattr(self.db[t], '_primarykey') and self.db[t]._primarykey) or [self.db[t]._id.name])])
-            # oracle does not support limitby
-        return self.select_limitby(sql_s, sql_f, sql_t, sql_w, sql_o, limitby)
+            if not orderby and tables:
+                sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
+        return self.select_limitby(sql_s, sql_f, sql_t, sql_w, sql_o, limitby), columns
 
     def select_limitby(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitby):
         if limitby:
@@ -322,741 +323,21 @@ class Adapter():
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, query, fields, attributes):
-        sql = self._select(query, fields, attributes)
+    def select(self, where, fields, *attributes):
+        sql, columns = self._select(where, fields, *attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
         limitby = attributes.get('limitby', (0,))
         rows = self.rowslice(rows, limitby[0], None)
         return self.parse(rows, self._colnames)
 
-    def _count(self, where, distinct=None):
-        tablenames = map(str, self.getExpressionTables(where))
-        if where:
-            sql_w = ' WHERE ' + self.render(where)
-        else:
-            sql_w = ''
-        sql_t = ','.join(tablenames)
-        if distinct:
-            if isinstance(distinct, (list, tuple)):
-                distinct = xorify(distinct)
-            sql_d = self.render(distinct)
-            return 'SELECT COUNT(DISTINCT %s) FROM %s%s;' % (sql_d, sql_t, sql_w)
-        return 'SELECT COUNT(*) FROM %s%s;' % (sql_t, sql_w)
-
-    def count(self, query, distinct=None):
-        self.execute(self._count(query, distinct))
-        return self.cursor.fetchone()[0]
-
-
-    def getExpressionTables(self, expression):
-        '''Get tables involved in WHERE expression.'''
-        tables = set()
-        if isinstance(expression, orm.Field):
-            tables.add(expression.table)
-        elif isinstance(expression, orm.Expression):
-            tables = tables.union(self.tables(expression.first))
-            tables = tables.union(self.tables(expression.second))
-        return tables
-
-
-
-class SqliteAdapter(Adapter):
-    driver = globals().get('sqlite3')
-
-    def _getCreateTableIndexes(self, table):
-        indexes = []
-        for index in table._indexes:
-            if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
-                continue
-            indexType = 'PRIMARY KEY'
-            columns = []
-            for i, field in enumerate(index.fields):
-                column = field.column.name
-                prefixLength = index.prefixLengths[i] 
-                if prefixLength:
-                    column += '(%i)' % prefixLength
-                sortOrder = index.sortOrders[i]
-                column += ' %s' % sortOrder.upper()
-                columns.append(column)
-                
-            indexes.append('%s (%s)' % (indexType, ', '.join(columns)))
-            
-        return indexes
-
-    def _getCreateTableOther(self, table):
-        indexes = []
-        for index in table._indexes:
-            if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
-                continue
-            elif index.type == 'unique':
-                indexType = 'UNIQUE INDEX'
-            else:
-                indexType = 'INDEX'
-            columns = []
-            for i, field in enumerate(index.fields):
-                column = field.column.name
-#                prefixLength = index.prefixLengths[i] 
-#                if prefixLength:
-#                    column += '(%i)' % prefixLength
-                sortOrder = index.sortOrders[i]
-                column += ' %s' % sortOrder.upper()
-                columns.append(column)
-            table = index.fields[0].table
-            indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, str(table), ', '.join(columns)))
-            
-        return (';\n' + ';\n'.join(indexes)) if indexes else ''
-
-    def columnInt(self, **kwargs):
-        return 'INTEGER'
-
-
-
-class MysqlAdapter(Adapter):
-    driver = globals().get('mysqldb')
-    
-    def _getCreateTableOther(self, table):
-        return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
-    
-    
-
-class Column():
-    '''Abstract DB column, supported natively by the DB.'''
-    def __init__(self, name, type, field, **kwargs):
-        self.name = name
-        self.type = type
-        self.field = field
-        self.props = kwargs # properties 
-        
-
-
-def xorify(orderBy):
-    if not orderBy:
-        return None
-    orderBy2 = orderBy[0]
-    for item in orderBy[1:]:
-        orderBy2 = orderBy2 | item
-    return orderBy2
-
-#class BaseAdapter(ConnectionPool):
-#
-#    driver = None
-#    maxcharlength = MAXCHARLENGTH
-#    commit_on_alter_table = False
-#    support_distributed_transaction = False
-#    uploads_in_blob = False
-#    types = {
-#        'boolean': 'CHAR(1)',
-#        'string': 'CHAR(%(length)s)',
-#        'text': 'TEXT',
-#        'password': 'CHAR(%(length)s)',
-#        'blob': 'BLOB',
-#        'upload': 'CHAR(%(length)s)',
-#        'integer': 'INTEGER',
-#        'double': 'DOUBLE',
-#        'decimal': 'DOUBLE',
-#        'date': 'DATE',
-#        'time': 'TIME',
-#        'datetime': 'TIMESTAMP',
-#        'id': 'INTEGER PRIMARY KEY AUTOINCREMENT',
-#        'reference': 'INTEGER REFERENCES %(foreign_key)s ON DELETE %(on_delete_action)s',
-#        'list:integer': 'TEXT',
-#        'list:string': 'TEXT',
-#        'list:reference': 'TEXT',
-#        }
-#
-#    def adapt(self, obj):
-#        return "'%s'" % obj.replace("'", "''")
-#
-#    def integrity_error(self):
-#        return self.driver.IntegrityError
-#
-#    def operational_error(self):
-#        return self.driver.OperationalError
-#
-#    def __init__(self, db, uri, pool_size=0, folder=None, db_codec='UTF-8',
-#                 credential_decoder=lambda x:x, driver_args={},
-#                 adapter_args={}):
-#        self.db = db
-#        self.dbengine = "None"
-#        self.uri = uri
-#        self.pool_size = pool_size
-#        self.folder = folder
-#        self.db_codec = db_codec
-#        class Dummy(object):
-#            lastrowid = 1
-#            def __getattr__(self, value):
-#                return lambda * a, **b: []
-#        self.connection = Dummy()
-#        self.cursor = Dummy()
-#
-#    def sequence_name(self, tablename):
-#        return '%s_sequence' % tablename
-#
-#    def trigger_name(self, tablename):
-#        return '%s_sequence' % tablename
-#
-#
-#    def migrate_table(
-#        self,
-#        table,
-#        sql_fields,
-#        sql_fields_old,
-#        sql_fields_aux,
-#        logfile,
-#        fake_migrate=False,
-#        ):
-#        tablename = table._tablename
-#        def fix(item):
-#            k, v = item
-#            if not isinstance(v, dict):
-#                v = dict(type='unkown', sql=v)
-#            return k.lower(), v
-#        ### make sure all field names are lower case to avoid conflicts
-#        sql_fields = dict(map(fix, sql_fields.items()))
-#        sql_fields_old = dict(map(fix, sql_fields_old.items()))
-#        sql_fields_aux = dict(map(fix, sql_fields_aux.items()))
-#
-#        keys = sql_fields.keys()
-#        for key in sql_fields_old:
-#            if not key in keys:
-#                keys.append(key)
-#        if self.dbengine == 'mssql':
-#            new_add = '; ALTER TABLE %s ADD ' % tablename
-#        else:
-#            new_add = ', ADD '
-#
-#        metadata_change = False
-#        sql_fields_current = copy.copy(sql_fields_old)
-#        for key in keys:
-#            query = None
-#            if not key in sql_fields_old:
-#                sql_fields_current[key] = sql_fields[key]
-#                query = ['ALTER TABLE %s ADD %s %s;' % \
-#                         (tablename, key,
-#                          sql_fields_aux[key]['sql'].replace(', ', new_add))]
-#                metadata_change = True
-#            elif self.dbengine == 'sqlite':
-#                if key in sql_fields:
-#                    sql_fields_current[key] = sql_fields[key]
-#                metadata_change = True
-#            elif not key in sql_fields:
-#                del sql_fields_current[key]
-#                if not self.dbengine in ('firebird',):
-#                    query = ['ALTER TABLE %s DROP COLUMN %s;' % (tablename, key)]
-#                else:
-#                    query = ['ALTER TABLE %s DROP %s;' % (tablename, key)]
-#                metadata_change = True
-#            elif sql_fields[key]['sql'] != sql_fields_old[key]['sql'] \
-#                  and not isinstance(table[key].type, SQLCustomType) \
-#                  and not (table[key].type.startswith('reference') and \
-#                      sql_fields[key]['sql'].startswith('INT,') and \
-#                      sql_fields_old[key]['sql'].startswith('INT NOT NULL,')):
-#                sql_fields_current[key] = sql_fields[key]
-#                t = tablename
-#                tt = sql_fields_aux[key]['sql'].replace(', ', new_add)
-#                if not self.dbengine in ('firebird',):
-#                    query = ['ALTER TABLE %s ADD %s__tmp %s;' % (t, key, tt),
-#                             'UPDATE %s SET %s__tmp=%s;' % (t, key, key),
-#                             'ALTER TABLE %s DROP COLUMN %s;' % (t, key),
-#                             'ALTER TABLE %s ADD %s %s;' % (t, key, tt),
-#                             'UPDATE %s SET %s=%s__tmp;' % (t, key, key),
-#                             'ALTER TABLE %s DROP COLUMN %s__tmp;' % (t, key)]
-#                else:
-#                    query = ['ALTER TABLE %s ADD %s__tmp %s;' % (t, key, tt),
-#                             'UPDATE %s SET %s__tmp=%s;' % (t, key, key),
-#                             'ALTER TABLE %s DROP %s;' % (t, key),
-#                             'ALTER TABLE %s ADD %s %s;' % (t, key, tt),
-#                             'UPDATE %s SET %s=%s__tmp;' % (t, key, key),
-#                             'ALTER TABLE %s DROP %s__tmp;' % (t, key)]
-#                metadata_change = True
-#            elif sql_fields[key]['type'] != sql_fields_old[key]['type']:
-#                sql_fields_current[key] = sql_fields[key]
-#                metadata_change = True
-#
-#            if query:
-#                logfile.write('timestamp: %s\n'
-#                              % datetime.datetime.today().isoformat())
-#                table._db['_lastsql'] = '\n'.join(query)
-#                for sub_query in query:
-#                    logfile.write(sub_query + '\n')
-#                    if not fake_migrate:
-#                        self.execute(sub_query)
-#                        # caveat. mysql, oracle and firebird do not allow multiple alter table
-#                        # in one transaction so we must commit partial transactions and
-#                        # update table._dbt after alter table.
-#                        if table._db._adapter.commit_on_alter_table:
-#                            table._db.commit()
-#                            tfile = self.file_open(table._dbt, 'w')
-#                            cPickle.dump(sql_fields_current, tfile)
-#                            self.file_close(tfile)
-#                            logfile.write('success!\n')
-#                    else:
-#                        logfile.write('faked!\n')
-#            elif metadata_change:
-#                tfile = self.file_open(table._dbt, 'w')
-#                cPickle.dump(sql_fields_current, tfile)
-#                self.file_close(tfile)
-#
-#        if metadata_change and \
-#                not (query and self.dbengine in ('mysql', 'oracle', 'firebird')):
-#            table._db.commit()
-#            tfile = self.file_open(table._dbt, 'w')
-#            cPickle.dump(sql_fields_current, tfile)
-#            self.file_close(tfile)
-#
-#
-#    def _drop(self, table, mode):
-#        return ['DROP TABLE %s;' % table]
-#
-#    def drop(self, table, mode=''):
-#        if table._dbt:
-#            logfile = self.file_open(table._loggername, 'a')
-#        queries = self._drop(table, mode)
-#        for query in queries:
-#            if table._dbt:
-#                logfile.write(query + '\n')
-#            self.execute(query)
-#        table._db.commit()
-#        del table._db[table._tablename]
-#        del table._db.tables[table._db.tables.index(table._tablename)]
-#        table._db._update_referenced_by(table._tablename)
-#        if table._dbt:
-#            self.file_delete(table._dbt)
-#            logfile.write('success!\n')
-#
-#    def _insert(self, table, fields):
-#        keys = ','.join(f.name for f, v in fields)
-#        values = ','.join(self.render(v, f.type) for f, v in fields)
-#        return 'INSERT INTO %s(%s) VALUES (%s);' % (table, keys, values)
-#
-#    def insert(self, table, fields):
-#        query = self._insert(table, fields)
-#        try:
-#            self.execute(query)
-#        except Exception as e:
-#            if isinstance(e, self.integrity_error_class()):
-#                return None
-#            raise e
-#        if hasattr(table, '_primarykey'):
-#            return dict([(k[0].name, k[1]) for k in fields \
-#                             if k[0].name in table._primarykey])
-#        id = self.lastrowid(table)
-#        if not isinstance(id, int):
-#            return id
-#        rid = Reference(id)
-#        (rid._table, rid._record) = (table, None)
-#        return rid
-#
-#    def bulk_insert(self, table, items):
-#        return [self.insert(table, item) for item in items]
-#
-#    def render(self, expression, field_type=None):
-#        if isinstance(expression, Field):
-#            return str(expression)
-#        elif isinstance(expression, (Expression, Query)):
-#            if not expression.second is None:
-#                return expression.op(expression.first, expression.second)
-#            elif not expression.first is None:
-#                return expression.op(expression.first)
-#            elif not isinstance(expression.op, str):
-#                return expression.op()
-#            else:
-#                return '(%s)' % expression.op
-#        elif field_type:
-#            return self.represent(expression, field_type)
-#        elif isinstance(expression, (list, tuple)):
-#            return ','.join([self.represent(item, field_type) for item in expression])
-#        else:
-#            return str(expression)
-#
-#    def alias(self, table, alias):
-#        """
-#        given a table object, makes a new table object
-#        with alias name.
-#        """
-#        other = copy.copy(table)
-#        other['_ot'] = other._tablename
-#        other['ALL'] = SQLALL(other)
-#        other['_tablename'] = alias
-#        for fieldname in other.fields:
-#            other[fieldname] = copy.copy(other[fieldname])
-#            other[fieldname]._tablename = alias
-#            other[fieldname].tablename = alias
-#            other[fieldname].table = other
-#        table._db[alias] = other
-#        return other
-#
-#    def _truncate(self, table, mode=''):
-#        tablename = table._tablename
-#        return ['TRUNCATE TABLE %s %s;' % (tablename, mode or '')]
-#
-#    def truncate(self, table, mode=' '):
-#        # Prepare functions "write_to_logfile" and "close_logfile"
-#        if table._dbt:
-#            logfile = self.file_open(table._loggername, 'a')
-#        else:
-#            class Logfile(object):
-#                def write(self, value):
-#                    pass
-#                def close(self):
-#                    pass
-#            logfile = Logfile()
-#
-#        try:
-#            queries = table._db._adapter._truncate(table, mode)
-#            for query in queries:
-#                logfile.write(query + '\n')
-#                self.execute(query)
-#            table._db.commit()
-#            logfile.write('success!\n')
-#        finally:
-#            logfile.close()
-#
-#    def _update(self, tablename, query, fields):
-#        if query:
-#            sql_w = ' WHERE ' + self.render(query)
-#        else:
-#            sql_w = ''
-#        sql_v = ','.join(['%s=%s' % (field.name, self.render(value, field.type)) for (field, value) in fields])
-#        return 'UPDATE %s SET %s%s;' % (tablename, sql_v, sql_w)
-#
-#    def update(self, tablename, query, fields):
-#        sql = self._update(tablename, query, fields)
-#        self.execute(sql)
-#        try:
-#            return self.cursor.rowcount
-#        except:
-#            return None
-#
-#    def _delete(self, tablename, query):
-#        if query:
-#            sql_w = ' WHERE ' + self.render(query)
-#        else:
-#            sql_w = ''
-#        return 'DELETE FROM %s%s;' % (tablename, sql_w)
-#
-#    def delete(self, tablename, query):
-#        sql = self._delete(tablename, query)
-#        ### special code to handle CASCADE in SQLite
-#        db = self.db
-#        table = db[tablename]
-#        if self.dbengine == 'sqlite' and table._referenced_by:
-#            deleted = [x[table._id.name] for x in db(query).select(table._id)]
-#        ### end special code to handle CASCADE in SQLite
-#        self.execute(sql)
-#        try:
-#            counter = self.cursor.rowcount
-#        except:
-#            counter = None
-#        ### special code to handle CASCADE in SQLite
-#        if self.dbengine == 'sqlite' and counter:
-#            for tablename, fieldname in table._referenced_by:
-#                f = db[tablename][fieldname]
-#                if f.type == 'reference ' + table._tablename and f.ondelete == 'CASCADE':
-#                    db(db[tablename][fieldname].belongs(deleted)).delete()
-#        ### end special code to handle CASCADE in SQLite
-#        return counter
-#
-#    def get_table(self, query):
-#        tablenames = self.tables(query)
-#        if len(tablenames) == 1:
-#            return tablenames[0]
-#        elif len(tablenames) < 1:
-#            raise RuntimeError("No table selected")
-#        else:
-#            raise RuntimeError("Too many tables selected")
-#
-    def _select(self, query, fields, attributes):
-        for key in set(attributes.keys()) - set(('orderby', 'groupby', 'limitby',
-                                               'required', 'cache', 'left',
-                                               'distinct', 'having', 'join')):
-            raise SyntaxError('invalid select attribute: %s' % key)
-        # ## if not fields specified take them all from the requested tables
-        tablenames = self.tables(query) # get tables involved in the query
-        query = self.filter_tenant(query, tablenames) # process the query ???
-        if not fields:
-            for table in tablenames:
-                for field in self.db[table]:
-                    fields.append(field)
-        else:
-            for field in fields:
-                if isinstance(field, basestring) and table_field.match(field):
-                    tn, fn = field.split('.')
-                    field = self.db[tn][fn]
-                for tablename in self.tables(field):
-                    if not tablename in tablenames:
-                        tablenames.append(tablename)
-        if not tablenames:
-            raise SyntaxError('Set: no tables selected')
-        sql_f = ', '.join(map(self.render, fields))
-        self._colnames = [c.strip() for c in sql_f.split(', ')]
-        if query:
-            sql_w = ' WHERE ' + self.render(query)
-        else:
-            sql_w = ''
-        sql_o = ''
-        sql_s = ''
-        left = attributes.get('left', False)
-        inner_join = attributes.get('join', False)
-        distinct = attributes.get('distinct', False)
-        groupby = attributes.get('groupby', False)
-        orderby = attributes.get('orderby', False)
-        having = attributes.get('having', False)
-        limitby = attributes.get('limitby', False)
-        if distinct is True:
-            sql_s += 'DISTINCT'
-        elif distinct:
-            sql_s += 'DISTINCT ON (%s)' % distinct
-        if inner_join:
-            icommand = self.JOIN()
-            if not isinstance(inner_join, (tuple, list)):
-                inner_join = [inner_join]
-            ijoint = [t._tablename for t in inner_join if not isinstance(t, Expression)]
-            ijoinon = [t for t in inner_join if isinstance(t, Expression)]
-            ijoinont = [t.first._tablename for t in ijoinon]
-            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
-        if left:
-            join = attributes['left']
-            command = self.LEFT_JOIN()
-            if not isinstance(join, (tuple, list)):
-                join = [join]
-            joint = [t._tablename for t in join if not isinstance(t, Expression)]
-            joinon = [t for t in join if isinstance(t, Expression)]
-            #patch join+left patch (solves problem with ordering in left joins)
-            tables_to_merge = {}
-            [tables_to_merge.update(dict.fromkeys(self.tables(t))) for t in joinon]
-            joinont = [t.first._tablename for t in joinon]
-            [tables_to_merge.pop(t) for t in joinont if t in tables_to_merge]
-            important_tablenames = joint + joinont + tables_to_merge.keys()
-            excluded = [t for t in tablenames if not t in important_tablenames ]
-        def alias(t):
-            return str(self.db[t])
-        if inner_join and not left:
-            sql_t = ', '.join(alias(t) for t in iexcluded)
-            for t in ijoinon:
-                sql_t += ' %s %s' % (icommand, str(t))
-        elif not inner_join and left:
-            sql_t = ', '.join([alias(t) for t in excluded + tables_to_merge.keys()])
-            if joint:
-                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
-            for t in joinon:
-                sql_t += ' %s %s' % (command, str(t))
-        elif inner_join and left:
-            sql_t = ','.join([alias(t) for t in excluded + \
-                                  tables_to_merge.keys() if t in iexcluded ])
-            for t in ijoinon:
-                sql_t += ' %s %s' % (icommand, str(t))
-            if joint:
-                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
-            for t in joinon:
-                sql_t += ' %s %s' % (command, str(t))
-        else:
-            sql_t = ', '.join(alias(t) for t in tablenames)
-        if groupby:
-            if isinstance(groupby, (list, tuple)):
-                groupby = xorify(groupby)
-            sql_o += ' GROUP BY %s' % self.render(groupby)
-            if having:
-                sql_o += ' HAVING %s' % attributes['having']
-        if orderby:
-            if isinstance(orderby, (list, tuple)):
-                orderby = xorify(orderby)
-            if str(orderby) == '<random>':
-                sql_o += ' ORDER BY %s' % self.RANDOM()
-            else:
-                sql_o += ' ORDER BY %s' % self.render(orderby)
-        if limitby:
-            if not orderby and tablenames:
-                sql_o += ' ORDER BY %s' % ', '.join(['%s.%s' % (t, x) for t in tablenames for x in ((hasattr(self.db[t], '_primarykey') and self.db[t]._primarykey) or [self.db[t]._id.name])])
-            # oracle does not support limitby
-        return self.select_limitby(sql_s, sql_f, sql_t, sql_w, sql_o, limitby)
-
-    def select_limitby(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitby):
-        if limitby:
-            (lmin, lmax) = limitby
-            sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
-        return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
-
-    def select(self, query, fields, attributes):
-        """
-        Always returns a Rows object, even if it may be empty
-        """
-        def response(sql):
-            self.execute(sql)
-            return self.cursor.fetchall()
-        sql = self._select(query, fields, attributes)
-        if attributes.get('cache', None):
-            (cache_model, time_expire) = attributes['cache']
-            del attributes['cache']
-            key = self.uri + '/' + sql
-            key = (key <= 200) and key or hashlib.md5(key).hexdigest()
-            rows = cache_model(key, lambda: response(sql), time_expire)
-        else:
-            rows = response(sql)
-        if isinstance(rows, tuple):
-            rows = list(rows)
-        limitby = attributes.get('limitby', None) or (0,)
-        rows = self.rowslice(rows, limitby[0], None)
-        return self.parse(rows, self._colnames)
-
-#    def _count(self, query, distinct=None):
-#        tablenames = self.tables(query)
-#        if query:
-#            sql_w = ' WHERE ' + self.render(query)
-#        else:
-#            sql_w = ''
-#        sql_t = ','.join(tablenames)
-#        if distinct:
-#            if isinstance(distinct, (list, tuple)):
-#                distinct = xorify(distinct)
-#            sql_d = self.render(distinct)
-#            return 'SELECT count(DISTINCT %s) FROM %s%s;' % (sql_d, sql_t, sql_w)
-#        return 'SELECT count(*) FROM %s%s;' % (sql_t, sql_w)
-#
-#    def count(self, query, distinct=None):
-#        self.execute(self._count(query, distinct))
-#        return self.cursor.fetchone()[0]
-#
-#
-    def tables(self, query):
-        tables = set()
-        if isinstance(query, Field):
-            tables.add(query.tablename)
-        elif isinstance(query, (Expression, Query)):
-            if not query.first is None:
-                tables = tables.union(self.tables(query.first))
-            if not query.second is None:
-                tables = tables.union(self.tables(query.second))
-        return list(tables)
-#
-#    def commit(self):
-#        return self.connection.commit()
-#
-#    def rollback(self):
-#        return self.connection.rollback()
-#
-#    def close(self):
-#        return self.connection.close()
-#
-#    def distributed_transaction_begin(self, key):
-#        return
-#
-#    def prepare(self, key):
-#        self.connection.prepare()
-#
-#    def commit_prepared(self, key):
-#        self.connection.commit()
-#
-#    def rollback_prepared(self, key):
-#        self.connection.rollback()
-#
-#    def concat_add(self, table):
-#        return ', ADD '
-#
-#    def constraint_name(self, table, fieldname):
-#        return '%s_%s__constraint' % (table, fieldname)
-#
-#    def create_sequence_and_triggers(self, query, table, **args):
-#        self.execute(query)
-#
-#    def log_execute(self, *a, **b):
-#        self.db._lastsql = a[0]
-#        t0 = time.time()
-#        ret = self.cursor.execute(*a, **b)
-#        self.db._timings.append((a[0], time.time() - t0))
-#        return ret
-#
-#    def execute(self, *a, **b):
-#        return self.log_execute(*a, **b)
-#
-#    def represent(self, obj, fieldtype):
-#        if isinstance(obj, CALLABLETYPES):
-#            obj = obj()
-#        if isinstance(fieldtype, SQLCustomType):
-#            return fieldtype.encoder(obj)
-#        if isinstance(obj, (Expression, Field)):
-#            return str(obj)
-#        if fieldtype.startswith('list:'):
-#            if not obj:
-#                obj = []
-#            if not isinstance(obj, (list, tuple)):
-#                obj = [obj]
-#        if isinstance(obj, (list, tuple)):
-#            obj = bar_encode(obj)
-#        if obj is None:
-#            return 'NULL'
-#        if obj == '' and not fieldtype[:2] in ['st', 'te', 'pa', 'up']:
-#            return 'NULL'
-#        r = self.represent_exceptions(obj, fieldtype)
-#        if not r is None:
-#            return r
-#        if fieldtype == 'boolean':
-#            if obj and not str(obj)[:1].upper() in ['F', '0']:
-#                return "'T'"
-#            else:
-#                return "'F'"
-#        if fieldtype == 'id' or fieldtype == 'integer':
-#            return str(int(obj))
-#        if fieldtype.startswith('decimal'):
-#            return str(obj)
-#        elif fieldtype.startswith('reference'): # reference
-#            if fieldtype.find('.') > 0:
-#                return repr(obj)
-#            elif isinstance(obj, (Row, Reference)):
-#                return str(obj['id'])
-#            return str(int(obj))
-#        elif fieldtype == 'double':
-#            return repr(float(obj))
-#        if isinstance(obj, unicode):
-#            obj = obj.encode(self.db_codec)
-#        if fieldtype == 'blob':
-#            obj = base64.b64encode(str(obj))
-#        elif fieldtype == 'date':
-#            if isinstance(obj, (datetime.date, datetime.datetime)):
-#                obj = obj.isoformat()[:10]
-#            else:
-#                obj = str(obj)
-#        elif fieldtype == 'datetime':
-#            if isinstance(obj, datetime.datetime):
-#                obj = obj.isoformat()[:19].replace('T', ' ')
-#            elif isinstance(obj, datetime.date):
-#                obj = obj.isoformat()[:10] + ' 00:00:00'
-#            else:
-#                obj = str(obj)
-#        elif fieldtype == 'time':
-#            if isinstance(obj, datetime.time):
-#                obj = obj.isoformat()[:10]
-#            else:
-#                obj = str(obj)
-#        if not isinstance(obj, str):
-#            obj = str(obj)
-#        try:
-#            obj.decode(self.db_codec)
-#        except:
-#            obj = obj.decode('latin1').encode(self.db_codec)
-#        return self.adapt(obj)
-#
-#    def represent_exceptions(self, obj, fieldtype):
-#        return None
-#
-#    def lastrowid(self, table):
-#        return None
-#
-#    def integrity_error_class(self):
-#        return type(None)
-#
-#    def rowslice(self, rows, minimum=0, maximum=None):
-#        """ by default this function does nothing, overload when db does not do slicing """
-#        return rows
-#
-    def parse(self, rows, colnames, blob_decode=True):
+    def parseResponse(self, rows, columns, blob_decode=True):
         db = self.db
         virtualtables = []
         new_rows = []
         for (i, row) in enumerate(rows):
             new_row = Row()
-            for j, colname in enumerate(colnames):
+            for j, colname in enumerate(columns):
                 value = row[j]
                 if not table_field.match(colnames[j]):
                     if not '_extra' in new_row:
@@ -1064,7 +345,7 @@ def xorify(orderBy):
                     new_row['_extra'][colnames[j]] = value
                     select_as_parser = re.compile("\s+AS\s+(\S+)")
                     new_column_name = select_as_parser.search(colnames[j])
-                    if not new_column_name is None:
+                    if new_column_name is not None:
                         column_name = new_column_name.groups(0)
                         setattr(new_row, column_name[0], value)
                     continue
@@ -1190,69 +471,115 @@ def xorify(orderBy):
                     pass
         return rowsobj
 
-    def filter_tenant(self, query, tablenames):
-        fieldname = self.db._request_tenant
-        for tablename in tablenames:
-            table = self.db[tablename]
-            if fieldname in table:
-                default = table[fieldname].default
-                if not default is None:
-                    query = query & (table[fieldname] == default)
-        return query
+    def _count(self, where, distinct=None):
+        tablenames = map(str, self.getExpressionTables(where))
+        if where:
+            sql_w = ' WHERE ' + self.render(where)
+        else:
+            sql_w = ''
+        sql_t = ','.join(tablenames)
+        if distinct:
+            if isinstance(distinct, (list, tuple)):
+                distinct = xorify(distinct)
+            sql_d = self.render(distinct)
+            return 'SELECT COUNT(DISTINCT %s) FROM %s%s;' % (sql_d, sql_t, sql_w)
+        return 'SELECT COUNT(*) FROM %s%s;' % (sql_t, sql_w)
+
+    def count(self, query, distinct=None):
+        self.execute(self._count(query, distinct))
+        return self.cursor.fetchone()[0]
 
 
-#class SQLiteAdapter(BaseAdapter):
-#
-#    driver = globals().get('sqlite3', None)
-#
-#    def EXTRACT(self, field, what):
-#        return "web2py_extract('%s',%s)" % (what, self.render(field))
-#
-#    @staticmethod
-#    def web2py_extract(lookup, s):
-#        table = {
-#            'year': (0, 4),
-#            'month': (5, 7),
-#            'day': (8, 10),
-#            'hour': (11, 13),
-#            'minute': (14, 16),
-#            'second': (17, 19),
-#            }
-#        try:
-#            (i, j) = table[lookup]
-#            return int(s[i:j])
-#        except:
-#            return None
-#
-#    def __init__(self, db, uri, pool_size=0, folder=None, db_codec='UTF-8',
-#                 credential_decoder=lambda x:x, driver_args={}, adapter_args={}):
-#        self.db = db
-#        self.dbengine = "sqlite"
-#        self.uri = uri
-#        self.pool_size = pool_size
-#        self.folder = folder
-#        self.db_codec = db_codec
-#        self.find_or_make_work_folder()
-#        path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
-#        if uri.startswith('sqlite:memory'):
-#            dbpath = ':memory:'
-#        else:
-#            dbpath = uri.split('://')[1]
-#            if dbpath[0] != '/':
-#                dbpath = os.path.join(self.folder.decode(path_encoding).encode('utf8'), dbpath)
-#        if not 'check_same_thread' in driver_args:
-#            driver_args['check_same_thread'] = False
-#        if not 'detect_types' in driver_args:
-#            driver_args['detect_types'] = self.driver.PARSE_DECLTYPES
-#        def connect(dbpath=dbpath, driver_args=driver_args):
-#            return self.driver.Connection(dbpath, **driver_args)
-#        self.pool_connection(connect)
-#        self.connection.create_function('web2py_extract', 2, SQLiteAdapter.web2py_extract)
-#
-#    def _truncate(self, table, mode=''):
-#        tablename = table._tablename
-#        return ['DELETE FROM %s;' % tablename,
-#                "DELETE FROM sqlite_sequence WHERE name='%s';" % tablename]
-#
-#    def lastrowid(self, table):
-#        return self.cursor.lastrowid
+    def getExpressionTables(self, expression):
+        '''Get tables involved in WHERE expression.'''
+        tables = set()
+        if isinstance(expression, orm.Field):
+            tables.add(expression.table)
+        elif isinstance(expression, orm.Expression):
+            tables |= self.getExpressionTables(expression.left)
+            tables |= self.getExpressionTables(expression.right)
+        return tables
+
+
+
+class SqliteAdapter(Adapter):
+    driver = globals().get('sqlite3')
+
+    def _getCreateTableIndexes(self, table):
+        indexes = []
+        for index in table._indexes:
+            if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+                continue
+            indexType = 'PRIMARY KEY'
+            columns = []
+            for i, field in enumerate(index.fields):
+                column = field.column.name
+                prefixLength = index.prefixLengths[i] 
+                if prefixLength:
+                    column += '(%i)' % prefixLength
+                sortOrder = index.sortOrders[i]
+                column += ' %s' % sortOrder.upper()
+                columns.append(column)
+                
+            indexes.append('%s (%s)' % (indexType, ', '.join(columns)))
+            
+        return indexes
+
+    def _getCreateTableOther(self, table):
+        indexes = []
+        for index in table._indexes:
+            if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+                continue
+            elif index.type == 'unique':
+                indexType = 'UNIQUE INDEX'
+            else:
+                indexType = 'INDEX'
+            columns = []
+            for i, field in enumerate(index.fields):
+                column = field.column.name
+#                prefixLength = index.prefixLengths[i] 
+#                if prefixLength:
+#                    column += '(%i)' % prefixLength
+                sortOrder = index.sortOrders[i]
+                column += ' %s' % sortOrder.upper()
+                columns.append(column)
+            table = index.fields[0].table
+            indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, str(table), ', '.join(columns)))
+            
+        return (';\n' + ';\n'.join(indexes)) if indexes else ''
+
+    def columnInt(self, **kwargs):
+        return 'INTEGER'
+
+
+
+class MysqlAdapter(Adapter):
+    driver = globals().get('mysqldb')
+    
+    def _getCreateTableOther(self, table):
+        return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
+    
+    def RANDOM(self):
+        return 'RAND()'
+    
+
+class Column():
+    '''Abstract DB column, supported natively by the DB.'''
+    def __init__(self, name, type, field, **kwargs):
+        self.name = name
+        self.type = type
+        self.field = field
+        self.props = kwargs # properties 
+        
+
+
+def xorify(orderBy):
+    if not isinstance(orderBy, (list, tuple)):
+        return orderBy
+    if not orderBy:
+        return None
+    orderBy2 = orderBy[0]
+    for item in orderBy[1:]:
+        orderBy2 = orderBy2 | item
+    return orderBy2
+
