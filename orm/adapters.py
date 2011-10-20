@@ -1,10 +1,12 @@
 '''This module contains database adapters, which incapsulate all operations specific to a certain database.
 All other ORM modules should be database agnostic.'''
 
-import base64
+import os, sys, base64, locale
 import time, inspect
 from collections import OrderedDict
+
 import orm
+from sre_parse import isname
 
 
 drivers = []
@@ -22,10 +24,13 @@ class Adapter():
     def __init__(self, uri='', connect=True):
         '''URI is already without protocol.'''
         print(uri)
+        self._timings = []
         if connect:
             self.connection = self.connect()
+            self.cursor = self.connection.cursor()
         else:
             self.connection = None
+            self.cursor = None
     
     def connect(self):
         '''Connect to the DB and return the connection'''
@@ -35,7 +40,7 @@ class Adapter():
         lastsql = a[0]
         t0 = time.time()
         ret = self.cursor.execute(*a, **b)
-        self.db._timings.append((lastsql, time.time() - t0))
+        self._timings.append((lastsql, time.time() - t0))
         return ret
     
     def getLastSql(self):
@@ -259,19 +264,19 @@ class Adapter():
 #            icommand = self.JOIN()
 #            if not isinstance(inner_join, (tuple, list)):
 #                inner_join = [inner_join]
-#            ijoint = [t._tablename for t in inner_join if not isinstance(t, orm.Expression)]
-#            ijoinon = [t for t in inner_join if isinstance(t, orm.Expression)]
+#            ijoint = [t._tablename for t in inner_join if not isinstance(t,Expression)]
+#            ijoinon = [t for t in inner_join if isinstance(t, Expression)]
 #            ijoinont = [t.first._tablename for t in ijoinon]
 #            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
 #        if left:
-#            join = left
+#            join = attributes['left']
 #            command = self.LEFT_JOIN()
 #            if not isinstance(join, (tuple, list)):
 #                join = [join]
-#            joint = [t._tablename for t in join if not isinstance(t, orm.Expression)]
-#            joinon = [t for t in join if isinstance(t, orm.Expression)]
+#            joint = [t._tablename for t in join if not isinstance(t, Expression)]
+#            joinon = [t for t in join if isinstance(t, Expression)]
 #            #patch join+left patch (solves problem with ordering in left joins)
-#            tables_to_merge = {}
+#            tables_to_merge={}
 #            [tables_to_merge.update(dict.fromkeys(self.tables(t))) for t in joinon]
 #            joinont = [t.first._tablename for t in joinon]
 #            [tables_to_merge.pop(t) for t in joinont if t in tables_to_merge]
@@ -307,11 +312,13 @@ class Adapter():
             if having:
                 sql_o += ' HAVING %s' % having
         if orderby:
-            orderby = xorify(orderby)
+            #orderby = xorify(orderby)
+            if isinstance(orderby, (list, tuple)):
+                orderby = ', '.join(map(self.render, orderby))
             if str(orderby) == '<random>':
                 sql_o += ' ORDER BY %s' % self.RANDOM()
             else:
-                sql_o += ' ORDER BY %s' % self.render(orderby)
+                sql_o += ' ORDER BY %s' % orderby
         if limitby:
             if not orderby and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
@@ -323,21 +330,20 @@ class Adapter():
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, where, fields, *attributes):
-        sql, columns = self._select(where, fields, *attributes)
+    def select(self, where, fields=None, **attributes):
+        sql, columns = self._select(where, fields, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
-        limitby = attributes.get('limitby', (0,))
-        rows = self.rowslice(rows, limitby[0], None)
-        return self.parse(rows, self._colnames)
+        return self.parseResponse(rows, columns)
 
     def parseResponse(self, rows, columns, blob_decode=True):
+        return rows
         db = self.db
         virtualtables = []
         new_rows = []
-        for (i, row) in enumerate(rows):
+        for (i,row) in enumerate(rows):
             new_row = Row()
-            for j, colname in enumerate(columns):
+            for j,colname in enumerate(colnames):
                 value = row[j]
                 if not table_field.match(colnames[j]):
                     if not '_extra' in new_row:
@@ -345,9 +351,9 @@ class Adapter():
                     new_row['_extra'][colnames[j]] = value
                     select_as_parser = re.compile("\s+AS\s+(\S+)")
                     new_column_name = select_as_parser.search(colnames[j])
-                    if new_column_name is not None:
+                    if not new_column_name is None:
                         column_name = new_column_name.groups(0)
-                        setattr(new_row, column_name[0], value)
+                        setattr(new_row,column_name[0],value)
                     continue
                 (tablename, fieldname) = colname.split('.')
                 table = db[tablename]
@@ -392,7 +398,7 @@ class Adapter():
                     colset[fieldname] = datetime.date(y, m, d)
                 elif field_type == 'time' \
                         and not isinstance(value, datetime.time):
-                    time_items = map(int, str(value)[:8].strip().split(':')[:3])
+                    time_items = map(int,str(value)[:8].strip().split(':')[:3])
                     if len(time_items) == 3:
                         (h, mi, s) = time_items
                     else:
@@ -400,8 +406,8 @@ class Adapter():
                     colset[fieldname] = datetime.time(h, mi, s)
                 elif field_type == 'datetime'\
                         and not isinstance(value, datetime.datetime):
-                    (y, m, d) = map(int, str(value)[:10].strip().split('-'))
-                    time_items = map(int, str(value)[11:19].strip().split(':')[:3])
+                    (y, m, d) = map(int,str(value)[:10].strip().split('-'))
+                    time_items = map(int,str(value)[11:19].strip().split(':')[:3])
                     if len(time_items) == 3:
                         (h, mi, s) = time_items
                     else:
@@ -417,17 +423,17 @@ class Adapter():
                         value = decimal.Decimal(str(value))
                     colset[fieldname] = value
                 elif field_type.startswith('list:integer'):
-                    if not self.dbengine == 'google:datastore':
+                    if not self.dbengine=='google:datastore':
                         colset[fieldname] = bar_decode_integer(value)
                     else:
                         colset[fieldname] = value
                 elif field_type.startswith('list:reference'):
-                    if not self.dbengine == 'google:datastore':
+                    if not self.dbengine=='google:datastore':
                         colset[fieldname] = bar_decode_integer(value)
                     else:
                         colset[fieldname] = value
                 elif field_type.startswith('list:string'):
-                    if not self.dbengine == 'google:datastore':
+                    if not self.dbengine=='google:datastore':
                         colset[fieldname] = bar_decode_string(value)
                     else:
                         colset[fieldname] = value
@@ -436,12 +442,12 @@ class Adapter():
                 if field_type == 'id':
                     id = colset[field.name]
                     colset.update_record = lambda _ = (colset, table, id), **a: update_record(_, a)
-                    colset.delete_record = lambda t = table, i = id: t._db(t._id == i).delete()
+                    colset.delete_record = lambda t = table, i = id: t._db(t._id==i).delete()
                     for (referee_table, referee_name) in \
                             table._referenced_by:
                         s = db[referee_table][referee_name]
                         referee_link = db._referee_name and \
-                            db._referee_name % dict(table=referee_table, field=referee_name)
+                            db._referee_name % dict(table=referee_table,field=referee_name)
                         if referee_link and not referee_link in colset:
                             colset[referee_link] = Set(db, s == id)
                     colset['id'] = id
@@ -452,15 +458,15 @@ class Adapter():
         for tablename in virtualtables:
             ### new style virtual fields
             table = db[tablename]
-            fields_virtual = [(f, v) for (f, v) in table.items() if isinstance(v, FieldVirtual)]
-            fields_lazy = [(f, v) for (f, v) in table.items() if isinstance(v, FieldLazy)]
+            fields_virtual = [(f,v) for (f,v) in table.items() if isinstance(v,FieldVirtual)]
+            fields_lazy = [(f,v) for (f,v) in table.items() if isinstance(v,FieldLazy)]
             if fields_virtual or fields_lazy:
                 for row in rowsobj.records:
                     box = row[tablename]
-                    for f, v in fields_virtual:
+                    for f,v in fields_virtual:
                         box[f] = v.f(row)
-                    for f, v in fields_lazy:
-                        box[f] = (v.handler or VirtualCommand)(v.f, row)
+                    for f,v in fields_lazy:
+                        box[f] = (v.handler or VirtualCommand)(v.f,row)
 
             ### old style virtual fields
             for item in table.virtualfields:
@@ -504,6 +510,26 @@ class Adapter():
 
 class SqliteAdapter(Adapter):
     driver = globals().get('sqlite3')
+
+    def __init__(self, uri, driverArgs={}):
+        self.driverArgs = driverArgs
+        #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
+        dbPath = uri
+        if dbPath != ':memory:' and dbPath[0] != '/':
+            dbPath = os.path.join(os.getcwd(), dbPath)
+        self.dbPath = dbPath
+        super().__init__(uri)
+
+    def connect(self):
+        return self.driver.Connection(self.dbPath, **self.driverArgs)
+
+    def _truncate(self, table, mode=''):
+        tableName = str(table)
+        return ['DELETE FROM %s;' % tableName,
+                "DELETE FROM sqlite_sequence WHERE name='%s';" % tableName]
+
+    def lastrowid(self, table):
+        return self.cursor.lastrowid
 
     def _getCreateTableIndexes(self, table):
         indexes = []

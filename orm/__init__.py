@@ -31,6 +31,15 @@ from orm.fields import Expression, Field, IdField, StringField, DecimalFieldI, R
 from orm.tables import Table, Record, Index
 from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter as _Adapter
 
-defaultAdapter = _Adapter()
+defaultAdapter = _Adapter(connect=False)
+
+def connect(uri, adapters):
+    '''Search for suitable adapter by protocol'''
+    for dbType, dbAdapterClass in adapters.items(): 
+        uriStart = dbType + '://'
+        if uri.startswith(uriStart):
+            dbAdapter = dbAdapterClass(uri[len(uriStart):])
+            return dbAdapter
+
 
 

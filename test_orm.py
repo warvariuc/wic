@@ -35,7 +35,7 @@ def connect(uri):
 
 
 
-dbAdapter = connect('mysql://conf/databases/test.sqlite')
+dbAdapter = connect('sqlite://../mtc.sqlite')
 orm.defaultAdapter = dbAdapter
 
 #print('\nBooks indexes:')
