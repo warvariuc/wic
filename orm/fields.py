@@ -8,6 +8,8 @@ class Nil(): '''Custom None'''
 
 class Expression():
     '''Expression - pair of operands and operation on them.'''
+    sort = 'ASC' # default sorting
+    
     def __init__(self, operation, left=Nil, right=Nil, type=None): # FIXME: type parameter not needed?
         self.operation = operation
         self.left = left # left operand
@@ -40,6 +42,15 @@ class Expression():
         return Expression('LE', self, other)
     def __add__(self, other): 
         return Expression('ADD', self, other)
+    
+    def __neg__(self):
+        '''-Field: sort DESC'''
+        self.sort = 'DESC'
+        return self
+    def __pos__(self):
+        '''+Field: sort ASC'''
+        self.sort = 'ASC'
+        return self
     
     def IN(self, *items):
         '''The IN clause.''' 
@@ -90,7 +101,7 @@ class Field(Expression):
         
 
 class StringField(Field):
-    def _init(self, maxLength, defaultValue=None,  index=''):
+    def _init(self, maxLength, defaultValue=None, index=''):
         super()._init(orm.adapters.Column(self.name, 'char', self, maxLength=maxLength), defaultValue, index)
         self.maxLength = maxLength
 

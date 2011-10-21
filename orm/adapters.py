@@ -94,9 +94,9 @@ class Adapter():
             return value._render(self) # render sub-expression
         else: # it's a value for a DB column
             if value is not None and castField is not None:
-                assert isinstance(castField, orm.fields.Expression)
+                assert isinstance(castField, orm.fields.Expression), 'Cast field must be an Expression.'
                 if isinstance(castField, orm.fields.Field): # Field - subclass of Expression
-                    pass # TODO: JOIN
+                    pass #
                 else: # is the Expression itself
                     castField = castField.type # expression right operand type
                 value = castField._cast(value)
@@ -262,18 +262,18 @@ class Adapter():
 #        inner_join = join
 #        if inner_join:
 #            icommand = self.JOIN()
-#            if not isinstance(inner_join, (tuple, list)):
+#            if not hasattr(inner_join, '__iter__'):
 #                inner_join = [inner_join]
-#            ijoint = [t._tablename for t in inner_join if not isinstance(t,Expression)]
+#            ijoint = [t._tablename for t in inner_join if not isinstance(t, orm.Expression)]
 #            ijoinon = [t for t in inner_join if isinstance(t, Expression)]
 #            ijoinont = [t.first._tablename for t in ijoinon]
 #            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
 #        if left:
-#            join = attributes['left']
+#            join = left
 #            command = self.LEFT_JOIN()
 #            if not isinstance(join, (tuple, list)):
 #                join = [join]
-#            joint = [t._tablename for t in join if not isinstance(t, Expression)]
+#            joint = [t._tablename for t in join if not isinstance(t, orm.Expression)]
 #            joinon = [t for t in join if isinstance(t, Expression)]
 #            #patch join+left patch (solves problem with ordering in left joins)
 #            tables_to_merge={}
@@ -312,13 +312,20 @@ class Adapter():
             if having:
                 sql_o += ' HAVING %s' % having
         if orderby:
-            #orderby = xorify(orderby)
-            if isinstance(orderby, (list, tuple)):
-                orderby = ', '.join(map(self.render, orderby))
-            if str(orderby) == '<random>':
-                sql_o += ' ORDER BY %s' % self.RANDOM()
-            else:
-                sql_o += ' ORDER BY %s' % orderby
+            if not hasattr(orderby, '__iter__'):
+                orderby = [orderby]
+            _orderBy = []
+            for order in orderby:
+                if isinstance(order, orm.Expression):
+                    order = self.render(order) + ' ' + order.sort
+                elif isinstance(orderby, str):
+                    if order == '<random>':
+                        order = self.RANDOM()
+                else:
+                    raise SyntaxError('Orderby should receive Field or str.')
+                _orderBy.append(order)
+            sql_o += ' ORDER BY %s' % ', '.join(_orderBy)
+                
         if limitby:
             if not orderby and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
@@ -477,23 +484,23 @@ class Adapter():
                     pass
         return rowsobj
 
-    def _count(self, where, distinct=None):
-        tablenames = map(str, self.getExpressionTables(where))
-        if where:
-            sql_w = ' WHERE ' + self.render(where)
-        else:
-            sql_w = ''
-        sql_t = ','.join(tablenames)
-        if distinct:
-            if isinstance(distinct, (list, tuple)):
-                distinct = xorify(distinct)
-            sql_d = self.render(distinct)
-            return 'SELECT COUNT(DISTINCT %s) FROM %s%s;' % (sql_d, sql_t, sql_w)
-        return 'SELECT COUNT(*) FROM %s%s;' % (sql_t, sql_w)
-
-    def count(self, query, distinct=None):
-        self.execute(self._count(query, distinct))
-        return self.cursor.fetchone()[0]
+#    def _count(self, where, distinct=None):
+#        tablenames = map(str, self.getExpressionTables(where))
+#        if where:
+#            sql_w = ' WHERE ' + self.render(where)
+#        else:
+#            sql_w = ''
+#        sql_t = ','.join(tablenames)
+#        if distinct:
+#            if hasattr(distinct, '__iter__'):
+#                distinct = xorify(distinct)
+#            sql_d = self.render(distinct)
+#            return 'SELECT COUNT(DISTINCT %s) FROM %s%s;' % (sql_d, sql_t, sql_w)
+#        return 'SELECT COUNT(*) FROM %s%s;' % (sql_t, sql_w)
+#
+#    def count(self, query, distinct=None):
+#        self.execute(self._count(query, distinct))
+#        return self.cursor.fetchone()[0]
 
 
     def getExpressionTables(self, expression):
@@ -516,9 +523,9 @@ class SqliteAdapter(Adapter):
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
         if dbPath != ':memory:' and dbPath[0] != '/':
-            dbPath = os.path.join(os.getcwd(), dbPath)
+            dbPath = os.path.abspath(os.path.join(os.getcwd(), dbPath))
         self.dbPath = dbPath
-        super().__init__(uri)
+        super().__init__(dbPath)
 
     def connect(self):
         return self.driver.Connection(self.dbPath, **self.driverArgs)
@@ -600,7 +607,7 @@ class Column():
 
 
 def xorify(orderBy):
-    if not isinstance(orderBy, (list, tuple)):
+    if hasattr(orderBy, '__iter__'):
         return orderBy
     if not orderBy:
         return None

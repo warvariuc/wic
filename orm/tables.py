@@ -52,7 +52,7 @@ class TableMeta(type):
             yield field
 
     def __str__(self):
-        return self.__name__.lower() 
+        return getattr(self, '_name', '') or self.__name__.lower() 
 
 
 class Table(metaclass=TableMeta):
