@@ -140,7 +140,7 @@ class IdField(Field):
 class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index=''):
-        super()._init(orm.adapters.Column(self.name + '_id', 'int', self, bytesCount=8), None, index)
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8), None, index)
         self._referTable = referTable # foreign key - referenced type of table
         
     def getReferTable(self):
@@ -164,7 +164,7 @@ class RecordIdField(Field):
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
     def _init(self, index=''):
-        super()._init(orm.adapters.Column(self.name + '_id', 'int', self, bytesCount=2), None, index)
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=2), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
@@ -178,11 +178,11 @@ class AnyRecordIdField(Field):
     def _init(self, index=''):
         super()._init(None, None) # no column, but later we create two fields
             
-        tableIdField = TableIdField(name=self.name + '_table', table=self.table)
+        tableIdField = TableIdField(name=self.name + '_tid', table=self.table)
         tableIdField._init()
         setattr(self.table, tableIdField.name, tableIdField)
         
-        recordIdField = RecordIdField(name=self.name + '_item', table=self.table)
+        recordIdField = RecordIdField(name=self.name + '_id', table=self.table)
         recordIdField._init(None) # no refered table
         setattr(self.table, recordIdField.name, recordIdField)
         

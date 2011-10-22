@@ -3,6 +3,7 @@ import logging, sys
 logger = logging.getLogger("wic.orm")
 
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
+_tablesCount = 0 
 
 def getObjectByPath(path, defaultModule):
     '''Given the path in form 'some.module.object' return the object. 
@@ -31,7 +32,7 @@ from orm.fields import Expression, Field, IdField, StringField, DecimalFieldI, R
 from orm.tables import Table, Record, Index
 from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter as _Adapter
 
-defaultAdapter = _Adapter(connect=False)
+#defaultAdapter = _Adapter(connect=False)
 
 def connect(uri, adapters):
     '''Search for suitable adapter by protocol'''

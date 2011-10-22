@@ -23,7 +23,7 @@ class Adapter():
     '''Generic DB adapter.'''
     def __init__(self, uri='', connect=True):
         '''URI is already without protocol.'''
-        print(uri)
+        print('Creating adapter: %s' % uri)
         self._timings = []
         if connect:
             self.connection = self.connect()
@@ -229,9 +229,9 @@ class Adapter():
             return 'VARCHAR(%i)' % maxLength
             
 
-    def _select(self, where, fields=None, orderby=False, limitby=False, join=False, distinct=False, groupby=False, 
-                having=False, left=False):
-        fields = fields or []
+    def _select(self, where=None, fields=(), orderBy=False, limitBy=False, join=(), distinct=False, groupBy=False, 
+                having=False, leftJoin=()):
+        fields = list(fields)
         tables = self.getExpressionTables(where) # get tables involved in the query
         #where = self.filter_tenant(where, tablenames) # process the query ???
         if not fields: # if not fields specified take them all from the requested tables
@@ -268,10 +268,10 @@ class Adapter():
 #            ijoinon = [t for t in inner_join if isinstance(t, Expression)]
 #            ijoinont = [t.first._tablename for t in ijoinon]
 #            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
-#        if left:
-#            join = left
+#        if leftJoin:
+#            join = leftJoin
 #            command = self.LEFT_JOIN()
-#            if not isinstance(join, (tuple, list)):
+#            if not hasattr(join, '__iter__'):
 #                join = [join]
 #            joint = [t._tablename for t in join if not isinstance(t, orm.Expression)]
 #            joinon = [t for t in join if isinstance(t, Expression)]
@@ -306,19 +306,19 @@ class Adapter():
 #        else:
 #            sql_t = ', '.join(alias(t) for t in tablenames)
         sql_t = ', '.join(map(str, tables))
-        if groupby:
-            groupby = xorify(groupby)
-            sql_o += ' GROUP BY %s' % self.render(groupby)
+        if groupBy:
+            groupBy = xorify(groupBy)
+            sql_o += ' GROUP BY %s' % self.render(groupBy)
             if having:
                 sql_o += ' HAVING %s' % having
-        if orderby:
-            if not hasattr(orderby, '__iter__'):
-                orderby = [orderby]
+        if orderBy:
+            if not hasattr(orderBy, '__iter__'):
+                orderby = [orderBy]
             _orderBy = []
-            for order in orderby:
+            for order in orderBy:
                 if isinstance(order, orm.Expression):
                     order = self.render(order) + ' ' + order.sort
-                elif isinstance(orderby, str):
+                elif isinstance(order, str):
                     if order == '<random>':
                         order = self.RANDOM()
                 else:
@@ -326,18 +326,19 @@ class Adapter():
                 _orderBy.append(order)
             sql_o += ' ORDER BY %s' % ', '.join(_orderBy)
                 
-        if limitby:
-            if not orderby and tables:
+        if limitBy:
+            if not orderBy and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
-        return self.select_limitby(sql_s, sql_f, sql_t, sql_w, sql_o, limitby), columns
+                
+        return self.selectLimitBy(sql_s, sql_f, sql_t, sql_w, sql_o, limitBy), columns
 
-    def select_limitby(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitby):
-        if limitby:
-            (lmin, lmax) = limitby
+    def selectLimitBy(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitBy):
+        if limitBy:
+            (lmin, lmax) = limitBy
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, where, fields=None, **attributes):
+    def select(self, where, fields=(), **attributes):
         sql, columns = self._select(where, fields, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
@@ -345,145 +346,145 @@ class Adapter():
 
     def parseResponse(self, rows, columns, blob_decode=True):
         return rows
-        db = self.db
-        virtualtables = []
-        new_rows = []
-        for (i,row) in enumerate(rows):
-            new_row = Row()
-            for j,colname in enumerate(colnames):
-                value = row[j]
-                if not table_field.match(colnames[j]):
-                    if not '_extra' in new_row:
-                        new_row['_extra'] = Row()
-                    new_row['_extra'][colnames[j]] = value
-                    select_as_parser = re.compile("\s+AS\s+(\S+)")
-                    new_column_name = select_as_parser.search(colnames[j])
-                    if not new_column_name is None:
-                        column_name = new_column_name.groups(0)
-                        setattr(new_row,column_name[0],value)
-                    continue
-                (tablename, fieldname) = colname.split('.')
-                table = db[tablename]
-                field = table[fieldname]
-                field_type = field.type
-                if field.type != 'blob' and isinstance(value, str):
-                    try:
-                        value = value.decode(db._db_codec)
-                    except Exception:
-                        pass
-                if isinstance(value, unicode):
-                    value = value.encode('utf-8')
-                if not tablename in new_row:
-                    colset = new_row[tablename] = Row()
-                    if tablename not in virtualtables:
-                        virtualtables.append(tablename)
-                else:
-                    colset = new_row[tablename]
-
-                if isinstance(field_type, SQLCustomType):
-                    colset[fieldname] = field_type.decoder(value)
-                    # field_type = field_type.type
-                elif not isinstance(field_type, str) or value is None:
-                    colset[fieldname] = value
-                elif isinstance(field_type, str) and \
-                        field_type.startswith('reference'):
-                    referee = field_type[10:].strip()
-                    if not '.' in referee:
-                        colset[fieldname] = rid = Reference(value)
-                        (rid._table, rid._record) = (db[referee], None)
-                    else: ### reference not by id
-                        colset[fieldname] = value
-                elif field_type == 'boolean':
-                    if value == True or str(value)[:1].lower() == 't':
-                        colset[fieldname] = True
-                    else:
-                        colset[fieldname] = False
-                elif field_type == 'date' \
-                        and (not isinstance(value, datetime.date)\
-                                 or isinstance(value, datetime.datetime)):
-                    (y, m, d) = map(int, str(value)[:10].strip().split('-'))
-                    colset[fieldname] = datetime.date(y, m, d)
-                elif field_type == 'time' \
-                        and not isinstance(value, datetime.time):
-                    time_items = map(int,str(value)[:8].strip().split(':')[:3])
-                    if len(time_items) == 3:
-                        (h, mi, s) = time_items
-                    else:
-                        (h, mi, s) = time_items + [0]
-                    colset[fieldname] = datetime.time(h, mi, s)
-                elif field_type == 'datetime'\
-                        and not isinstance(value, datetime.datetime):
-                    (y, m, d) = map(int,str(value)[:10].strip().split('-'))
-                    time_items = map(int,str(value)[11:19].strip().split(':')[:3])
-                    if len(time_items) == 3:
-                        (h, mi, s) = time_items
-                    else:
-                        (h, mi, s) = time_items + [0]
-                    colset[fieldname] = datetime.datetime(y, m, d, h, mi, s)
-                elif field_type == 'blob' and blob_decode:
-                    colset[fieldname] = base64.b64decode(str(value))
-                elif field_type.startswith('decimal'):
-                    decimals = int(field_type[8:-1].split(',')[-1])
-                    if self.dbengine == 'sqlite':
-                        value = ('%.' + str(decimals) + 'f') % value
-                    if not isinstance(value, decimal.Decimal):
-                        value = decimal.Decimal(str(value))
-                    colset[fieldname] = value
-                elif field_type.startswith('list:integer'):
-                    if not self.dbengine=='google:datastore':
-                        colset[fieldname] = bar_decode_integer(value)
-                    else:
-                        colset[fieldname] = value
-                elif field_type.startswith('list:reference'):
-                    if not self.dbengine=='google:datastore':
-                        colset[fieldname] = bar_decode_integer(value)
-                    else:
-                        colset[fieldname] = value
-                elif field_type.startswith('list:string'):
-                    if not self.dbengine=='google:datastore':
-                        colset[fieldname] = bar_decode_string(value)
-                    else:
-                        colset[fieldname] = value
-                else:
-                    colset[fieldname] = value
-                if field_type == 'id':
-                    id = colset[field.name]
-                    colset.update_record = lambda _ = (colset, table, id), **a: update_record(_, a)
-                    colset.delete_record = lambda t = table, i = id: t._db(t._id==i).delete()
-                    for (referee_table, referee_name) in \
-                            table._referenced_by:
-                        s = db[referee_table][referee_name]
-                        referee_link = db._referee_name and \
-                            db._referee_name % dict(table=referee_table,field=referee_name)
-                        if referee_link and not referee_link in colset:
-                            colset[referee_link] = Set(db, s == id)
-                    colset['id'] = id
-            new_rows.append(new_row)
-
-        rowsobj = Rows(db, new_rows, colnames, rawrows=rows)
-
-        for tablename in virtualtables:
-            ### new style virtual fields
-            table = db[tablename]
-            fields_virtual = [(f,v) for (f,v) in table.items() if isinstance(v,FieldVirtual)]
-            fields_lazy = [(f,v) for (f,v) in table.items() if isinstance(v,FieldLazy)]
-            if fields_virtual or fields_lazy:
-                for row in rowsobj.records:
-                    box = row[tablename]
-                    for f,v in fields_virtual:
-                        box[f] = v.f(row)
-                    for f,v in fields_lazy:
-                        box[f] = (v.handler or VirtualCommand)(v.f,row)
-
-            ### old style virtual fields
-            for item in table.virtualfields:
-                try:
-                    rowsobj = rowsobj.setvirtualfields(**{tablename:item})
-                except KeyError:
-                    # to avoid breaking virtualfields when partial select
-                    pass
-        return rowsobj
-
+#        db = self.db
+#        virtualtables = []
+#        new_rows = []
+#        for (i,row) in enumerate(rows):
+#            new_row = Row()
+#            for j,colname in enumerate(colnames):
+#                value = row[j]
+#                if not table_field.match(colnames[j]):
+#                    if not '_extra' in new_row:
+#                        new_row['_extra'] = Row()
+#                    new_row['_extra'][colnames[j]] = value
+#                    select_as_parser = re.compile("\s+AS\s+(\S+)")
+#                    new_column_name = select_as_parser.search(colnames[j])
+#                    if not new_column_name is None:
+#                        column_name = new_column_name.groups(0)
+#                        setattr(new_row,column_name[0],value)
+#                    continue
+#                (tablename, fieldname) = colname.split('.')
+#                table = db[tablename]
+#                field = table[fieldname]
+#                field_type = field.type
+#                if field.type != 'blob' and isinstance(value, str):
+#                    try:
+#                        value = value.decode(db._db_codec)
+#                    except Exception:
+#                        pass
+#                if isinstance(value, unicode):
+#                    value = value.encode('utf-8')
+#                if not tablename in new_row:
+#                    colset = new_row[tablename] = Row()
+#                    if tablename not in virtualtables:
+#                        virtualtables.append(tablename)
+#                else:
+#                    colset = new_row[tablename]
+#
+#                if isinstance(field_type, SQLCustomType):
+#                    colset[fieldname] = field_type.decoder(value)
+#                    # field_type = field_type.type
+#                elif not isinstance(field_type, str) or value is None:
+#                    colset[fieldname] = value
+#                elif isinstance(field_type, str) and \
+#                        field_type.startswith('reference'):
+#                    referee = field_type[10:].strip()
+#                    if not '.' in referee:
+#                        colset[fieldname] = rid = Reference(value)
+#                        (rid._table, rid._record) = (db[referee], None)
+#                    else: ### reference not by id
+#                        colset[fieldname] = value
+#                elif field_type == 'boolean':
+#                    if value == True or str(value)[:1].lower() == 't':
+#                        colset[fieldname] = True
+#                    else:
+#                        colset[fieldname] = False
+#                elif field_type == 'date' \
+#                        and (not isinstance(value, datetime.date)\
+#                                 or isinstance(value, datetime.datetime)):
+#                    (y, m, d) = map(int, str(value)[:10].strip().split('-'))
+#                    colset[fieldname] = datetime.date(y, m, d)
+#                elif field_type == 'time' \
+#                        and not isinstance(value, datetime.time):
+#                    time_items = map(int,str(value)[:8].strip().split(':')[:3])
+#                    if len(time_items) == 3:
+#                        (h, mi, s) = time_items
+#                    else:
+#                        (h, mi, s) = time_items + [0]
+#                    colset[fieldname] = datetime.time(h, mi, s)
+#                elif field_type == 'datetime'\
+#                        and not isinstance(value, datetime.datetime):
+#                    (y, m, d) = map(int,str(value)[:10].strip().split('-'))
+#                    time_items = map(int,str(value)[11:19].strip().split(':')[:3])
+#                    if len(time_items) == 3:
+#                        (h, mi, s) = time_items
+#                    else:
+#                        (h, mi, s) = time_items + [0]
+#                    colset[fieldname] = datetime.datetime(y, m, d, h, mi, s)
+#                elif field_type == 'blob' and blob_decode:
+#                    colset[fieldname] = base64.b64decode(str(value))
+#                elif field_type.startswith('decimal'):
+#                    decimals = int(field_type[8:-1].split(',')[-1])
+#                    if self.dbengine == 'sqlite':
+#                        value = ('%.' + str(decimals) + 'f') % value
+#                    if not isinstance(value, decimal.Decimal):
+#                        value = decimal.Decimal(str(value))
+#                    colset[fieldname] = value
+#                elif field_type.startswith('list:integer'):
+#                    if not self.dbengine=='google:datastore':
+#                        colset[fieldname] = bar_decode_integer(value)
+#                    else:
+#                        colset[fieldname] = value
+#                elif field_type.startswith('list:reference'):
+#                    if not self.dbengine=='google:datastore':
+#                        colset[fieldname] = bar_decode_integer(value)
+#                    else:
+#                        colset[fieldname] = value
+#                elif field_type.startswith('list:string'):
+#                    if not self.dbengine=='google:datastore':
+#                        colset[fieldname] = bar_decode_string(value)
+#                    else:
+#                        colset[fieldname] = value
+#                else:
+#                    colset[fieldname] = value
+#                if field_type == 'id':
+#                    id = colset[field.name]
+#                    colset.update_record = lambda _ = (colset, table, id), **a: update_record(_, a)
+#                    colset.delete_record = lambda t = table, i = id: t._db(t._id==i).delete()
+#                    for (referee_table, referee_name) in \
+#                            table._referenced_by:
+#                        s = db[referee_table][referee_name]
+#                        referee_link = db._referee_name and \
+#                            db._referee_name % dict(table=referee_table,field=referee_name)
+#                        if referee_link and not referee_link in colset:
+#                            colset[referee_link] = Set(db, s == id)
+#                    colset['id'] = id
+#            new_rows.append(new_row)
+#
+#        rowsobj = Rows(db, new_rows, colnames, rawrows=rows)
+#
+#        for tablename in virtualtables:
+#            ### new style virtual fields
+#            table = db[tablename]
+#            fields_virtual = [(f,v) for (f,v) in table.items() if isinstance(v,FieldVirtual)]
+#            fields_lazy = [(f,v) for (f,v) in table.items() if isinstance(v,FieldLazy)]
+#            if fields_virtual or fields_lazy:
+#                for row in rowsobj.records:
+#                    box = row[tablename]
+#                    for f,v in fields_virtual:
+#                        box[f] = v.f(row)
+#                    for f,v in fields_lazy:
+#                        box[f] = (v.handler or VirtualCommand)(v.f,row)
+#
+#            ### old style virtual fields
+#            for item in table.virtualfields:
+#                try:
+#                    rowsobj = rowsobj.setvirtualfields(**{tablename:item})
+#                except KeyError:
+#                    # to avoid breaking virtualfields when partial select
+#                    pass
+#        return rowsobj
+#
 #    def _count(self, where, distinct=None):
 #        tablenames = map(str, self.getExpressionTables(where))
 #        if where:

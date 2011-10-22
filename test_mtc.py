@@ -4,9 +4,28 @@ import orm
 
 
 class Regions(orm.Table):
-    _tableId = 1
     region_name = orm.StringField(maxLength=60)
     region_type_name = orm.StringField(maxLength=20)
+
+class Locations(orm.Table):
+    region_id = orm.RecordIdField(Regions)
+    location_name = orm.StringField(maxLength=100)
+    location_type_name = orm.StringField(maxLength=20)
+
+class Streets(orm.Table):
+    location_id = orm.RecordIdField(Locations)
+    street_name = orm.StringField(maxLength=100)
+    street_old_name = orm.StringField(maxLength=100)
+    street_type_name = orm.StringField(maxLength=20)
+
+class Persons(orm.Table):
+    last_name = orm.StringField(maxLength=100)
+    first_name = orm.StringField(maxLength=100)
+    middle_name = orm.StringField(maxLength=100)
+    #phone_prefix = " INTEGER NOT NULL ,"
+    #phone_number = " INTEGER NOT NULL ,"
+    location_id = orm.RecordIdField(Locations)
+    street_id = orm.RecordIdField(Streets)
 
 
 ADAPTERS = dict(sqlite=orm.SqliteAdapter, mysql=orm.MysqlAdapter) # available adapters
@@ -14,31 +33,13 @@ ADAPTERS = dict(sqlite=orm.SqliteAdapter, mysql=orm.MysqlAdapter) # available ad
 
 dbAdapter = orm.connect('sqlite://../mtc.sqlite', ADAPTERS)
 
-#print('\nBooks indexes:')
-#for index in Books._indexes:
-#    print(' ', index)
-#    
-#print('\nTextual representation of a field:')
-#print(Books.author)
-#
-print('\nRegions table fields:')
-for field in Regions:
-    print(' ', field)
-#
-#print('\nTextual representation of a Table:')
-#print(Books)
-#
-#print('\nCREATE TABLE query for Authors table:')
-#print(Authors.getCreateStatement(orm.defaultAdapter))
-#
-#print('\nCREATE TABLE query for Books table:')
-#print(Books.getCreateStatement(orm.defaultAdapter))
+#print('\nRegions table fields:')
+#for field in Regions:
+#    print(' ', field)
 
+# implicit join
+#pprint(dbAdapter.select((Regions.id != Locations.region_id), orderBy=[Regions.region_type_name, -Regions.region_name], limitBy=(0, 10)))
 
-#print('\nTextual representation of an item:')
-#print(book)
-#
-#print(book.id, book.name, book.price) # None - the book wasn't saved yet
+# explicit join
+#pprint(dbAdapter.select(None, Regions, join=Locations(Locations.region_id != Regions.id), limitBy=(0, 10)))
 
-#print(dbAdapter._select((Books.price > 5), limitby=(0,10)))
-pprint(dbAdapter._select((Regions.id != None), orderby=[Regions.region_type_name, -Regions.region_name], limitby=(0,10)))
