@@ -9,10 +9,10 @@ class TableMeta(type):
         newClass = type.__new__(cls, name, bases, attrs)
         
         if 'Table' in globals(): # only Table subclasses. if Table is not defined - __new__ is called for it
-            orm._tablesCount += 1
-            if not hasattr(newClass, '_tableId'):
-                #raise Exception('Table ID not set in {}!'.format(newClass))
-                newClass._tableId = orm._tablesCount  
+#            orm._tablesCount += 1
+#            if not hasattr(newClass, '_tableId'):
+#                newClass._tableId = orm._tablesCount  
+#                #raise Exception('Table ID not set in {}!'.format(newClass))
             
             newClass._indexes = list(newClass._indexes) # assure each class has its own attribute
             for index in newClass._indexes :

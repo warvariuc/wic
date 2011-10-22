@@ -37,17 +37,21 @@ class Adapter():
         return None # DB connection
 
     def logExecute(self, *a, **b):
-        lastsql = a[0]
+        lastQuery = a[0]
         t0 = time.time()
-        ret = self.cursor.execute(*a, **b)
-        self._timings.append((lastsql, time.time() - t0))
+        try:
+            ret = self.cursor.execute(*a, **b)
+        except:
+            print(lastQuery)
+            raise
+        self._timings.append((lastQuery, time.time() - t0))
         return ret
     
-    def getLastSql(self):
-        return self.db._timings[-1][0]
+    def getLastQuery(self):
+        return self._timings[-1]
 
-    def execute(self, *a, **b):
-        return self.logExecute(*a, **b)
+    def execute(self, *args, **kwargs):
+        return self.logExecute(*args, **kwargs)
 
     def AND(self, left, right):
         '''Render the AND clause.'''
@@ -229,21 +233,17 @@ class Adapter():
             return 'VARCHAR(%i)' % maxLength
             
 
-    def _select(self, where=None, fields=(), orderBy=False, limitBy=False, join=(), distinct=False, groupBy=False, 
+    def _select(self, fields=(), where=None, orderBy=False, limitBy=False, join=(), distinct=False, groupBy=False, 
                 having=False, leftJoin=()):
         fields = list(fields)
         tables = self.getExpressionTables(where) # get tables involved in the query
         #where = self.filter_tenant(where, tablenames) # process the query ???
         if not fields: # if not fields specified take them all from the requested tables
             for table in tables:
-                for field in table:
-                    fields.append(field)
+                fields.extend(table)
         else:
             for field in fields:
                 assert isinstance(field, orm.Field)
-#                if isinstance(field, str) and table_field.match(field):
-#                    tn, fn = field.split('.')
-#                    field = self.db[tn][fn]
                 tables |= self.getExpressionTables(field)
         if not tables:
             raise SyntaxError('SELECT: no tables involved.')
@@ -338,11 +338,11 @@ class Adapter():
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, where, fields=(), **attributes):
-        sql, columns = self._select(where, fields, **attributes)
+    def select(self, fields=(), where=None, **attributes):
+        sql, columns = self._select(fields, where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
-        return self.parseResponse(rows, columns)
+        return self.parseResponse(rows, columns), columns
 
     def parseResponse(self, rows, columns, blob_decode=True):
         return rows

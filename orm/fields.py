@@ -56,17 +56,12 @@ class Expression():
         '''The IN clause.''' 
         return Expression('IN', self, items)
     
-    def _render(self, adapter=None):
+    def _render(self, adapter):
         '''Construct the text of the WHERE clause from this Expression.
         adapter - db adapter to use for rendering. If None - use default.'''
-        adapter = adapter or orm.defaultAdapter
         operation = getattr(adapter, self.operation)
-            
-        if self.right is not Nil:
-            return operation(self.left, self.right)
-        elif self.left is not Nil:
-            return operation(self.left)
-        return operation()
+        args = [arg for arg in (self.left, self.right) if arg is not Nil]      
+        return operation(*args)
 
     def _cast(self, value):
         '''Converts a value to Field's comparable type. Default implementation.'''
@@ -108,7 +103,7 @@ class StringField(Field):
 
 class IntegerField(Field):
     def _init(self, bytesCount, defaultValue=None, autoincrement=False, index=''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount, autoincrement), defaultValue, index)
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=bytesCount, autoincrement=autoincrement), defaultValue, index)
         self.bytesCount = bytesCount
         self.autoincrement = autoincrement
 
@@ -151,10 +146,7 @@ class RecordIdField(Field):
     referTable = property(getReferTable)
         
     def _cast(self, value):
-        '''Convert a value into another value wihch is ok for this Field.'''
-        if isinstance(value, orm.Record):
-            value = value.id # ItemField() == Item() -> ItemField() == Item().id
-            
+        '''Convert a value into another value which is ok for this Field.'''
         try:
             return int(value)
         except ValueError:
@@ -169,31 +161,26 @@ class TableIdField(Field):
     def _cast(self, value):
         if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
-        return value
+        return int(value)
 
 
-class AnyRecordIdField(Field):
+class AnyRecordField(Field):
     '''This field stores id of a row of any table.
     It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID.'''
     def _init(self, index=''):
         super()._init(None, None) # no column, but later we create two fields
             
-        tableIdField = TableIdField(name=self.name + '_tid', table=self.table)
+        tableIdField = TableIdField(name=self.name + '_table', table=self.table)
         tableIdField._init()
         setattr(self.table, tableIdField.name, tableIdField)
         
-        recordIdField = RecordIdField(name=self.name + '_id', table=self.table)
+        recordIdField = RecordIdField(name=self.name + '_record', table=self.table)
         recordIdField._init(None) # no refered table
         setattr(self.table, recordIdField.name, recordIdField)
         
         self.table._indexes.append(orm.Index([tableIdField, recordIdField], index))
         
-        self._fields = dict(tableId=tableIdField, itemId=recordIdField)
-
-    def _cast(self, value):
-        if isinstance(value, orm.Table):
-            return value.id
-        return value
+        self._fields = dict(tableId=tableIdField, itemId=recordIdField) # real fields
 
     def __eq__(self, other): 
         assert isinstance(other, orm.Table)

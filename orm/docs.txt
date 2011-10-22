@@ -1,0 +1,1 @@
+Foreign key fields are always named with '_id' at the end.

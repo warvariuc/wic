@@ -18,8 +18,8 @@ class Books(orm.Table):
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
     price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00', index=True) # 2 decimal places
     old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
-    author = orm.RecordIdField('Authors', index=True)
-    fan = orm.fields.RecordIdField(None, index=True) # None means that this field may contain reference to any other table in the DB
+    author_id = orm.RecordIdField('Authors', index=True)
+#    fan = orm.AnyRecordField(index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
 
@@ -36,7 +36,6 @@ def connect(uri):
 
 
 dbAdapter = connect('sqlite://../mtc.sqlite')
-orm.defaultAdapter = dbAdapter
 
 #print('\nBooks indexes:')
 #for index in Books._indexes:
@@ -52,11 +51,11 @@ orm.defaultAdapter = dbAdapter
 #print('\nTextual representation of a Table:')
 #print(Books)
 #
-#print('\nCREATE TABLE query for Authors table:')
-#print(Authors.getCreateStatement(orm.defaultAdapter))
-#
-#print('\nCREATE TABLE query for Books table:')
-#print(Books.getCreateStatement(orm.defaultAdapter))
+print('\nCREATE TABLE query for Authors table:')
+print(Authors.getCreateStatement(dbAdapter))
+
+print('\nCREATE TABLE query for Books table:')
+print(Books.getCreateStatement(dbAdapter))
 
 
 #print(Authors.id.table, Books.id.table) # though id is inehrited from base model - you can see that now each table has its personal id field
@@ -74,15 +73,15 @@ print('\nTextual representation of an item:')
 print(book)
 
 print(book.id, book.name, book.price) # None - the book wasn't saved yet
-print(((Books.price != None) & (Books.price > Books.old_price))._render())
+print(((Books.price != None) & (Books.price > Books.old_price))._render(dbAdapter))
 
-where = ((Books.author == author) | ((1 <= Books.id) & (Books.price > 9.99)))
-print(where._render())
+where = ((Books.author_id == author.id) | ((1 <= Books.id) & (Books.price > 9.99)))
+print(where._render(dbAdapter))
 
-print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render())
+print(((1 < Books.price) & (Books.price.IN(3, 4, 5)))._render(dbAdapter))
 
 print('\nSELECT query:')
-print(dbAdapter._select((Books.price > 5), limitby=(0,10)))
+print(dbAdapter._select([Books.id], (Books.price > 5), limitBy=(0,10)))
 
 #print(Books(Books.price > 5).select(dbAdapter, join=[Authors]))
 
