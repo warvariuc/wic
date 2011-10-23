@@ -43,10 +43,10 @@ pprint(dbAdapter.select([], (Regions.id == Locations.region_id), orderBy=[Region
 # explicit join
 #pprint(dbAdapter.select(list(Persons), join=Locations(Locations.id == Persons.location_id), limitBy=(0, 10)))
 #print(dbAdapter.select([], Locations.id == Persons.location_id, limitBy=(0, 10)))
-pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons, locations JOIN locations AS l ON (l.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
+pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
 print(dbAdapter.getLastQuery())
 
-pprint(dbAdapter.select([], (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
+pprint(dbAdapter.select(list(Persons), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
 print(dbAdapter.getLastQuery())
 
 
