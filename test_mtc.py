@@ -38,15 +38,16 @@ dbAdapter = orm.connect('sqlite://../mtc.sqlite', ADAPTERS)
 #    print(' ', field)
 
 # implicit join: get all locations and the regions they are part of
-pprint(dbAdapter.select([], (Regions.id == Locations.region_id), orderBy=[Regions.region_type_name, -Regions.region_name], limitBy=(0, 10)))
+#pprint(dbAdapter.select([], (Regions.id == Locations.region_id), orderBy=[Regions.region_type_name, -Regions.region_name], limitBy=(0, 10)))
 
 # explicit join
+pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
+print(dbAdapter.getLastQuery(), '\n')
+
 #pprint(dbAdapter.select(list(Persons), join=Locations(Locations.id == Persons.location_id), limitBy=(0, 10)))
 #print(dbAdapter.select([], Locations.id == Persons.location_id, limitBy=(0, 10)))
-pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
-print(dbAdapter.getLastQuery())
 
-pprint(dbAdapter.select(list(Persons), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
-print(dbAdapter.getLastQuery())
+pprint(dbAdapter.select(list(Persons) + list(Locations), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
+#print(dbAdapter.getLastQuery())
 
 

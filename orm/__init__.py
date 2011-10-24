@@ -27,6 +27,12 @@ class class_or_instance_method():
             return self.method(obj, *args, **kwargs)
         return wrapped        
 
+def listify(obj):
+    '''Assure that obj is an iterable.'''
+    if not hasattr(obj, '__iter__'):
+        obj = [obj]
+    return obj
+
 
 from orm.fields import Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, RecordIdField, AnyRecordField
 from orm.tables import Table, Record, Index

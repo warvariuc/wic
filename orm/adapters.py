@@ -195,6 +195,12 @@ class Adapter():
         query += '\n) ' + other + ';'
         return query
 
+    def JOIN(self):
+        return 'JOIN'
+
+    def LEFT_JOIN(self):
+        return 'LEFT JOIN'
+    
     def NULL(self):   
         return 'NULL'
         
@@ -259,15 +265,20 @@ class Adapter():
             sql_s += 'DISTINCT'
         elif distinct:
             sql_s += 'DISTINCT ON (%s)' % distinct
+
+        if join:
+            join = orm.listify(join)
+            joinTables = []
+            for table in join:
+                assert isinstance(table, orm.Table)
+                joinTables.append(table.__class__)
 #        inner_join = join
 #        if inner_join:
 #            icommand = self.JOIN()
-#            if not hasattr(inner_join, '__iter__'):
-#                inner_join = [inner_join]
-#            ijoint = [t._tablename for t in inner_join if not isinstance(t, orm.Expression)]
-#            ijoinon = [t for t in inner_join if isinstance(t, Expression)]
-#            ijoinont = [t.first._tablename for t in ijoinon]
-#            iexcluded = [t for t in tablenames if not t in ijoint + ijoinont]
+#            ijoin_t = [table._tablename for table in inner_join if not isinstance(table, orm.Expression)]
+#            ijoin_on = [table for table in inner_join if isinstance(table, orm.Expression)] # JOIN ON Expressions
+#            ijoin_on_t = [table.left._table for table in ijoin_on]
+#            iexcluded = [table for table in tables if not table in ijoin_t + ijoin_on_t]
 #        if leftJoin:
 #            join = leftJoin
 #            command = self.LEFT_JOIN()
@@ -277,7 +288,7 @@ class Adapter():
 #            joinon = [t for t in join if isinstance(t, Expression)]
 #            #patch join+left patch (solves problem with ordering in left joins)
 #            tables_to_merge={}
-#            [tables_to_merge.update(dict.fromkeys(self.tables(t))) for t in joinon]
+#            [tables_to_merge.update(dict.fromkeys(self.getExpressionTables(t))) for t in joinon]
 #            joinont = [t.first._tablename for t in joinon]
 #            [tables_to_merge.pop(t) for t in joinont if t in tables_to_merge]
 #            important_tablenames = joint + joinont + tables_to_merge.keys()

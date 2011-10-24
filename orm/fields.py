@@ -99,6 +99,9 @@ class StringField(Field):
     def _init(self, maxLength, defaultValue=None, index=''):
         super()._init(orm.adapters.Column(self.name, 'char', self, maxLength=maxLength), defaultValue, index)
         self.maxLength = maxLength
+    
+    def __str__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.maxLength)
 
 
 class IntegerField(Field):
