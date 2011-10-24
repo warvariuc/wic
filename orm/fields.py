@@ -1,5 +1,6 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 from decimal import Decimal
-import inspect
 import orm
 
 
@@ -162,7 +163,7 @@ class TableIdField(Field):
         super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=2), None, index)
         
     def _cast(self, value):
-        if isinstance(value, orm.Table) or (inspect.isclass(value) and issubclass(value, orm.Table)):
+        if isinstance(value, orm.Table) or orm.isTable(value):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
         return int(value)
 

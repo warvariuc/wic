@@ -1,3 +1,5 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 import inspect
 import orm
 
@@ -64,30 +66,17 @@ class Table(metaclass=TableMeta):
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
 
     def __init__(self, expression):
-        assert isinstance(expression, orm.fields.Expression)
+        assert isinstance(expression, orm.fields.Expression), 'WHERE should be an Expression.'
         self.where = expression
 
-    @classmethod
-    def getCreateStatement(cls, adapter):
-        '''CREATE TABLE statement for the given DB.'''
-        return adapter.getCreateTableQuery(cls)
-    
     @classmethod
     def new(cls, adapter, **kwargs):
         '''Create new item of this Table'''
         return Record(cls, adapter, **kwargs)
     
-    @orm.class_or_instance_method
-    def select(self, adapter, where=None, join=()):
-        if isinstance(self, Table): # it's an instance of Table
-            table = self.__class__
-            where = self.where
-        else: # it's a Table
-            assert where is not None, 'Provide a WHERE expression.'
-            table = self
-        assert isinstance(where, orm.fields.Expression), 'WHERE should be an Expression.'
-        fields = map(str, table) # list of fields to select
-        table = str(table)
+    def select(self, adapter, join=()):
+        fields = map(str, self) # list of fields to select
+        table = str(self)
         return list(fields) #adapter.makeSelectQuery(table, fields, where)
 
 

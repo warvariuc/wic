@@ -1,4 +1,6 @@
-import logging, sys
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
+import logging, sys, inspect
 
 logger = logging.getLogger("wic.orm")
 
@@ -14,18 +16,8 @@ def getObjectByPath(path, defaultModule):
         return getattr(module, className)            
     return getattr(sys.modules[defaultModule], path) 
     
-
-class class_or_instance_method():
-    '''If you decorate a method with this - it will pass as the first argument instance or class.'''
-    def __init__(self, method):
-        self.method = method
-    
-    def __get__(self, obj, objType):
-        if obj is None:
-            obj = objType
-        def wrapped(*args, **kwargs):
-            return self.method(obj, *args, **kwargs)
-        return wrapped        
+def isTable(obj):
+    return inspect.isclass(obj) and issubclass(obj, Table)
 
 def listify(obj):
     '''Assure that obj is an iterable.'''
@@ -36,7 +28,7 @@ def listify(obj):
 
 from orm.fields import Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, RecordIdField, AnyRecordField
 from orm.tables import Table, Record, Index
-from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter as _Adapter
+from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter
 
 #defaultAdapter = _Adapter(connect=False)
 

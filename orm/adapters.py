@@ -1,8 +1,10 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 '''This module contains database adapters, which incapsulate all operations specific to a certain database.
 All other ORM modules should be database agnostic.'''
 
 import os, sys, base64, locale
-import time, inspect
+import time
 from collections import OrderedDict
 
 import orm
@@ -184,7 +186,7 @@ class Adapter():
 
     def getCreateTableQuery(self, table):
         '''Get CREATE TABLE statement for this database'''
-        assert inspect.isclass(table) and issubclass(table, orm.Table)
+        assert orm.isTable(table), 'Provide a Table subclass.'
         
         columns = self._getCreateTableColumns(table)
         indexes = self._getCreateTableIndexes(table)
@@ -248,9 +250,16 @@ class Adapter():
             for table in tables:
                 fields.extend(table)
         else:
+            newFields = []
             for field in fields:
-                assert isinstance(field, orm.Field)
-                tables |= self.getExpressionTables(field)
+                if orm.isTable(field):
+                    newFields.extend(field) # select all table fields
+                    tables.add(field)
+                else:
+                    assert isinstance(field, orm.Field)
+                    newFields.append(field)
+                    tables |= self.getExpressionTables(field)
+            fields = newFields
         if not tables:
             raise SyntaxError('SELECT: no tables involved.')
         columns = OrderedDict(zip(map(self.render, fields), fields))
@@ -272,6 +281,13 @@ class Adapter():
             for table in join:
                 assert isinstance(table, orm.Table)
                 joinTables.append(table.__class__)
+            tables = [table for table in tables if table not in joinTables]
+            sql_t = ', '.join(map(str, tables))
+            for table in join:
+                sql_t += ' JOIN %s ON %s' % (table.__class__, self.render(table.where))
+        else:
+            sql_t = ', '.join(map(str, tables))
+                
 #        inner_join = join
 #        if inner_join:
 #            icommand = self.JOIN()
@@ -316,15 +332,13 @@ class Adapter():
 #                sql_t += ' %s %s' % (command, str(t))
 #        else:
 #            sql_t = ', '.join(alias(t) for t in tablenames)
-        sql_t = ', '.join(map(str, tables))
         if groupBy:
             groupBy = xorify(groupBy)
             sql_o += ' GROUP BY %s' % self.render(groupBy)
             if having:
                 sql_o += ' HAVING %s' % having
         if orderBy:
-            if not hasattr(orderBy, '__iter__'):
-                orderby = [orderBy]
+            orderBy = orm.listify(orderBy)
             _orderBy = []
             for order in orderBy:
                 if isinstance(order, orm.Expression):

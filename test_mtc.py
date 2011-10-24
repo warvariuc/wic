@@ -44,10 +44,15 @@ dbAdapter = orm.connect('sqlite://../mtc.sqlite', ADAPTERS)
 pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
 print(dbAdapter.getLastQuery(), '\n')
 
-#pprint(dbAdapter.select(list(Persons), join=Locations(Locations.id == Persons.location_id), limitBy=(0, 10)))
+result = dbAdapter.select([Persons, Locations, Regions], 
+                          join=[Locations(Locations.id == Persons.location_id), Regions(Regions.id == Locations.region_id)], 
+                          where=Persons.phone_number == '763533', limitBy=(0, 10)) 
+pprint(list(zip(result[1], result[0][0])))
+print(dbAdapter.getLastQuery(), '\n')
+
 #print(dbAdapter.select([], Locations.id == Persons.location_id, limitBy=(0, 10)))
 
-pprint(dbAdapter.select(list(Persons) + list(Locations), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
+#pprint(dbAdapter.select(list(Persons) + list(Locations), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
 #print(dbAdapter.getLastQuery())
 
 

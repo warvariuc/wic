@@ -52,10 +52,10 @@ dbAdapter = connect('sqlite://../mtc.sqlite')
 #print(Books)
 #
 print('\nCREATE TABLE query for Authors table:')
-print(Authors.getCreateStatement(dbAdapter))
+print(dbAdapter.getCreateTableQuery(Authors))
 
 print('\nCREATE TABLE query for Books table:')
-print(Books.getCreateStatement(dbAdapter))
+print(dbAdapter.getCreateTableQuery(Books))
 
 
 #print(Authors.id.table, Books.id.table) # though id is inehrited from base model - you can see that now each table has its personal id field
