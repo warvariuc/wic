@@ -65,9 +65,10 @@ class Table(metaclass=TableMeta):
     id = orm.IdField() # this field is present in all tables
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
 
-    def __init__(self, expression):
+    def __init__(self, expression, join=''):
         assert isinstance(expression, orm.fields.Expression), 'WHERE should be an Expression.'
         self.where = expression
+        self.join = join # join type. if empty - INNER JOIN
 
     @classmethod
     def new(cls, adapter, **kwargs):

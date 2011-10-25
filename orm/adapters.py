@@ -268,14 +268,13 @@ class Adapter():
             sql_w = ' WHERE ' + self.render(where)
         else:
             sql_w = ''
-        sql_o = ''
         sql_s = ''
         if distinct is True:
             sql_s += 'DISTINCT'
         elif distinct:
             sql_s += 'DISTINCT ON (%s)' % distinct
 
-        if join:
+        if join: # http://stackoverflow.com/questions/187146/inner-join-outer-join-is-the-order-of-tables-in-from-important
             join = orm.listify(join)
             joinTables = []
             for table in join:
@@ -284,59 +283,17 @@ class Adapter():
             tables = [table for table in tables if table not in joinTables]
             sql_t = ', '.join(map(str, tables))
             for table in join:
-                sql_t += ' JOIN %s ON %s' % (table.__class__, self.render(table.where))
+                sql_t += ' %s JOIN %s ON %s' % (table.join.upper(), table.__class__, self.render(table.where))
         else:
             sql_t = ', '.join(map(str, tables))
-                
-#        inner_join = join
-#        if inner_join:
-#            icommand = self.JOIN()
-#            ijoin_t = [table._tablename for table in inner_join if not isinstance(table, orm.Expression)]
-#            ijoin_on = [table for table in inner_join if isinstance(table, orm.Expression)] # JOIN ON Expressions
-#            ijoin_on_t = [table.left._table for table in ijoin_on]
-#            iexcluded = [table for table in tables if not table in ijoin_t + ijoin_on_t]
-#        if leftJoin:
-#            join = leftJoin
-#            command = self.LEFT_JOIN()
-#            if not hasattr(join, '__iter__'):
-#                join = [join]
-#            joint = [t._tablename for t in join if not isinstance(t, orm.Expression)]
-#            joinon = [t for t in join if isinstance(t, Expression)]
-#            #patch join+left patch (solves problem with ordering in left joins)
-#            tables_to_merge={}
-#            [tables_to_merge.update(dict.fromkeys(self.getExpressionTables(t))) for t in joinon]
-#            joinont = [t.first._tablename for t in joinon]
-#            [tables_to_merge.pop(t) for t in joinont if t in tables_to_merge]
-#            important_tablenames = joint + joinont + tables_to_merge.keys()
-#            excluded = [t for t in tablenames if not t in important_tablenames ]
-#        def alias(t):
-#            return str(self.db[t])
-#        if inner_join and not left:
-#            sql_t = ', '.join(alias(t) for t in iexcluded)
-#            for t in ijoinon:
-#                sql_t += ' %s %s' % (icommand, str(t))
-#        elif not inner_join and left:
-#            sql_t = ', '.join([alias(t) for t in excluded + tables_to_merge.keys()])
-#            if joint:
-#                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
-#            for t in joinon:
-#                sql_t += ' %s %s' % (command, str(t))
-#        elif inner_join and left:
-#            sql_t = ','.join([alias(t) for t in excluded + \
-#                                  tables_to_merge.keys() if t in iexcluded ])
-#            for t in ijoinon:
-#                sql_t += ' %s %s' % (icommand, str(t))
-#            if joint:
-#                sql_t += ' %s %s' % (command, ','.join([t for t in joint]))
-#            for t in joinon:
-#                sql_t += ' %s %s' % (command, str(t))
-#        else:
-#            sql_t = ', '.join(alias(t) for t in tablenames)
+
+        sql_o = ''
         if groupBy:
             groupBy = xorify(groupBy)
             sql_o += ' GROUP BY %s' % self.render(groupBy)
             if having:
                 sql_o += ' HAVING %s' % having
+                
         if orderBy:
             orderBy = orm.listify(orderBy)
             _orderBy = []

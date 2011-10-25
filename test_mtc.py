@@ -45,7 +45,7 @@ pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locati
 print(dbAdapter.getLastQuery(), '\n')
 
 result = dbAdapter.select([Persons, Locations, Regions], 
-                          join=[Locations(Locations.id == Persons.location_id), Regions(Regions.id == Locations.region_id)], 
+                          join=[Locations(Locations.id == Persons.location_id, join='left'), Regions(Regions.id == Locations.region_id)], 
                           where=Persons.phone_number == '763533', limitBy=(0, 10)) 
 pprint(list(zip(result[1], result[0][0])))
 print(dbAdapter.getLastQuery(), '\n')
