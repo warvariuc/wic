@@ -23,7 +23,7 @@ def listify(obj):
     '''Assure that obj is an iterable.'''
     if not hasattr(obj, '__iter__'):
         obj = [obj]
-    return obj
+    return list(obj)
 
 
 from orm.fields import Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, RecordIdField, AnyRecordField

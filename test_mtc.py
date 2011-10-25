@@ -50,6 +50,13 @@ result = dbAdapter.select([Persons, Locations, Regions],
 pprint(list(zip(result[1], result[0][0])))
 print(dbAdapter.getLastQuery(), '\n')
 
+pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
+print(dbAdapter.getLastQuery(), '\n')
+
+print(dbAdapter.select(orm.fields.COUNT(Persons.id))) 
+print(dbAdapter.getLastQuery(), '\n')
+
+
 #print(dbAdapter.select([], Locations.id == Persons.location_id, limitBy=(0, 10)))
 
 #pprint(dbAdapter.select(list(Persons) + list(Locations), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))

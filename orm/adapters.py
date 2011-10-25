@@ -93,6 +93,14 @@ class Adapter():
             return '(%s IN (%s))' % (self.render(first), second[:-1])
         items = ', '.join(self.render(item, first) for item in second)
         return '(%s IN (%s))' % (self.render(first), items)
+
+    def COUNT(self, expression):
+        expression = self.render(expression) if expression != '*' else '*'
+        distinct = getattr(expression, 'distinct', False)
+        if distinct:
+            return 'COUNT(DISTINCT %s)' % expression
+        else:
+            return 'COUNT(%s)' % expression
     
     def render(self, value, castField=None):
         '''Render of a value in a format suitable for operations with this DB field'''
@@ -116,10 +124,11 @@ class Adapter():
     def _render(self, value, column):
         if value is None:
             return self.NULL()
-        renderFunc = getattr(self, 'render' + column.type.capitalize(), None)
-        if hasattr(renderFunc, '__call__'): 
-            return renderFunc(value)
-        return str(value)  
+        if isinstance(column, orm.Expression) and not isinstance(column, orm.Field):
+            renderFunc = getattr(self, 'render' + column.type.capitalize(), None)
+            if hasattr(renderFunc, '__call__'): 
+                return renderFunc(value)
+        return "'%s'" % value  
 
 #            elif isinstance(dbType, DbIntegerField):
 #                if isinstance(obj, (datetime.date, datetime.datetime)):
@@ -224,6 +233,9 @@ class Adapter():
     def renderInt(self, value):
         return str(int(value))
 
+    def renderStr(self, value):
+        return "'%s'" % value
+
     def renderBlob(self, value):
         return base64.b64encode(str(value))
     
@@ -243,7 +255,7 @@ class Adapter():
 
     def _select(self, fields=(), where=None, orderBy=False, limitBy=False, join=(), distinct=False, groupBy=False, 
                 having=False, leftJoin=()):
-        fields = list(fields)
+        fields = orm.listify(fields)
         tables = self.getExpressionTables(where) # get tables involved in the query
         #where = self.filter_tenant(where, tablenames) # process the query ???
         if not fields: # if not fields specified take them all from the requested tables
@@ -256,7 +268,7 @@ class Adapter():
                     newFields.extend(field) # select all table fields
                     tables.add(field)
                 else:
-                    assert isinstance(field, orm.Field)
+                    assert isinstance(field, orm.Expression)
                     newFields.append(field)
                     tables |= self.getExpressionTables(field)
             fields = newFields

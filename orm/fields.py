@@ -11,19 +11,21 @@ class Expression():
     '''Expression - pair of operands and operation on them.'''
     sort = 'ASC' # default sorting
     
-    def __init__(self, operation, left=Nil, right=Nil, type=None): # FIXME: type parameter not needed?
-        self.operation = operation
-        self.left = left # left operand
-        self.right = right # right operand
+    def __init__(self, operation, left=Nil, right=Nil, type=None, **kwargs): # FIXME: type parameter not needed?
         if left is not Nil and not type:
             if isinstance(left, Field):
                 self.type = left
             elif isinstance(left, Expression):
                 self.type = left.type
             else:
-                raise Exception('Cast target must be an Expression/Field.')
+                left = str(left)
+                #raise Exception('Cast target must be an Expression/Field.')
         else:
             self.type = type
+        self.operation = operation
+        self.left = left # left operand
+        self.right = right # right operand
+        self.__dict__.update(kwargs)
         
     def __and__(self, other): 
         return Expression('AND', self, other)
@@ -171,23 +173,27 @@ class TableIdField(Field):
 class AnyRecordField(Field):
     '''This field stores id of a row of any table.
     It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID.'''
-    def _init(self, index=''):
+    def _init(self, index= ''):
         super()._init(None, None) # no column, but later we create two fields
             
-        tableIdField = TableIdField(name=self.name + '_table', table=self.table)
+        tableIdField = TableIdField(name= self.name + '_table', table= self.table)
         tableIdField._init()
         setattr(self.table, tableIdField.name, tableIdField)
         
-        recordIdField = RecordIdField(name=self.name + '_record', table=self.table)
+        recordIdField = RecordIdField(name= self.name + '_record', table= self.table)
         recordIdField._init(None) # no refered table
         setattr(self.table, recordIdField.name, recordIdField)
         
         self.table._indexes.append(orm.Index([tableIdField, recordIdField], index))
         
-        self._fields = dict(tableId=tableIdField, itemId=recordIdField) # real fields
+        self._fields = dict(tableId= tableIdField, itemId= recordIdField) # real fields
 
     def __eq__(self, other): 
         assert isinstance(other, orm.Table)
         return Expression('AND', 
                   Expression('EQ', self._fields['tableId'], other._tableId), 
                   Expression('EQ', self._fields['itemId'], other.id))
+
+
+def COUNT(expression= '*', distinct= False):
+    return Expression('COUNT', expression, distinct=distinct)
