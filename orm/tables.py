@@ -63,6 +63,7 @@ class Table(metaclass=TableMeta):
     '''Base class for all tables. Class attributes - the fields. 
     Instance of this class are WHERE queries on this table.'''
     id = orm.IdField() # this field is present in all tables
+    #version = orm.IntegerField(bytesCount=2) # version of the record - to allow checking integrity
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
 
     def __init__(self, expression, join=''):

@@ -1,6 +1,18 @@
+The DELETE statement follows the syntax:
+DELETE FROM table_name [WHERE condition];
+Any rows that match the WHERE condition will be removed from the table. If the WHERE clause is omitted, all rows in the table are removed. The DELETE statement should thus be used with caution.
+The DELETE statement does not return any rows; that is, it will not generate a result set.
+Executing a DELETE statement can cause triggers to run that can cause deletes in other tables. For example, if two tables are linked by a foreign key and rows in the referenced table are deleted, then it is common that rows in the referencing table would also have to be deleted to maintain referential integrity.
+
+
+Insert statements have the following form:
+INSERT INTO table (column1, [column2, ... ]) VALUES (value1, [value2, ... ])
+The number of columns and values must be the same. If a column is not specified, the default value for the column is used. The values specified (or implied) by the INSERT statement must satisfy all the applicable constraints (such as primary keys, CHECK constraints, and NOT NULL constraints). If a syntax error occurs or if any constraints are violated, the new row is not added to the table and an error returned instead.
+
 SELECT a.first_name AS f FROM authors AS a
 JOIN books AS b
 ON b.author = a.id
+# AS defines alias which is used only for convenience (shorter names)
 
 #mysql
 delimiter $$

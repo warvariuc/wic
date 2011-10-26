@@ -97,6 +97,10 @@ class Field(Expression):
     
     def __str__(self):
         return '{}.{}'.format(self.table, self.name)
+    
+#    def __call__(self, value):
+#        '''You can use Field()(value) to return a tuple for INSERT.'''
+#        return (self, value)
         
 
 class StringField(Field):

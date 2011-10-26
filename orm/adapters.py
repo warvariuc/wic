@@ -258,8 +258,29 @@ class Adapter():
             tables |= self.getExpressionTables(expression.right)
         return tables
 
-    def _select(self, fields=(), where=None, orderBy=False, limitBy=False, join=(), distinct=False, groupBy=False, 
-                having=False, leftJoin=()):
+    def _insert(self, table, fields):
+        '''Create and return INSERT query.'''
+        keys = ', '.join(f.name for f, v in fields)
+        values = ', '.join(self.expand(v, f.type) for f, v in fields)
+        return 'INSERT INTO %s (%s) VALUES (%s);' % (table, keys, values)
+
+    def insert(self, table, fields):
+        query = self._insert(table, fields)
+        try:
+            self.execute(query)
+        except self.integrity_error_class():
+            return None
+        
+        return self.lastrowid(table)
+    
+    def _select(self, fields=(), where=None, orderBy=False, limitBy=False, join=(), distinct=False, 
+                groupBy=False, having=False):
+        '''Create and return SELECT query.
+        fields: one or list of fields to select;
+        where: expression for where;
+        join: one or list of tables to join, in form Table(join_on_expression);
+        tables are taken from fields and `where` expression.'''
+        
         fields = orm.listify(fields)
         tables = self.getExpressionTables(where) # get tables involved in the query
         #where = self.filter_tenant(where, tablenames) # process the query ???
