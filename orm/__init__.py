@@ -12,7 +12,7 @@ def getObjectByPath(path, defaultModule):
     If '.' is not present in path return object from defaultModule with that name.'''
     moduleName, sep, className = str(path).rpartition('.')
     if sep: # '.' is present 
-        module = __import__(moduleName, fromlist=[className])
+        module = __import__(moduleName, fromlist= [className])
         return getattr(module, className)            
     return getattr(sys.modules[defaultModule], path) 
     

@@ -23,7 +23,7 @@ except ImportError:
 
 class Adapter():
     '''Generic DB adapter.'''
-    def __init__(self, uri='', connect=True):
+    def __init__(self, uri= '', connect= True):
         '''URI is already without protocol.'''
         print('Creating adapter: %s' % uri)
         self._timings = []
@@ -38,16 +38,25 @@ class Adapter():
         '''Connect to the DB and return the connection'''
         return None # DB connection
 
+    def commit(self):
+        return self.connection.commit()
+
+    def rollback(self):
+        return self.connection.rollback()
+
+    def close(self):
+        return self.connection.close()
+
     def logExecute(self, *a, **b):
         lastQuery = a[0]
         t0 = time.time()
         try:
-            ret = self.cursor.execute(*a, **b)
+            result = self.cursor.execute(*a, **b)
         except:
             print(lastQuery)
             raise
         self._timings.append((lastQuery, time.time() - t0))
-        return ret
+        return result
     
     def getLastQuery(self):
         return self._timings[-1]
@@ -102,7 +111,7 @@ class Adapter():
         else:
             return 'COUNT(%s)' % expression
     
-    def render(self, value, castField=None):
+    def render(self, value, castField= None):
         '''Render of a value in a format suitable for operations with this DB field'''
         if isinstance(value, orm.fields.Expression): # it's an expression
             return value._render(self) # render sub-expression
@@ -124,7 +133,7 @@ class Adapter():
     def _render(self, value, column):
         if value is None:
             return self.NULL()
-        if isinstance(column, orm.Expression) and not isinstance(column, orm.Field):
+        if isinstance(column, Column):
             renderFunc = getattr(self, 'render' + column.type.capitalize(), None)
             if hasattr(renderFunc, '__call__'): 
                 return renderFunc(value)
@@ -212,8 +221,8 @@ class Adapter():
     def RANDOM(self):
         return 'RANDOM()'
 
-    def typeInt(self, bytesCount=4, intMap = [(1, 'TINYINT'), (2, 'SMALLINT'), 
-                    (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')], autoincrement=False, **kwargs):
+    def typeInt(self, bytesCount= 4, intMap= [(1, 'TINYINT'), (2, 'SMALLINT'), 
+                    (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')], autoincrement= False, **kwargs):
         '''INT column type.'''
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
@@ -233,13 +242,13 @@ class Adapter():
     def renderBlob(self, value):
         return base64.b64encode(str(value))
     
-    def typeDecimal(self, maxDigits, decimalPlaces=0, **kwargs):
+    def typeDecimal(self, maxDigits, decimalPlaces= 0, **kwargs):
         '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65. (Older versions of MySQL permitted a range of 1 to 254.)
         D is the number of digits to the right of the decimal point (the scale). It has a range of 0 to 30 and must be no larger than M.'''
         return 'DECIMAL (%s, %s)' % (maxDigits, decimalPlaces)
     
-    def typeChar(self, maxLength, lengthFixed=False, **kwargs):
+    def typeChar(self, maxLength, lengthFixed= False, **kwargs):
         '''CHAR, VARCHAR'''
         if lengthFixed:
             return 'CHAR(%i)' % maxLength
@@ -258,23 +267,29 @@ class Adapter():
             tables |= self.getExpressionTables(expression.right)
         return tables
 
-    def _insert(self, table, fields):
+    def lastInsertId(self):
+        return None
+    
+    def _insert(self, *fields):
         '''Create and return INSERT query.'''
-        keys = ', '.join(f.name for f, v in fields)
-        values = ', '.join(self.expand(v, f.type) for f, v in fields)
+        table = None
+        for item in fields:
+            assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
+            field, value = item
+            assert isinstance(field, orm.Field), 'First item must be a Field.'
+            _table = field.table
+            table = table or _table
+            assert table is _table, 'Pass fields from the same table'
+        keys = ', '.join(field.name for field, value in fields)
+        values = ', '.join(self.render(value, field) for field, value in fields)
         return 'INSERT INTO %s (%s) VALUES (%s);' % (table, keys, values)
 
-    def insert(self, table, fields):
-        query = self._insert(table, fields)
-        try:
-            self.execute(query)
-        except self.integrity_error_class():
-            return None
-        
-        return self.lastrowid(table)
+    def insert(self, *fields):
+        query = self._insert(*fields)
+        return self.execute(query)
     
-    def _select(self, fields=(), where=None, orderBy=False, limitBy=False, join=(), distinct=False, 
-                groupBy=False, having=False):
+    def _select(self, fields= (), where= None, orderBy= False, limitBy= False, join= (), 
+                distinct= False, groupBy= False, having= False):
         '''Create and return SELECT query.
         fields: one or list of fields to select;
         where: expression for where;
@@ -358,13 +373,13 @@ class Adapter():
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, fields=(), where=None, **attributes):
+    def select(self, fields= (), where= None, **attributes):
         sql, columns = self._select(fields, where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
         return self.parseResponse(rows, columns), columns
 
-    def parseResponse(self, rows, columns, blob_decode=True):
+    def parseResponse(self, rows, columns, blob_decode= True):
         return rows
 #        db = self.db
 #        virtualtables = []
@@ -505,30 +520,13 @@ class Adapter():
 #                    pass
 #        return rowsobj
 #
-#    def _count(self, where, distinct=None):
-#        tablenames = map(str, self.getExpressionTables(where))
-#        if where:
-#            sql_w = ' WHERE ' + self.render(where)
-#        else:
-#            sql_w = ''
-#        sql_t = ','.join(tablenames)
-#        if distinct:
-#            if hasattr(distinct, '__iter__'):
-#                distinct = xorify(distinct)
-#            sql_d = self.render(distinct)
-#            return 'SELECT COUNT(DISTINCT %s) FROM %s%s;' % (sql_d, sql_t, sql_w)
-#        return 'SELECT COUNT(*) FROM %s%s;' % (sql_t, sql_w)
-#
-#    def count(self, query, distinct=None):
-#        self.execute(self._count(query, distinct))
-#        return self.cursor.fetchone()[0]
 
 
 
 class SqliteAdapter(Adapter):
     driver = globals().get('sqlite3')
 
-    def __init__(self, uri, driverArgs={}):
+    def __init__(self, uri, driverArgs= {}):
         self.driverArgs = driverArgs
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
@@ -545,7 +543,7 @@ class SqliteAdapter(Adapter):
         return ['DELETE FROM %s;' % tableName,
                 "DELETE FROM sqlite_sequence WHERE name='%s';" % tableName]
 
-    def lastrowid(self, table):
+    def lastInsertId(self):
         return self.cursor.lastrowid
 
     def _getCreateTableIndexes(self, table):
@@ -604,6 +602,10 @@ class MysqlAdapter(Adapter):
     
     def RANDOM(self):
         return 'RAND()'
+
+    def lastInsertId(self):
+        return self.cursor.insert_id()
+
     
 
 class Column():

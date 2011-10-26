@@ -51,7 +51,7 @@ class TableMeta(type):
                 fields.append(self[attrName])
             except KeyError:
                 pass 
-        fields.sort(key=lambda field: field._orderNo) # sort by creation order - because __dict__ is unordered
+        fields.sort(key= lambda field: field._orderNo) # sort by creation order - because __dict__ is unordered
         for field in fields:
             yield field
 
@@ -66,7 +66,7 @@ class Table(metaclass=TableMeta):
     #version = orm.IntegerField(bytesCount=2) # version of the record - to allow checking integrity
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
 
-    def __init__(self, expression, join=''):
+    def __init__(self, expression, join= ''):
         assert isinstance(expression, orm.fields.Expression), 'WHERE should be an Expression.'
         self.where = expression
         self.join = join # join type. if empty - INNER JOIN
@@ -76,7 +76,7 @@ class Table(metaclass=TableMeta):
         '''Create new item of this Table'''
         return Record(cls, adapter, **kwargs)
     
-    def select(self, adapter, join=()):
+    def select(self, adapter, join= ()):
         fields = map(str, self) # list of fields to select
         table = str(self)
         return list(fields) #adapter.makeSelectQuery(table, fields, where)
@@ -104,7 +104,7 @@ class Record():
 
     def __str__(self):
         return '%s(%s)' % (self._table.__name__, 
-            ', '.join('%s=%r' % (field.name, getattr(self, field.name))
+            ', '.join('%s= %r' % (field.name, getattr(self, field.name))
                        for field in self._table)) 
 
 
@@ -113,7 +113,7 @@ class Index():
     type: index, unique, fulltext, spatial
     sort: asc, desc
     method: btree, hash, gist, and gin'''
-    def __init__(self, fields, type='index', name='', sortOrders=None, prefixLengths=None, method='', **kwargs):
+    def __init__(self, fields, type= 'index', name= '', sortOrders= None, prefixLengths= None, method='', **kwargs):
         assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
         assert fields, 'You did not indicate which fields to index.'
         table = fields[0].table

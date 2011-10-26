@@ -11,7 +11,7 @@ class Expression():
     '''Expression - pair of operands and operation on them.'''
     sort = 'ASC' # default sorting
     
-    def __init__(self, operation, left=Nil, right=Nil, type=None, **kwargs): # FIXME: type parameter not needed?
+    def __init__(self, operation, left= Nil, right= Nil, type= None, **kwargs): # FIXME: type parameter not needed?
         if left is not Nil and not type:
             if isinstance(left, Field):
                 self.type = left
@@ -83,7 +83,7 @@ class Field(Expression):
         orm._fieldsCount += 1
         self._orderNo = orm._fieldsCount  
 
-    def _init(self, column, defaultValue, index=''):
+    def _init(self, column, defaultValue, index= ''):
         '''This is called by the Table metaclass to initialize the Field after a Table subclass is created.'''
         del self._initArgs, self._initKwargs
         self.column = column
@@ -98,14 +98,15 @@ class Field(Expression):
     def __str__(self):
         return '{}.{}'.format(self.table, self.name)
     
-#    def __call__(self, value):
-#        '''You can use Field()(value) to return a tuple for INSERT.'''
-#        return (self, value)
+    def __call__(self, value):
+        '''You can use Field()(value) to return a tuple for INSERT.'''
+        return (self, value)
         
 
 class StringField(Field):
-    def _init(self, maxLength, defaultValue=None, index=''):
-        super()._init(orm.adapters.Column(self.name, 'char', self, maxLength=maxLength), defaultValue, index)
+    def _init(self, maxLength, defaultValue= None, index= ''):
+        super()._init(orm.adapters.Column(self.name, 'char', self, maxLength= maxLength), 
+                      defaultValue, index)
         self.maxLength = maxLength
     
     def __str__(self):
@@ -113,8 +114,9 @@ class StringField(Field):
 
 
 class IntegerField(Field):
-    def _init(self, bytesCount, defaultValue=None, autoincrement=False, index=''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=bytesCount, autoincrement=autoincrement), defaultValue, index)
+    def _init(self, bytesCount, defaultValue= None, autoincrement= False, index=''):
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= bytesCount, 
+                                          autoincrement= autoincrement), defaultValue, index)
         self.bytesCount = bytesCount
         self.autoincrement = autoincrement
 
@@ -122,8 +124,8 @@ class IntegerField(Field):
 class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
-    def _init(self, maxDigits, decimalPlaces, defaultValue, index=''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8), defaultValue, index)
+    def _init(self, maxDigits, decimalPlaces, defaultValue, index= ''):
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 8), defaultValue, index)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
     
@@ -140,13 +142,13 @@ class DecimalFieldI(Field):
 class IdField(Field):
     '''ID - implicitly present in each table.'''
     def _init(self):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8, autoincrement=True), None, 'primary')
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 8, autoincrement= True), None, 'primary')
         
 
 class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
-    def _init(self, referTable, index=''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=8), None, index)
+    def _init(self, referTable, index= ''):
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 8), None, index)
         self._referTable = referTable # foreign key - referenced type of table
         
     def getReferTable(self):
@@ -166,8 +168,8 @@ class RecordIdField(Field):
 
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
-    def _init(self, index=''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount=2), None, index)
+    def _init(self, index= ''):
+        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 2), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Table) or orm.isTable(value):
@@ -202,4 +204,4 @@ class AnyRecordField(Field):
 
 def COUNT(expression, distinct= False):
     assert isinstance(expression, orm.Expression) or orm.isTable(expression), 'COUNT argument must be a Field or a Table.'
-    return Expression('COUNT', expression, distinct=distinct)
+    return Expression('COUNT', expression, distinct= distinct)
