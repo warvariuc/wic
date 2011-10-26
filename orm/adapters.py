@@ -95,7 +95,7 @@ class Adapter():
         return '(%s IN (%s))' % (self.render(first), items)
 
     def COUNT(self, expression):
-        expression = self.render(expression) if expression != '*' else '*'
+        expression = '*' if orm.isTable(expression) else self.render(expression)
         distinct = getattr(expression, 'distinct', False)
         if distinct:
             return 'COUNT(DISTINCT %s)' % expression
@@ -206,12 +206,6 @@ class Adapter():
         query += '\n) ' + other + ';'
         return query
 
-    def JOIN(self):
-        return 'JOIN'
-
-    def LEFT_JOIN(self):
-        return 'LEFT JOIN'
-    
     def NULL(self):   
         return 'NULL'
         
@@ -252,6 +246,17 @@ class Adapter():
         else:
             return 'VARCHAR(%i)' % maxLength
             
+    def getExpressionTables(self, expression):
+        '''Get tables involved in WHERE expression.'''
+        tables = set()
+        if orm.isTable(expression):
+            tables.add(expression)
+        elif isinstance(expression, orm.Field):
+            tables.add(expression.table)
+        elif isinstance(expression, orm.Expression):
+            tables |= self.getExpressionTables(expression.left)
+            tables |= self.getExpressionTables(expression.right)
+        return tables
 
     def _select(self, fields=(), where=None, orderBy=False, limitBy=False, join=(), distinct=False, groupBy=False, 
                 having=False, leftJoin=()):
@@ -496,17 +501,6 @@ class Adapter():
 #    def count(self, query, distinct=None):
 #        self.execute(self._count(query, distinct))
 #        return self.cursor.fetchone()[0]
-
-
-    def getExpressionTables(self, expression):
-        '''Get tables involved in WHERE expression.'''
-        tables = set()
-        if isinstance(expression, orm.Field):
-            tables.add(expression.table)
-        elif isinstance(expression, orm.Expression):
-            tables |= self.getExpressionTables(expression.left)
-            tables |= self.getExpressionTables(expression.right)
-        return tables
 
 
 

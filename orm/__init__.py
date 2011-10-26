@@ -26,7 +26,8 @@ def listify(obj):
     return list(obj)
 
 
-from orm.fields import Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, RecordIdField, AnyRecordField
+from orm.fields import (Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, 
+                        RecordIdField, AnyRecordField, COUNT)
 from orm.tables import Table, Record, Index
 from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter
 

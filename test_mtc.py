@@ -53,9 +53,11 @@ print(dbAdapter.getLastQuery(), '\n')
 pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
 print(dbAdapter.getLastQuery(), '\n')
 
-print(dbAdapter.select(orm.fields.COUNT(Persons.id))) 
+print(dbAdapter.select(orm.COUNT(Persons))) 
 print(dbAdapter.getLastQuery(), '\n')
 
+print(dbAdapter.select(orm.COUNT(Persons.street_id))) 
+print(dbAdapter.getLastQuery(), '\n')
 
 #print(dbAdapter.select([], Locations.id == Persons.location_id, limitBy=(0, 10)))
 

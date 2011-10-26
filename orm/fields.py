@@ -18,14 +18,15 @@ class Expression():
             elif isinstance(left, Expression):
                 self.type = left.type
             else:
-                left = str(left)
+                self.type = None
+                #left = str(left)
                 #raise Exception('Cast target must be an Expression/Field.')
         else:
             self.type = type
         self.operation = operation
         self.left = left # left operand
         self.right = right # right operand
-        self.__dict__.update(kwargs)
+        self.__dict__.update(kwargs) # additional arguments
         
     def __and__(self, other): 
         return Expression('AND', self, other)
@@ -195,5 +196,6 @@ class AnyRecordField(Field):
                   Expression('EQ', self._fields['itemId'], other.id))
 
 
-def COUNT(expression= '*', distinct= False):
+def COUNT(expression, distinct= False):
+    assert isinstance(expression, orm.Expression) or orm.isTable(expression), 'COUNT argument must be a Field or a Table.'
     return Expression('COUNT', expression, distinct=distinct)
