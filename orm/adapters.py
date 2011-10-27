@@ -288,6 +288,60 @@ class Adapter():
         query = self._insert(*fields)
         return self.execute(query)
     
+    def _update(self, *fields, where= None):
+        table = None
+        for item in fields:
+            assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
+            field, value = item
+            assert isinstance(field, orm.Field), 'First item must be a Field.'
+            _table = field.table
+            table = table or _table
+            assert table is _table, 'Pass fields from the same table'
+        if where:
+            sql_w = ' WHERE ' + self.render(where)
+        else:
+            sql_w = ''
+        sql_v = ', '.join(['%s= %s' % (field.name, self.render(value, field)) for (field, value) in fields])
+        return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
+
+    def update(self, *fields, where= None):
+        sql = self._update(*fields, where= where)
+        self.execute(sql)
+        try:
+            return self.cursor.rowcount
+        except:
+            return None
+
+#    def _delete(self, tablename, query):
+#        query = self.filter_tenant(query, [tablename])
+#        if query:
+#            sql_w = ' WHERE ' + self.expand(query)
+#        else:
+#            sql_w = ''
+#        return 'DELETE FROM %s%s;' % (tablename, sql_w)
+#
+#    def delete(self, tablename, query):
+#        sql = self._delete(tablename, query)
+#        ### special code to handle CASCADE in SQLite
+#        db = self.db
+#        table = db[tablename]
+#        if self.dbengine == 'sqlite' and table._referenced_by:
+#            deleted = [x[table._id.name] for x in db(query).select(table._id)]
+#        ### end special code to handle CASCADE in SQLite
+#        self.execute(sql)
+#        try:
+#            counter = self.cursor.rowcount
+#        except:
+#            counter = None
+#        ### special code to handle CASCADE in SQLite
+#        if self.dbengine == 'sqlite' and counter:
+#            for tablename, fieldname in table._referenced_by:
+#                f = db[tablename][fieldname]
+#                if f.type == 'reference ' + table._tablename and f.ondelete == 'CASCADE':
+#                    db(db[tablename][fieldname].belongs(deleted)).delete()
+#        ### end special code to handle CASCADE in SQLite
+#        return counter
+
     def _select(self, fields= (), where= None, orderBy= False, limitBy= False, join= (), 
                 distinct= False, groupBy= False, having= False):
         '''Create and return SELECT query.

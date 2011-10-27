@@ -28,7 +28,7 @@ class Persons(orm.Table):
     street_id = orm.RecordIdField(Streets)
 
 
-ADAPTERS = dict(sqlite=orm.SqliteAdapter, mysql=orm.MysqlAdapter) # available adapters
+ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 
 
 dbAdapter = orm.connect('sqlite://../mtc.sqlite', ADAPTERS)
@@ -46,7 +46,7 @@ print(dbAdapter.getLastQuery(), '\n')
 
 result = dbAdapter.select([Persons, Locations, Regions], 
                           join= [Locations(Locations.id == Persons.location_id, join= 'left'), Regions(Regions.id == Locations.region_id)], 
-                          where= Persons.phone_number == '763533', limitBy=(0, 10)) 
+                          where= Persons.phone_number == '763533', limitBy= (0, 10)) 
 pprint(list(zip(result[1], result[0][0])))
 print(dbAdapter.getLastQuery(), '\n')
 
@@ -59,9 +59,12 @@ print(dbAdapter.getLastQuery(), '\n')
 print(dbAdapter.select(orm.COUNT(Persons.street_id))) 
 print(dbAdapter.getLastQuery(), '\n')
 
-#print(dbAdapter._insert(Persons.first_name('First name'), Persons.last_name('Last name'), Persons.location_id(2)))
-print(dbAdapter.insert(Persons.phone_number(222222), Persons.phone_prefix(22)))
-print(dbAdapter.lastInsertId())
+dbAdapter.insert(Persons.phone_number(222222), Persons.phone_prefix(22))
+dbAdapter.commit()
+personId = dbAdapter.lastInsertId() 
+print(personId)
+
+dbAdapter.update(Persons.phone_number(333333), Persons.phone_prefix(22), where= (Persons.id == personId))
 dbAdapter.commit()
 
 #print(dbAdapter.select([], Locations.id == Persons.location_id, limitBy=(0, 10)))

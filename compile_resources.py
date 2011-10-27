@@ -6,8 +6,7 @@
 # Works on Windows and Linux (Ubuntu)
 # part of the script is taken from makepyqt.pyw
 
-import os, sys, time
-import stat, shutil
+import os, sys, stat
 import subprocess, py_compile
 from PyQt4 import QtGui
 
@@ -20,7 +19,6 @@ def build(path, recurse):
 
 def clean(path, recurse):
     _apply(recurse, _clean, path)
-
 
 
 def _apply(recurse, function, path):
@@ -46,8 +44,7 @@ def _build(dirPath, fileName, removeSource= True):
     args = ["-o", target, source]
     if command == pyrcc4:
         args.insert(0, "-py3")
-    elif command == PYUIC4 and pyuic4x:
-        args.insert(0, "-x")
+        
     try:
         command += ' ' + ' '.join(args)
         output = subprocess.check_output(command, shell= True, stderr= subprocess.STDOUT)
@@ -66,7 +63,7 @@ def _build(dirPath, fileName, removeSource= True):
     
     if removeSource:
         os.remove(source)
-        print('Deleted source %s\n' % source)
+        print('Deleted source %s' % source)
 
 def _clean(dirPath, fileName):
     if fileName.endswith('.pyc'):
@@ -148,10 +145,7 @@ if Windows:
 pyuic4 = PYUIC4
 pyrcc4 = PYRCC4
 
+print('Be aware that some IDEs might automatically delete the resulting *.pyc files.')
 
-pyuic4x = False # you can set it on
-dryRun = False
-
-curDir = os.path.join(curDir, 'widgets')
 clean(curDir, recurse= True)
 build(curDir, recurse= True)
