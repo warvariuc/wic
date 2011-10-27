@@ -68,5 +68,3 @@ dbAdapter.commit()
 
 #pprint(dbAdapter.select(list(Persons) + list(Locations), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
 #print(dbAdapter.getLastQuery())
-
-
