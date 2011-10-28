@@ -85,14 +85,14 @@ class Table(metaclass=TableMeta):
 
 class Record():
     '''Row/record of a Table - new or existing.'''
-    def __init__(self, _table, _adapter, **kwargs):
+    def __init__(self, table, adapter, **kwargs):
         '''Initialize a new record of the given table in the given database.'''
-        assert inspect.isclass(_table) and issubclass(_table, Table)
+        assert orm.isTable(table), 'First parameter must be a Table.'
         
-        self._table = _table
-        self._adapter = _adapter # in which db?
+        self._table = table
+        self._adapter = adapter # in which db?
         
-        for field in _table: # make values for fields
+        for field in table: # make values for fields
             setattr(self, field.name, kwargs.pop(field.name, field.defaultValue))
     
     def delete(self):

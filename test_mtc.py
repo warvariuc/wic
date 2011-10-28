@@ -67,7 +67,44 @@ print(personId)
 dbAdapter.update(Persons.phone_number(333333), Persons.phone_prefix(22), where= (Persons.id == personId))
 dbAdapter.commit()
 
-#print(dbAdapter.select([], Locations.id == Persons.location_id, limitBy=(0, 10)))
+dbAdapter.delete(Persons, where= (Persons.id == personId))
+dbAdapter.commit()
 
-#pprint(dbAdapter.select(list(Persons) + list(Locations), (Locations.id == Persons.location_id) & (Persons.phone_number == '763533'), limitBy=(0, 10)))
-#print(dbAdapter.getLastQuery())
+
+
+db = dbAdapter
+chunkLength = 100 # how many records to process in one chunk
+lastRowId = 0 # last checked item's row_id
+
+def makeRecord(db, table, row, fields):
+    _fields = {}
+    for i, field in enumerate(fields.values()):
+        if isinstance(field, orm.Field) and field.table is table:
+            _fields[field.name] = row[i]
+    return table.new(db, **_fields)
+
+while True:
+    print('Getting next %i records starting with row id %i' % (chunkLength, lastRowId))
+    
+    rows, fields = db.select(Persons, where= (Persons.id > lastRowId), limitBy= (0, chunkLength))
+    if not rows: # walked over the entire table
+        break #lastRowId = 0
+        
+    idIndex = list(fields.values()).index(Persons.id)
+    lastRowId = rows[-1][idIndex]
+    for i, row in enumerate(rows):
+        person = makeRecord(db, Persons, row, fields)
+        print(person)
+        
+        if person.last_name:
+            person.last_name = person.last_name.capitalize()
+        if person.first_name:
+            person.first_name = person.first_name.capitalize()
+        if person.middle_name:
+            person.middle_name = person.middle_name.capitalize()
+            
+        db.update(Persons.last_name(person.last_name), 
+                  Persons.first_name(person.first_name), 
+                  Persons.middle_name(person.middle_name), 
+                  where= (Persons.id == person.id))
+    db.commit()

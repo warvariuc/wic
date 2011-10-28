@@ -139,27 +139,6 @@ class Adapter():
                 return renderFunc(value)
         return "'%s'" % value  
 
-#            elif isinstance(dbType, DbIntegerField):
-#                if isinstance(obj, (datetime.date, datetime.datetime)):
-#                    obj = obj.isoformat()[:10]
-#                else:
-#                    obj = str(obj)
-#            elif fieldtype == 'datetime':
-#                if isinstance(obj, datetime.datetime):
-#                    obj = obj.isoformat()[:19].replace('T', ' ')
-#                elif isinstance(obj, datetime.date):
-#                    obj = obj.isoformat()[:10] + ' 00:00:00'
-#                else:
-#                    obj = str(obj)
-#            elif fieldtype == 'time':
-#                if isinstance(obj, datetime.time):
-#                    obj = obj.isoformat()[:10]
-#                else:
-#                    obj = str(obj)
-#            if not isinstance(obj, str):
-#                obj = str(obj)
-        
-             
     def IntegrityError(self): 
         return self.driver.IntegrityError
     
@@ -297,10 +276,7 @@ class Adapter():
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
-        if where:
-            sql_w = ' WHERE ' + self.render(where)
-        else:
-            sql_w = ''
+        sql_w = ' WHERE ' + self.render(where) if where else ''
         sql_v = ', '.join(['%s= %s' % (field.name, self.render(value, field)) for (field, value) in fields])
         return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
 
@@ -312,35 +288,18 @@ class Adapter():
         except:
             return None
 
-#    def _delete(self, tablename, query):
-#        query = self.filter_tenant(query, [tablename])
-#        if query:
-#            sql_w = ' WHERE ' + self.expand(query)
-#        else:
-#            sql_w = ''
-#        return 'DELETE FROM %s%s;' % (tablename, sql_w)
-#
-#    def delete(self, tablename, query):
-#        sql = self._delete(tablename, query)
-#        ### special code to handle CASCADE in SQLite
-#        db = self.db
-#        table = db[tablename]
-#        if self.dbengine == 'sqlite' and table._referenced_by:
-#            deleted = [x[table._id.name] for x in db(query).select(table._id)]
-#        ### end special code to handle CASCADE in SQLite
-#        self.execute(sql)
-#        try:
-#            counter = self.cursor.rowcount
-#        except:
-#            counter = None
-#        ### special code to handle CASCADE in SQLite
-#        if self.dbengine == 'sqlite' and counter:
-#            for tablename, fieldname in table._referenced_by:
-#                f = db[tablename][fieldname]
-#                if f.type == 'reference ' + table._tablename and f.ondelete == 'CASCADE':
-#                    db(db[tablename][fieldname].belongs(deleted)).delete()
-#        ### end special code to handle CASCADE in SQLite
-#        return counter
+    def _delete(self, table, where):
+        assert orm.isTable(table)
+        sql_w = ' WHERE ' + self.render(where) if where else ''
+        return 'DELETE FROM %s%s;' % (table, sql_w)
+
+    def delete(self, table, where):
+        sql = self._delete(table, where)
+        self.execute(sql)
+        try:
+            return self.cursor.rowcount
+        except:
+            return None
 
     def _select(self, fields= (), where= None, orderBy= False, limitBy= False, join= (), 
                 distinct= False, groupBy= False, having= False):
@@ -371,10 +330,7 @@ class Adapter():
             raise SyntaxError('SELECT: no tables involved.')
         columns = OrderedDict(zip(map(self.render, fields), fields))
         sql_f = ', '.join(columns)
-        if where:
-            sql_w = ' WHERE ' + self.render(where)
-        else:
-            sql_w = ''
+        sql_w = ' WHERE ' + self.render(where) if where else ''
         sql_s = ''
         if distinct is True:
             sql_s += 'DISTINCT'
