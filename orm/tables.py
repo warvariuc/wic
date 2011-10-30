@@ -63,7 +63,7 @@ class Table(metaclass=TableMeta):
     '''Base class for all tables. Class attributes - the fields. 
     Instance of this class are WHERE queries on this table.'''
     id = orm.IdField() # this field is present in all tables
-    #version = orm.IntegerField(bytesCount=2) # version of the record - to allow checking integrity
+    #version = orm.IntegerField(bytesCount=2) # version of the record - incremented upon each record update
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
 
     def __init__(self, expression, join= ''):
@@ -72,11 +72,11 @@ class Table(metaclass=TableMeta):
         self.join = join # join type. if empty - INNER JOIN
 
     @classmethod
-    def new(cls, adapter, **kwargs):
-        '''Create new item of this Table'''
+    def newRecord(cls, adapter, **kwargs):
+        '''Create new record of this Table'''
         return Record(cls, adapter, **kwargs)
     
-    def select(self, adapter, join= ()):
+    def select(self, adapter):
         fields = map(str, self) # list of fields to select
         table = str(self)
         return list(fields) #adapter.makeSelectQuery(table, fields, where)
@@ -97,7 +97,7 @@ class Record():
     
     def delete(self):
         #self._table(self._table.id == self.id).delete(self._adapter)
-        self._table(id=self.id).delete(self._adapter)
+        self._table(id= self.id).delete(self._adapter)
         
     def save(self):
         (self._table.id == self.id).update(self._adapter)

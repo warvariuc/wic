@@ -41,40 +41,35 @@ dbAdapter = orm.connect('sqlite://../mtc.sqlite', ADAPTERS)
 #pprint(dbAdapter.select([], (Regions.id == Locations.region_id), orderBy=[Regions.region_type_name, -Regions.region_name], limitBy=(0, 10)))
 
 # explicit join
-pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
-print(dbAdapter.getLastQuery(), '\n')
+#pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
+#print(dbAdapter.getLastQuery(), '\n')
+#
+#result = dbAdapter.select([Persons, Locations, Regions], 
+#                          join= [Locations(Locations.id == Persons.location_id, join= 'left'), Regions(Regions.id == Locations.region_id)], 
+#                          where= Persons.phone_number == '763533', limitBy= (0, 10)) 
+#pprint(list(zip(result[1], result[0][0])))
+#print(dbAdapter.getLastQuery(), '\n')
+#
+#pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
+#print(dbAdapter.getLastQuery(), '\n')
+#
+#print(dbAdapter.select(orm.COUNT(Persons))) 
+#print(dbAdapter.getLastQuery(), '\n')
+#
+#print(dbAdapter.select(orm.COUNT(Persons.street_id))) 
+#print(dbAdapter.getLastQuery(), '\n')
+#
+#dbAdapter.insert(Persons.phone_number(222222), Persons.phone_prefix(22))
+#dbAdapter.commit()
+#personId = dbAdapter.lastInsertId() 
+#print(personId)
+#
+#dbAdapter.update(Persons.phone_number(333333), Persons.phone_prefix(22), where= (Persons.id == personId))
+#dbAdapter.commit()
+#
+#dbAdapter.delete(Persons, where= (Persons.id == personId))
+#dbAdapter.commit()
 
-result = dbAdapter.select([Persons, Locations, Regions], 
-                          join= [Locations(Locations.id == Persons.location_id, join= 'left'), Regions(Regions.id == Locations.region_id)], 
-                          where= Persons.phone_number == '763533', limitBy= (0, 10)) 
-pprint(list(zip(result[1], result[0][0])))
-print(dbAdapter.getLastQuery(), '\n')
-
-pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
-print(dbAdapter.getLastQuery(), '\n')
-
-print(dbAdapter.select(orm.COUNT(Persons))) 
-print(dbAdapter.getLastQuery(), '\n')
-
-print(dbAdapter.select(orm.COUNT(Persons.street_id))) 
-print(dbAdapter.getLastQuery(), '\n')
-
-dbAdapter.insert(Persons.phone_number(222222), Persons.phone_prefix(22))
-dbAdapter.commit()
-personId = dbAdapter.lastInsertId() 
-print(personId)
-
-dbAdapter.update(Persons.phone_number(333333), Persons.phone_prefix(22), where= (Persons.id == personId))
-dbAdapter.commit()
-
-dbAdapter.delete(Persons, where= (Persons.id == personId))
-dbAdapter.commit()
-
-
-
-db = dbAdapter
-chunkLength = 100 # how many records to process in one chunk
-lastRowId = 0 # last checked item's row_id
 
 def makeRecord(db, table, row, fields):
     _fields = {}
@@ -83,28 +78,46 @@ def makeRecord(db, table, row, fields):
             _fields[field.name] = row[i]
     return table.new(db, **_fields)
 
-while True:
-    print('Getting next %i records starting with row id %i' % (chunkLength, lastRowId))
-    
-    rows, fields = db.select(Persons, where= (Persons.id > lastRowId), limitBy= (0, chunkLength))
-    if not rows: # walked over the entire table
-        break #lastRowId = 0
-        
-    idIndex = list(fields.values()).index(Persons.id)
-    lastRowId = rows[-1][idIndex]
-    for i, row in enumerate(rows):
-        person = makeRecord(db, Persons, row, fields)
-        print(person)
-        
-        if person.last_name:
-            person.last_name = person.last_name.capitalize()
-        if person.first_name:
-            person.first_name = person.first_name.capitalize()
-        if person.middle_name:
-            person.middle_name = person.middle_name.capitalize()
-            
-        db.update(Persons.last_name(person.last_name), 
-                  Persons.first_name(person.first_name), 
-                  Persons.middle_name(person.middle_name), 
-                  where= (Persons.id == person.id))
-    db.commit()
+#db = dbAdapter
+#chunkLength = 10000 # how many records to process in one chunk
+#lastRowId = 0 # last checked item's row_id
+#totalPersonsCount = dbAdapter.select(orm.COUNT(Persons))[0][0][0]
+#personsProcessedCount = 0
+#
+#while True:
+#    
+#    rows, fields = db.select(Persons, where= (Persons.id > lastRowId), limitBy= (0, chunkLength))
+#    if not rows: # walked over the entire table
+#        break #lastRowId = 0
+#        
+#    print('Selected %i records starting with row id %i' % (chunkLength, lastRowId))
+#
+#    idIndex = list(fields.values()).index(Persons.id)
+#    lastRowId = rows[-1][idIndex]
+#    for i, row in enumerate(rows):
+#        person = makeRecord(db, Persons, row, fields)
+#        #print(person)
+#        
+#        if person.last_name:
+#            person.last_name = person.last_name.capitalize()
+#        if person.first_name:
+#            person.first_name = person.first_name.capitalize()
+#        if person.middle_name:
+#            person.middle_name = person.middle_name.capitalize()
+#            
+#        db.update(Persons.last_name(person.last_name), 
+#                  Persons.first_name(person.first_name), 
+#                  Persons.middle_name(person.middle_name), 
+#                  where= (Persons.id == person.id))
+#    personsProcessedCount += len(rows)
+#    print('Processed %i persons (%.2f %%).' % (personsProcessedCount, personsProcessedCount * 100 / totalPersonsCount))
+#    db.commit()
+
+victor = Persons.get((Persons.first_name == 'Victor') & (Persons.last_name == 'Varvariuc'))
+varvariucs = Persons.getList()
+victor.version = Persons.version + 1
+victor.save()
+victor.delete() # delete this existing record
+
+Persons.delete(where= ()) # delete record from Persons table which fall under the specified WHERE condition
+

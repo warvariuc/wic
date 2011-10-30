@@ -1,6 +1,12 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
 
-import logging, sys, inspect
+import sys
+
+if sys.hexversion < 0x03010000:
+    raise SystemExit('At least Python 3.1 needed. Exiting.')
+
+
+import logging, inspect
 
 logger = logging.getLogger("wic.orm")
 
