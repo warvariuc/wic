@@ -31,6 +31,30 @@ def listify(obj):
         obj = [obj]
     return list(obj)
 
+class metamethod():
+    '''A descriptor you can use to decorate a method. 
+    Then calling that method as instance method - calls its implemetation in the class.
+    Then calling that method as class method - calls its implemetation in the metaclass.'''
+    def __init__(self, method):
+        self.method = method
+
+    def __get__(self, obj, objtype):
+        if obj is None:
+            obj = objtype
+        def wrapped(*args, **kwargs):
+            method = self.method
+            if inspect.isclass(obj):
+                method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
+            return method(obj, *args, **kwargs)
+        return wrapped        
+
+
+class RecordNotFound(Exception):
+    ''''''
+
+class TooManyRecords(Exception):
+    ''''''
+
 
 from orm.fields import (Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, 
                         RecordIdField, AnyRecordField, COUNT, MAX, MIN)

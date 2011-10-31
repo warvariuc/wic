@@ -23,7 +23,7 @@ except ImportError:
 
 class Adapter():
     '''Generic DB adapter.'''
-    def __init__(self, uri= '', connect= True):
+    def __init__(self, uri= '', connect= True, autocommit= True):
         '''URI is already without protocol.'''
         print('Creating adapter: %s' % uri)
         self._timings = []
@@ -33,6 +33,7 @@ class Adapter():
         else:
             self.connection = None
             self.cursor = None
+        self.autocommit = autocommit
     
     def connect(self):
         '''Connect to the DB and return the connection'''
@@ -40,6 +41,11 @@ class Adapter():
 
     def commit(self):
         return self.connection.commit()
+
+    def _autocommit(self):
+        '''Commit if autocommit is set.'''
+        if self.autocommit:
+            self.commit()
 
     def rollback(self):
         return self.connection.rollback()
@@ -271,7 +277,9 @@ class Adapter():
 
     def insert(self, *fields):
         query = self._insert(*fields)
-        return self.execute(query)
+        result = self.execute(query)
+        self._autocommit()
+        return result
     
     def _update(self, *fields, where= None):
         table = None
@@ -599,7 +607,7 @@ class SqliteAdapter(Adapter):
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
             table = index.fields[0].table
-            indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, str(table), ', '.join(columns)))
+            indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, table, ', '.join(columns)))
             
         return (';\n' + ';\n'.join(indexes)) if indexes else ''
 

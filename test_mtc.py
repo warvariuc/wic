@@ -128,9 +128,16 @@ db = dbAdapter
 #victor.save()
 #victor.delete() # delete this existing record
 #
-person = Persons(last_name= 'Varvariuc', first_name= 'Victor', db= db)
+person = Persons((Persons.phone_number, 763533), (Persons.phone_prefix, 22), last_name= 'Varvariuc', first_name= 'Victor', db= db)
 print(person)
 person.save()
+print(person.id)
+person.first_name = 'Andrei'
+person.save()
+print(Persons.getOneById(db, 14362421))
+pprint(db.select(Persons, where= (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
+print(Persons.getOne(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
+Persons.delete(db, Persons.id >= 14362420)
 #Persons.delete(where= ()) # delete record from Persons table which fall under the specified WHERE condition
 #person.delete()
 #Persons.get(where= ()) # delete record from Persons table which fall under the specified WHERE condition

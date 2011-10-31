@@ -59,24 +59,6 @@ class LeftJoin(Join):
         
 
 
-class meta():
-    '''A descriptor with which you can decorate a method. 
-    Then calling that method as instance method - calls its implemetation in the class.
-    Then calling that method as class method - calls its implemetation in the metaclass.'''
-    def __init__(self, method):
-        self.method = method
-
-    def __get__(self, obj, objtype):
-        if obj is None:
-            obj = objtype
-        def wrapped(*args, **kwargs):
-            method = self.method
-            if inspect.isclass(obj):
-                method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
-            return method(obj, *args, **kwargs)
-        return wrapped        
-        
-        
 class ModelMeta(type):
     '''Metaclass for all tables (models).'''
     
@@ -135,18 +117,11 @@ class ModelMeta(type):
     def __str__(self):
         return getattr(self, '_name', '') or self.__name__.lower() 
 
-    def delete(self, where):
+    def delete(self, db, where):
         '''Delete records from this table which fall under the given condition.'''
-        print('Table.delete()')
-        return
-        db = self._db
-        table = self.__class__
-        db.delete(table, where= where)
+        db.delete(self, where= where)
         db.commit()
 
-    def get(self, where):
-        '''Get record from this table which fall under the given condition.'''
-        print('Table.get()')
 
 
 class Model(metaclass= ModelMeta):
@@ -170,7 +145,7 @@ class Model(metaclass= ModelMeta):
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
-            setattr(self, field.name, value)
+            kwargs[field.name] = value
 
         for field in self.__class__: # make values for fields
             setattr(self, field.name, kwargs.pop(field.name, field.defaultValue))
@@ -192,21 +167,37 @@ class Model(metaclass= ModelMeta):
             raise TypeError('Pass either a Field or its name.')
         return getattr(self, attrName)
     
-    @meta
+    @orm.metamethod
     def delete(self):
         '''Delete this record.'''
-        print('Record.delete()')
-        return
         db = self._db
         table = self.__class__
         db.delete(table, where= (table.id == self.id))
         db.commit()
+        self.id = None
         
-    @meta
-    def get(self, where):
+    @classmethod
+    def getOne(cls, db, where):
         '''Get a single record which falls under the given condition.'''
-        print('Record.get()')
+        fields, rows = db.select(cls, where= where)
+        if not rows: # not found
+            raise orm.RecordNotFound
+        if len(rows) == 1:
+            return cls(*zip(fields, rows[0]), db= db)
+        print(rows, db.getLastQuery())
+        raise orm.TooManyRecords
         
+        
+    @classmethod
+    def getOneById(cls, db, id):
+        '''Get one record by id'''
+        return cls.getOne(db, cls.id == id)
+
+    @classmethod
+    def get(self, where):
+        '''Get records from this table which fall under the given condition.'''
+        print('Table.get()')
+
     def save(self):
         db = self._db
         table = self.__class__
@@ -219,6 +210,7 @@ class Model(metaclass= ModelMeta):
             db.commit()
         else: # new record
             db.insert(*values)
+            db.commit()
             self.id = db.lastInsertId()
 
     def __str__(self):
