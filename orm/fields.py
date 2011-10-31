@@ -152,7 +152,7 @@ class RecordIdField(Field):
         self._referTable = referTable # foreign key - referenced type of table
         
     def getReferTable(self):
-        if isinstance(self._referTable, orm.Table): 
+        if isinstance(self._referTable, orm.Model): 
             return self._referTable
         return orm.getObjectByPath(self._referTable, self.table.__module__)
     
@@ -172,7 +172,7 @@ class TableIdField(Field):
         super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 2), None, index)
         
     def _cast(self, value):
-        if isinstance(value, orm.Table) or orm.isTable(value):
+        if isinstance(value, orm.Model) or orm.isModel(value):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
         return int(value)
 
@@ -196,12 +196,20 @@ class AnyRecordField(Field):
         self._fields = dict(tableId= tableIdField, itemId= recordIdField) # real fields
 
     def __eq__(self, other): 
-        assert isinstance(other, orm.Table)
+        assert isinstance(other, orm.Model)
         return Expression('AND', 
                   Expression('EQ', self._fields['tableId'], other._tableId), 
                   Expression('EQ', self._fields['itemId'], other.id))
 
 
 def COUNT(expression, distinct= False):
-    assert isinstance(expression, orm.Expression) or orm.isTable(expression), 'COUNT argument must be a Field or a Table.'
+    assert isinstance(expression, orm.Expression) or orm.isModel(expression), 'COUNT argument must be a Field, an Expression or a Table.'
     return Expression('COUNT', expression, distinct= distinct)
+
+def MAX(expression):
+    assert isinstance(expression, orm.Expression), 'MAX argument must be a Field or an Expression.'
+    return Expression('MAX', expression)
+
+def MIN(expression):
+    assert isinstance(expression, orm.Expression), 'MIN argument must be a Field or an Expression.'
+    return Expression('MIN', expression)

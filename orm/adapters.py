@@ -104,12 +104,18 @@ class Adapter():
         return '(%s IN (%s))' % (self.render(first), items)
 
     def COUNT(self, expression):
-        expression = '*' if orm.isTable(expression) else self.render(expression)
+        expression = '*' if orm.isModel(expression) else self.render(expression)
         distinct = getattr(expression, 'distinct', False)
         if distinct:
             return 'COUNT(DISTINCT %s)' % expression
         else:
             return 'COUNT(%s)' % expression
+
+    def MAX(self, expression):
+        return 'MAX(%s)' % self.render(expression)
+    
+    def MIN(self, expression):
+        return 'MIN(%s)' % self.render(expression)
     
     def render(self, value, castField= None):
         '''Render of a value in a format suitable for operations with this DB field'''
@@ -183,7 +189,7 @@ class Adapter():
 
     def getCreateTableQuery(self, table):
         '''Get CREATE TABLE statement for this database'''
-        assert orm.isTable(table), 'Provide a Table subclass.'
+        assert orm.isModel(table), 'Provide a Table subclass.'
         
         columns = self._getCreateTableColumns(table)
         indexes = self._getCreateTableIndexes(table)
@@ -237,7 +243,7 @@ class Adapter():
     def getExpressionTables(self, expression):
         '''Get tables involved in WHERE expression.'''
         tables = set()
-        if orm.isTable(expression):
+        if orm.isModel(expression):
             tables.add(expression)
         elif isinstance(expression, orm.Field):
             tables.add(expression.table)
@@ -272,7 +278,7 @@ class Adapter():
         for item in fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
             field, value = item
-            assert isinstance(field, orm.Field), 'First item must be a Field.'
+            assert isinstance(field, orm.Field), 'First item in the tuple must be a Field.'
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
@@ -289,7 +295,7 @@ class Adapter():
             return None
 
     def _delete(self, table, where):
-        assert orm.isTable(table)
+        assert orm.isModel(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
         return 'DELETE FROM %s%s;' % (table, sql_w)
 
@@ -301,35 +307,37 @@ class Adapter():
         except:
             return None
 
-    def _select(self, fields= (), where= None, orderBy= False, limitBy= False, join= (), 
+    def _select(self, *args, where= None, orderBy= False, limitBy= False, 
                 distinct= False, groupBy= False, having= False):
         '''Create and return SELECT query.
         fields: one or list of fields to select;
         where: expression for where;
         join: one or list of tables to join, in form Table(join_on_expression);
-        tables are taken from fields and `where` expression.'''
+        tables are taken from fields and `where` expression;
+        limitBy: a tuple (start, end).'''
         
-        fields = orm.listify(fields)
         tables = self.getExpressionTables(where) # get tables involved in the query
-        #where = self.filter_tenant(where, tablenames) # process the query ???
+        fields = []
+        joins = []
+        for arg in args:
+            if orm.isModel(arg):
+                fields.extend(arg) # select all table fields
+                tables.add(arg)
+            elif isinstance(arg, orm.Expression):
+                fields.append(arg)
+                tables |= self.getExpressionTables(arg)
+            elif isinstance(arg, orm.Join):
+                joins.append(arg)
+            else:
+                raise SyntaxError('Uknown argument.')
+                
         if not fields: # if not fields specified take them all from the requested tables
-            for table in tables:
-                fields.extend(table)
-        else:
-            newFields = []
-            for field in fields:
-                if orm.isTable(field):
-                    newFields.extend(field) # select all table fields
-                    tables.add(field)
-                else:
-                    assert isinstance(field, orm.Expression)
-                    newFields.append(field)
-                    tables |= self.getExpressionTables(field)
-            fields = newFields
+            raise SyntaxError('Please indicate at least one field.')
+                
         if not tables:
             raise SyntaxError('SELECT: no tables involved.')
-        columns = OrderedDict(zip(map(self.render, fields), fields))
-        sql_f = ', '.join(columns)
+        
+        sql_f = ', '.join(map(self.render, fields))
         sql_w = ' WHERE ' + self.render(where) if where else ''
         sql_s = ''
         if distinct is True:
@@ -337,16 +345,12 @@ class Adapter():
         elif distinct:
             sql_s += 'DISTINCT ON (%s)' % distinct
 
-        if join: # http://stackoverflow.com/questions/187146/inner-join-outer-join-is-the-order-of-tables-in-from-important
-            join = orm.listify(join)
-            joinTables = []
-            for table in join:
-                assert isinstance(table, orm.Table)
-                joinTables.append(table.__class__)
-            tables = [table for table in tables if table not in joinTables]
+        if joins: # http://stackoverflow.com/questions/187146/inner-join-outer-join-is-the-order-of-tables-in-from-important
+            joinTables = [join.model for join in joins]
+            tables = [table for table in tables if table not in joinTables] # remove from tables those which are joined
             sql_t = ', '.join(map(str, tables))
-            for table in join:
-                sql_t += ' %s JOIN %s ON %s' % (table.join.upper(), table.__class__, self.render(table.where))
+            for join in joins:
+                sql_t += ' %s JOIN %s ON %s' % (join.type.upper(), join.model, self.render(join.on))
         else:
             sql_t = ', '.join(map(str, tables))
 
@@ -375,22 +379,22 @@ class Adapter():
             if not orderBy and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
                 
-        return self.selectLimitBy(sql_s, sql_f, sql_t, sql_w, sql_o, limitBy), columns
+        return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limitBy)
 
-    def selectLimitBy(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitBy):
+    def _selectWithLimit(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitBy):
         if limitBy:
             (lmin, lmax) = limitBy
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, fields= (), where= None, **attributes):
-        sql, columns = self._select(fields, where, **attributes)
+    def select(self, *args, where= None, **attributes):
+        fields, sql = self._select(*args, where= where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
-        return self.parseResponse(rows, columns), columns
+        return self.parseResponse(fields, rows)
 
-    def parseResponse(self, rows, columns, blob_decode= True):
-        return rows
+    def parseResponse(self, fields, rows, blob_decode= True):
+        return fields, rows
 #        db = self.db
 #        virtualtables = []
 #        new_rows = []

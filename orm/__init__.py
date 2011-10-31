@@ -22,8 +22,8 @@ def getObjectByPath(path, defaultModule):
         return getattr(module, className)            
     return getattr(sys.modules[defaultModule], path) 
     
-def isTable(obj):
-    return inspect.isclass(obj) and issubclass(obj, Table)
+def isModel(obj):
+    return inspect.isclass(obj) and issubclass(obj, Model)
 
 def listify(obj):
     '''Assure that obj is an iterable.'''
@@ -33,8 +33,8 @@ def listify(obj):
 
 
 from orm.fields import (Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, 
-                        RecordIdField, AnyRecordField, COUNT)
-from orm.tables import Table, Record, Index
+                        RecordIdField, AnyRecordField, COUNT, MAX, MIN)
+from orm.models import Model, Index, Join, LeftJoin
 from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter
 
 #defaultAdapter = _Adapter(connect=False)
