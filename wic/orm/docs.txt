@@ -1,1 +1,2 @@
+Model names are in plural - Persons, not Person.
 Foreign key fields are always named with '_id' at the end.

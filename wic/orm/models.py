@@ -128,8 +128,9 @@ class Model(metaclass= ModelMeta):
     '''Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields.'''
     id = orm.IdField() # this field is present in all tables
-    #version = orm.IntegerField(bytesCount=2) # version of the record - incremented upon each record update
+    #timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record  
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
+    _ordering = [] # default order for select when not specified
 
     def __init__(self, *args, **kwargs):
         '''Create a model instance - a record.
@@ -184,7 +185,6 @@ class Model(metaclass= ModelMeta):
             raise orm.RecordNotFound
         if len(rows) == 1:
             return cls(*zip(fields, rows[0]), db= db)
-        print(rows, db.getLastQuery())
         raise orm.TooManyRecords
         
         
@@ -194,9 +194,12 @@ class Model(metaclass= ModelMeta):
         return cls.getOne(db, cls.id == id)
 
     @classmethod
-    def get(self, where):
+    def get(cls, db, where, orderBy= False, limit= False):
         '''Get records from this table which fall under the given condition.'''
-        print('Table.get()')
+        orderBy = orderBy or cls._ordering # use default table ordering if no ordering passed
+        fields, rows = db.select(cls, where= where, orderBy= orderBy, limit= limit)
+        for row in rows:
+            yield cls(*zip(fields, row), db= db)
 
     def save(self):
         db = self._db

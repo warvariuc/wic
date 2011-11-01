@@ -2,30 +2,24 @@
 
 '''wic (vix, wix?) platform'''
 
-import sys
-
-if sys.hexversion < 0x03010000:
-    print("At least Python 3.1 needed. Exiting.");
-    sys.exit(1)
-
+import sys, os
+from PyQt4 import QtCore, QtGui
 
 # monkeypatch: use cdecimal if present instead of decimal = it is much faster
 try: sys.modules['decimal'] = __import__('cdecimal') # http://www.bytereef.org/libmpdec-download.html
 except ImportError: pass
 
 
-import os
-from PyQt4 import QtCore, QtGui
 
-
-app = __import__('w_app').WApp(sys.argv)
+from wic.w_app import WApp
+app = WApp(sys.argv)
 
 QtGui.qApp.appDir = os.path.dirname(os.path.abspath(sys.argv[0]))
 sys.path.append(os.path.join(QtGui.qApp.appDir, 'widgets')) # path for searching resources and custom widgets modules
-import w_widgets_rc # load icons and possibly other resources
+import wic.widgets.w_widgets_rc # load icons and possibly other resources
 
 
-import w_main_window
+from wic import w_main_window
 QtGui.qApp.mainWindow = w_main_window.WMainWindow()
 QtGui.qApp.mainWindow.show()
 

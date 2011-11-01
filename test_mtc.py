@@ -1,7 +1,7 @@
 from pprint import pprint
 
-import orm
-from orm import Join, LeftJoin
+from wic import orm
+from wic.orm import Join, LeftJoin
 
 
 class Regions(orm.Model):
@@ -88,7 +88,7 @@ db = dbAdapter
 
 #chunkLength = 10000 # how many records to process in one chunk
 #lastRowId = 0 # last checked item's row_id
-#totalPersonsCount = dbAdapter.select(orm.COUNT(Persons))[0][0][0]
+#totalPersonsCount = dbAdapter.select(orm.COUNT(Persons))[1][0][0]
 #personsProcessedCount = 0
 #
 #while True:
@@ -120,25 +120,19 @@ db = dbAdapter
 #    print('Processed %i persons (%.2f %%).' % (personsProcessedCount, personsProcessedCount * 100 / totalPersonsCount))
 #    db.commit()
 
-#victor = Persons(first_name= 'Victor', last_name= 'Varvariuc')
-#lastRecord = Persons.get(Persons.id == orm.MAX(Persons.id))
 
-#varvariucs = Persons.getList()
-#victor.version = Persons.version + 1
-#victor.save()
-#victor.delete() # delete this existing record
-#
-person = Persons((Persons.phone_number, 763533), (Persons.phone_prefix, 22), last_name= 'Varvariuc', first_name= 'Victor', db= db)
-print(person)
-person.save()
-print(person.id)
-person.first_name = 'Andrei'
-person.save()
-print(Persons.getOneById(db, 14362421))
-pprint(db.select(Persons, where= (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
-print(Persons.getOne(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
-Persons.delete(db, Persons.id >= 14362420)
-#Persons.delete(where= ()) # delete record from Persons table which fall under the specified WHERE condition
-#person.delete()
-#Persons.get(where= ()) # delete record from Persons table which fall under the specified WHERE condition
-#person.get(where= ()) 
+#person = Persons((Persons.phone_number, 763533), (Persons.phone_prefix, 22), last_name= 'Varvariuc', first_name= 'Victor', db= db)
+#print(person)
+#person.save()
+#print(person.id)
+#person.first_name = 'Andrei'
+#person.save()
+#print(Persons.getOneById(db, 14362421))
+#pprint(db.select(Persons, where= (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
+#print(Persons.getOne(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
+#Persons.delete(db, Persons.id >= 14362420)
+
+#pprint(db._update(Persons.phone_prefix(Persons.phone_prefix + 1), where= (Persons.id == 1))) # UPDATE persons SET phone_prefix= (persons.phone_prefix + 1) WHERE (persons.id = 1); 
+
+for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
+    print(str(person), str(Locations.getOneById(db, person.location_id)))

@@ -3,12 +3,12 @@
 
 import os, sys, subprocess
 
-params = sys.argv[:]
-home_path = os.path.dirname(os.path.abspath(params[0]))
+curDir = os.path.dirname(os.path.abspath(__file__))
+params = list(sys.argv) # copy list
 params[0] = 'designer' # "designer-qt4" on Linux
 
 # add search path for custom widgets and plugins for designer
-os.putenv('PYQTDESIGNERPATH', os.path.join(home_path, 'widgets'))
+os.putenv('PYQTDESIGNERPATH', os.path.join(curDir, 'widgets'))
 os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) # http://code.activestate.com/recipes/577233-adding-the-directory-of-the-python-executable-to-t/
 
 retcode = subprocess.Popen(params)

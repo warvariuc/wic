@@ -262,7 +262,11 @@ class Adapter():
         return None
     
     def _insert(self, *fields):
-        '''Create and return INSERT query.'''
+        '''Create and return INSERT query.
+        INSERT INTO table_name [ ( col_name1, col_name2, ... ) ]
+          VALUES ( expression1_1, expression1_2, ... ),
+            ( expression2_1, expression2_2, ... ), ... 
+        '''
         table = None
         for item in fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
@@ -274,14 +278,16 @@ class Adapter():
         keys = ', '.join(field.name for field, value in fields)
         values = ', '.join(self.render(value, field) for field, value in fields)
         return 'INSERT INTO %s (%s) VALUES (%s);' % (table, keys, values)
-
+    
     def insert(self, *fields):
         query = self._insert(*fields)
         result = self.execute(query)
         self._autocommit()
         return result
     
-    def _update(self, *fields, where= None):
+    def _update(self, *fields, where= None, limit= None):
+        '''UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
+          [ WHERE expression ] [ LIMIT limit_amount ]'''
         table = None
         for item in fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
@@ -294,7 +300,7 @@ class Adapter():
         sql_v = ', '.join(['%s= %s' % (field.name, self.render(value, field)) for (field, value) in fields])
         return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
 
-    def update(self, *fields, where= None):
+    def update(self, *fields, where= None, limit= None):
         sql = self._update(*fields, where= where)
         self.execute(sql)
         try:
@@ -302,12 +308,13 @@ class Adapter():
         except:
             return None
 
-    def _delete(self, table, where):
+    def _delete(self, table, where, limit= None):
+        '''DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]'''
         assert orm.isModel(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
         return 'DELETE FROM %s%s;' % (table, sql_w)
 
-    def delete(self, table, where):
+    def delete(self, table, where, limit= None):
         sql = self._delete(table, where)
         self.execute(sql)
         try:
@@ -315,15 +322,15 @@ class Adapter():
         except:
             return None
 
-    def _select(self, *args, where= None, orderBy= False, limitBy= False, 
+    def _select(self, *args, where= None, orderBy= False, limit= False, 
                 distinct= False, groupBy= False, having= False):
-        '''Create and return SELECT query.
-        fields: one or list of fields to select;
-        where: expression for where;
-        join: one or list of tables to join, in form Table(join_on_expression);
-        tables are taken from fields and `where` expression;
-        limitBy: a tuple (start, end).'''
-        
+        '''SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
+          [ FROM from_clause ]
+          [ WHERE where_expression ]
+          [ GROUP BY expression1, expression2, ... ]
+          [ HAVING having_expression ]
+          [ ORDER BY order_column_expr1, order_column_expr2, ... ]
+        '''        
         tables = self.getExpressionTables(where) # get tables involved in the query
         fields = []
         joins = []
@@ -383,19 +390,26 @@ class Adapter():
                 _orderBy.append(order)
             sql_o += ' ORDER BY %s' % ', '.join(_orderBy)
                 
-        if limitBy:
+        if limit:
             if not orderBy and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
                 
-        return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limitBy)
+        return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
 
-    def _selectWithLimit(self, sql_s, sql_f, sql_t, sql_w, sql_o, limitBy):
-        if limitBy:
-            (lmin, lmax) = limitBy
+    def _selectWithLimit(self, sql_s, sql_f, sql_t, sql_w, sql_o, limit):
+        '''The syntax may differ in other dbs.'''
+        if limit:
+            (lmin, lmax) = limit
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
     def select(self, *args, where= None, **attributes):
+        '''Create and return SELECT query.
+        fields: one or list of fields to select;
+        where: expression for where;
+        join: one or list of tables to join, in form Table(join_on_expression);
+        tables are taken from fields and `where` expression;
+        limitBy: a tuple (start, end).'''
         fields, sql = self._select(*args, where= where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())

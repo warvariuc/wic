@@ -6,14 +6,12 @@
 import os, sys
 from types import ModuleType
 from PyQt4 import QtGui, uic
-from w_date_edit import WDateEdit
-from w_decimal_edit import WDecimalEdit
-import yaml
-import subprocess
-import datetime
+from wic.widgets.w_date_edit import WDateEdit
+from wic.widgets.w_decimal_edit import WDecimalEdit
+import yaml, subprocess, datetime
 
 #shortcuts
-appDir = QtGui.qApp.appDir # этот модуль должен загружаться после всех остновных модулей
+appDir = QtGui.qApp.appDir # этот модуль должен загружаться после всех основных модулей
 confDir = '' # будет заполнена при загрузке конфигурации
 mainWindow = QtGui.qApp.mainWindow
 statusBar = mainWindow.statusBar()
@@ -48,7 +46,7 @@ class WFormWidgetHooker():
         try:
             widget = getattr(self.form, name)
         except AttributeError:
-            raise AttributeError('The hooked form doesn\'t have attribute ' + name)
+            raise AttributeError('The hooked form does not have attribute ' + name)
     
         if isinstance(widget, QtGui.QTextEdit): return widget.plainText()
         elif isinstance(widget, QtGui.QCheckBox): return widget.isChecked()

@@ -23,7 +23,7 @@ def getObjectByPath(path, defaultModule):
     return getattr(sys.modules[defaultModule], path) 
     
 def isModel(obj):
-    return inspect.isclass(obj) and issubclass(obj, Model)
+    return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)
 
 def listify(obj):
     '''Assure that obj is an iterable.'''
@@ -43,7 +43,7 @@ class metamethod():
             obj = objtype
         def wrapped(*args, **kwargs):
             method = self.method
-            if inspect.isclass(obj):
+            if isinstance(obj, type): # is a class
                 method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
             return method(obj, *args, **kwargs)
         return wrapped        
