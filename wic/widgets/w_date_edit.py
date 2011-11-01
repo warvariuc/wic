@@ -1,7 +1,6 @@
 from PyQt4 import QtGui, QtCore
-from w_date import Date
-import ui_w_popup_calendar
-__import__('w_widgets_rc')
+from wic.widgets.w_date import Date
+from wic.widgets import ui_w_popup_calendar
 
 
 class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):

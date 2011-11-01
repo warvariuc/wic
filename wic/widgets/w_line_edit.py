@@ -1,5 +1,4 @@
 from PyQt4 import QtGui, QtCore
-__import__('w_widgets_rc')
 
 class WLineEdit(QtGui.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit-with-a-clear-button/
     def __init__(self, parent = None):

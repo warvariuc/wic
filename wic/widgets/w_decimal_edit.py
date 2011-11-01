@@ -1,6 +1,5 @@
 from PyQt4 import QtGui, QtCore
-__import__('w_widgets_rc')
-import ui_w_popup_calculator
+from wic.widgets import ui_w_popup_calculator
 import re, decimal
 Dec = decimal.Decimal
 

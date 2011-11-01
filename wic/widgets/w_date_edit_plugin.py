@@ -1,4 +1,6 @@
 # coding: utf-8
+import wic.widgets.w_widgets_rc
+
 # Designer plugin for:
 widgetModuleName = 'w_date_edit'
 widgetClassName = 'WDateEdit'
@@ -8,12 +10,11 @@ from PyQt4 import QtGui, QtDesigner
 widgetModule = __import__(widgetModuleName)
 
 class DesignerPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
-    def __init__(self, parent=None):
+    def __init__(self, parent= None):
         super().__init__(parent)
         self.initialized = False
 
     def initialize(self, formEditor):
-        if self.initialized: return
         self.initialized = True
 
     def isInitialized(self):
@@ -26,7 +27,7 @@ class DesignerPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return QtGui.QIcon(widgetIconName)
 
     def domXml(self):
-        return '<widget class="' + widgetClassName + '" name="' + self.name() + '">\n</widget>\n'
+        return '<widget class="%s" name="%s">\n</widget>\n' % (widgetClassName, self.name())
     
     def group(self):
         return 'wic'
@@ -48,8 +49,7 @@ class DesignerPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
 
 
 if __name__ == '__main__': # some tests
-    import sys
-    app = QtGui.QApplication(sys.argv)
+    app = QtGui.QApplication([])
     w = DesignerPlugin()
     print(w.domXml())
     print(w.includeFile())

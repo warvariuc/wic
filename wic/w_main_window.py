@@ -25,7 +25,7 @@ class WMainWindow(QtGui.QMainWindow):
         self.setCentralWidget(self.mdiArea)
         self.statusBar()
         
-        from messages_window import MessagesWindow
+        from wic.messages_window import MessagesWindow
         self.messagesWindow = MessagesWindow(self)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow.dockWidget)
 
@@ -75,7 +75,7 @@ class WMainWindow(QtGui.QMainWindow):
         self.setWindowTitle('wic')
         
         
-        import w_settings
+        from wic import w_settings
         self.settings = w_settings.WSettings(self)
         self.settings.readSettings()
 
@@ -86,11 +86,11 @@ class WMainWindow(QtGui.QMainWindow):
         __import__('w').loadModule(os.path.join(QtGui.qApp.appDir, 'designer.py'))
 
     def showCalculator(self):
-        import w_decimal_edit
+        from wic.widgets import w_decimal_edit
         w_decimal_edit.WPopupCalculator(self, persistent=True).show()
         
     def showCalendar(self):
-        import w_date_edit
+        from wic.widgets import w_date_edit
         w_date_edit.WCalendarPopup(self, persistent=True).show()
 
     def closeTab(self, i):
@@ -103,7 +103,7 @@ class WMainWindow(QtGui.QMainWindow):
         if self.mdiArea.subWindowList(): #there are still open subwindows
             event.ignore()
             return
-        import w
+        from wic import w
         if w.requestExit() == False: #именно False, иначе None тоже считается отрицательным
             event.ignore()
             return

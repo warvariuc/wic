@@ -12,22 +12,19 @@ from PyQt4 import QtGui
 
 
 
-def build(path, recurse):
-    _apply(recurse, _build, path)
-    #_apply(recurse, _translate, path)
+def build(path, recurse, removeSource= True):
+    _apply(_build, path, recurse, removeSource= removeSource)
+    #_apply(_translate, path, recurse)
 
 
 def clean(path, recurse):
-    _apply(recurse, _clean, path)
+    _apply(_clean, path, recurse)
 
 
-def _apply(recurse, function, path):
-    if not recurse:
-        function(path)
-    else:
-        for dirPath, dirs, files in os.walk(path):
-            for fileName in files:
-                function(dirPath, fileName)
+def _apply(function, path, recurse, **kwargs):
+    for dirPath, dirs, files in os.walk(path):
+        for fileName in files:
+            function(dirPath, fileName, **kwargs)
 
 def _build(dirPath, fileName, removeSource= True):
     if fileName.endswith(".ui"):
@@ -125,7 +122,7 @@ def _clean(dirPath, fileName):
 Windows = sys.platform.lower().startswith(('win', 'microsoft'))
 
 curDir = os.path.dirname(os.path.abspath(__file__))
-PATH = QtGui.QApplication.applicationDirPath()
+PATH = QtGui.QApplication([]).applicationDirPath()
 
 if Windows:
     PATH = os.path.join(os.path.dirname(sys.executable), 'Lib/site-packages/PyQt4')
@@ -145,7 +142,7 @@ if Windows:
 pyuic4 = PYUIC4
 pyrcc4 = PYRCC4
 
-print('Be aware that some IDEs might automatically delete the resulting *.pyc files.')
+print('Be aware that some IDEs might automatically delete the resulting *.pyc files.\n')
 
 clean(curDir, recurse= True)
-build(curDir, recurse= True)
+build(curDir, recurse= True, removeSource= False)

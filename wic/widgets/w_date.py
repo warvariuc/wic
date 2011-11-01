@@ -1,4 +1,5 @@
 #author Victor Varvariuc <victor.varvariuc@gmail.com>, 2010,2011
+
 import datetime
 
 class Date():
@@ -6,7 +7,7 @@ class Date():
 
     __slots__ = ('_date', ) # pre-declaring space for instance attributes and eliminating instance dictionaries
 
-    def __new__(cls, year=0, month=0, day=0): # immutable, so use __new__ not __init__
+    def __new__(cls, year= 0, month= 0, day= 0): # immutable, so use __new__ not __init__
         self = super().__new__(cls)
 
         if isinstance(year, Date): # from another Date

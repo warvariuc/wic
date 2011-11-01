@@ -1,14 +1,14 @@
 from PyQt4 import QtGui, QtCore
-from w_date import Date
 from decimal import Decimal as Dec
-from w_date_edit import WDateEdit
-from w_decimal_edit import WDecimalEdit
+from wic.widgets.w_date import Date
+from wic.widgets.w_date_edit import WDateEdit
+from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
 
 class WTableItemProperties(): # data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text
-    def __init__(self, format='', editable=False, 
-                alignment=None, defaultValue=None, roles={}):
+    def __init__(self, format= '', editable= False, 
+                alignment= None, defaultValue= None, roles= {}):
         self.format = format # text format of the value
         self.defaultValue = defaultValue
         if alignment is None:
@@ -71,7 +71,7 @@ class WTableColumnProperties():
     def __init__(self, table, identifier, editedHandler, rowItem):
         self.table = table
         self.identifier = identifier
-        self.headerItem = WTableItemProperties(alignment=QtCore.Qt.AlignCenter)
+        self.headerItem = WTableItemProperties(alignment= QtCore.Qt.AlignCenter)
         self.rowItem = rowItem
         self.editedHandler = editedHandler
     
@@ -114,8 +114,8 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
 
     def __setattr__(self, name, value):
         if name in WTableRow.__slots__:
-             super().__setattr__(name, value)
-             return
+            super().__setattr__(name, value)
+            return
         try:
             self.__setitem__(name, value)
             return
@@ -179,7 +179,7 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
 class WTable(): # ТаблицаЗначений
     __slots__ = ['_columns', '_columnsOrder', '_rows', '_tableView']
     wItemDelegate = WItemDelegate() # static
-    def __init__(self, tableView=None):
+    def __init__(self, tableView= None):
         self._columns = [] 
         self._rows = []
         self._columnsOrder = {} # column names and positions
@@ -205,12 +205,12 @@ class WTable(): # ТаблицаЗначений
     def column(self, key): 
         return self._columns[self._columnsOrder[key] if isinstance(key, str) else key]
 
-    def _notifyTableView(self, end=False):
+    def _notifyTableView(self, end= False):
         if self._tableView: # notify about changes
             if end: self._tableView.model().layoutChanged.emit()
             else: self._tableView.model().layoutAboutToBeChanged.emit()
 
-    def newRow(self, index=None):
+    def newRow(self, index= None):
         if not isinstance(index, int):
             index = self.rowCount()
         row = WTableRow(self)
@@ -219,7 +219,7 @@ class WTable(): # ТаблицаЗначений
         self._notifyTableView(True)
         return row
     
-    def newColumn(self, identifier, index=None, label='', width=100, visible=True, editedHandler=None, **kwargs):
+    def newColumn(self, identifier, index= None, label= '', width= 100, visible= True, editedHandler= None, **kwargs):
         if not identifier or (identifier in self._columnsOrder):
             raise AttributeError('Колонка с таким именем уже существует или не задано имя колонки: ' + identifier)
         if isinstance(index, str):
@@ -333,15 +333,14 @@ class WTableModel(QtCore.QAbstractTableModel):
 
 
 if __name__ == '__main__': # some tests
-    import sys
-    app = QtGui.QApplication(sys.argv)
+    app = QtGui.QApplication([])
     
     tableView = QtGui.QTableView(None)
     
     table = WTable(tableView)
-    table.newColumn("column1", label='int', defaultValue=0, width=50)
-    table.newColumn("column2", label='Decimal', editable=True, alignment=QtCore.Qt.AlignRight, defaultValue=Dec())
-    table.newColumn("column3", label='Date', editable=True, defaultValue=Date())
+    table.newColumn("column1", label= 'int', defaultValue= 0, width= 50)
+    table.newColumn("column2", label= 'Decimal', editable= True, alignment= QtCore.Qt.AlignRight, defaultValue= Dec())
+    table.newColumn("column3", label= 'Date', editable= True, defaultValue= Date())
     for rowIndex in range(10):
         row = table.newRow()
         row.column1 = rowIndex + 1
