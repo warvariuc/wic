@@ -53,6 +53,7 @@ def loadTestConf(): # load default test configuration
     f = module.Form(None)
     window = mainWindow.mdiArea.addSubWindow(f) # create subwindow with the form
     window.show()
+    f.finished.connect(window.close)
 
 QtCore.QTimer.singleShot(0, loadTestConf) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
 

@@ -5,7 +5,7 @@ from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
-class Form(QtGui.QWidget): # Form manipulator
+class Form(QtGui.QDialog):
     '''QObject allows having signals - f.e. about some value selected.'''
     
     def __init__(self, parentWidget):
@@ -17,30 +17,16 @@ class Form(QtGui.QWidget): # Form manipulator
         curDir = os.path.dirname(os.path.abspath(__file__))
         uiFilePath = os.path.join(curDir, 'form.ui')
             
-        dialogUi, uiQtClass = uic.loadUiType(uiFilePath)
-        if not issubclass(uiQtClass, QtGui.QDialog):
-            printMessage('<b>Форма не загружена - ожидается QDialog: </b>' + uiFilePath)
-            return
-
-        class Dialog(uiQtClass, dialogUi):
-            def __init__(self, parent):
-                super().__init__(parent)
-                self.finished.connect(self.close)
-                self.setupUi(parent)
-            
-
-        self.dialog = Dialog(self) # create form
+        uic.loadUi(uiFilePath, self)
         #self.widgets = WFormWidgetHooker(self.form) # helper for the form
         #self.bindSignals()
         self.onOpen() # предопределенная процедура
 
     def closeEvent(self, event):
-        print('closeEvent2')
         if self.aboutToClose() == False: # вызов предопределенной процедуры
             event.ignore()
-            #self.show()
             return
-        self.parentWidget().close() # close sub window
+        #self.reject()
 
     def bindSignals(self):
         '''Связать стандартные сигналы стандартных виджетов формы к предопределенным процедурам модуля.'''
