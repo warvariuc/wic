@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from PyQt4 import QtGui, QtCore
 from wic.widgets.ui_w_popup_calculator import Ui_WPopupCalculator
 import re, decimal
@@ -371,4 +373,4 @@ if __name__ == '__main__': # some tests
     #m = WPopupCalculator(None, True)
     m = WDecimalEdit(None)
     m.show()
-    app.exec()
+    app.exec_()

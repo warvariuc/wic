@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from PyQt4 import QtGui, QtCore
 from wic.widgets.w_date import Date
 from wic.widgets import ui_w_popup_calendar

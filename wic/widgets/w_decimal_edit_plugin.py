@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
 # coding: utf-8
-import wic.widgets.w_widgets_rc
+
+import w_widgets_rc
 
 # Designer plugin for:
 widgetClassName = 'WDecimalEdit'
@@ -8,6 +10,7 @@ widgetIconName = ':/icons/calculator.png'
 
 from PyQt4 import QtGui, QtDesigner
 widgetModule = __import__(widgetModuleName)
+#from wic.widgets import w_decimal_edit as widgetModule
 
 class DesignerPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     def __init__(self, parent= None):

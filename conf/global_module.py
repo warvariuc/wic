@@ -1,5 +1,7 @@
-import sys, os, w
+import sys, os
 from PyQt4 import QtCore, QtGui
+from wic import w
+
 
 def system_started(): # предопределенная процедура запускаемая при начале работы системы
     w.statusBar.showMessage('Готов...', 5000)

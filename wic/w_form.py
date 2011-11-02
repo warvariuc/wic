@@ -1,12 +1,12 @@
 import os, sys
-from PyQt4 import QtCore, QtGui, uic
-from wic.w import printMessage
+from PyQt4 import QtGui, QtCore, uic
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
-class Form(QtGui.QDialog):
+class WForm(QtGui.QDialog):
     '''QObject allows having signals - f.e. about some value selected.'''
+    uiFilePath = 'form.ui'
     
     def __init__(self, parentWidget):
         super().__init__(parentWidget)
@@ -14,8 +14,10 @@ class Form(QtGui.QDialog):
         # bind events to this Form manipulator
         # can raise Exception - top prevent loading - аналог СтатусВозврата (1) в 1С
         
-        curDir = os.path.dirname(os.path.abspath(__file__))
-        uiFilePath = os.path.join(curDir, 'form.ui')
+        moduleName = self.__class__.__module__
+        module = sys.modules[moduleName]
+        moduleDir = os.path.dirname(os.path.abspath(module.__file__)) 
+        uiFilePath = os.path.join(moduleDir, self.uiFilePath)
             
         uic.loadUi(uiFilePath, self)
         #self.widgets = WFormWidgetHooker(self.form) # helper for the form
@@ -43,7 +45,7 @@ class Form(QtGui.QDialog):
                 bind('textChanged')
             elif isinstance(child, QtGui.QCheckBox): 
                 bind('stateChanged')
-            elif isinstance(child, (WDateEdit, WDecimalEdit)): 
+            elif isinstance(child, (WDateEdit, WDecimalEdit)):
                 bind('edited') # check this classes before QLineEdit, because they are its descendants
             elif isinstance(child, QtGui.QLineEdit): 
                 bind('textEdited')
@@ -60,4 +62,3 @@ class Form(QtGui.QDialog):
     
     def widgetValidate(self):
         pass
-    

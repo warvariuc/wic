@@ -45,12 +45,13 @@ def exception_hook(excType, excValue, excTraceback): # Global function to catch 
 
 sys.excepthook = exception_hook # set our exception hook
 
+sys.path.append(os.path.join(appDir, 'widgets')) # path for searching resources and custom widgets modules
 
 def loadTestConf(): # load default test configuration
     #from wic import w
     #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
-    from conf.catalogs.catalog1 import module
-    f = module.Form(None)
+    from conf.reports import test
+    f = test.Form(None)
     window = mainWindow.mdiArea.addSubWindow(f) # create subwindow with the form
     window.show()
     f.finished.connect(window.close)
