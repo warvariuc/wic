@@ -47,8 +47,12 @@ sys.excepthook = exception_hook # set our exception hook
 
 
 def loadTestConf(): # load default test configuration
-    from wic import w
-    w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
+    #from wic import w
+    #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
+    from conf.catalogs.catalog1 import module
+    f = module.Form(None)
+    window = mainWindow.mdiArea.addSubWindow(f) # create subwindow with the form
+    window.show()
 
 QtCore.QTimer.singleShot(0, loadTestConf) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
 

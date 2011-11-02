@@ -1,9 +1,9 @@
 from PyQt4 import QtGui, QtCore
-from wic.widgets import ui_w_popup_calculator
+from wic.widgets.ui_w_popup_calculator import Ui_WPopupCalculator
 import re, decimal
 Dec = decimal.Decimal
 
-class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator):
+class WPopupCalculator(QtGui.QWidget, Ui_WPopupCalculator):
     '''Popup calculator'''
     
     operators = '+-*/' # static member

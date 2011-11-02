@@ -50,15 +50,14 @@ def _build(dirPath, fileName, removeSource= True):
     else:
         print('Converted %s to %s' % (source, targetName))
 
-    # convert *.py to *.pyc and delete the source
-    source = target
-    target = source + 'c' # py -> pyc
-    
-
-    py_compile.compile(source, target)
-    print('Compiled %s' % target)
-    
     if removeSource:
+        # convert *.py to *.pyc and delete the source
+        source = target
+        target = source + 'c' # py -> pyc
+        
+        py_compile.compile(source, target)
+        print('Compiled %s' % target)
+    
         os.remove(source)
         print('Deleted source %s' % source)
 
