@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-# coding: utf-8
-
-import w_widgets_rc
+import wic.widgets.w_widgets_rc
 
 # Designer plugin for:
 widgetClassName = 'WDecimalEdit'
@@ -60,4 +57,4 @@ if __name__ == '__main__': # some tests
     print(w.group())
     w1 = w.createWidget(None)
     w1.show()
-    app.exec()
+    app.exec_()

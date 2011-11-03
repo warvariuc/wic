@@ -1,5 +1,3 @@
-# coding: utf-8
-
 from PyQt4 import QtGui, QtCore
 from wic.widgets.ui_w_popup_calculator import Ui_WPopupCalculator
 import re, decimal

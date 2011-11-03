@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding: utf-8
 
 import os, sys, subprocess
 
@@ -8,6 +7,8 @@ params = list(sys.argv) # copy list
 params[0] = 'designer' # "designer-qt4" on Linux
 
 widgetsDir = os.path.join(curDir, 'wic', 'widgets')
+
+os.chdir(widgetsDir)
 
 # add search path for custom widgets and plugins for designer
 os.putenv('PYQTDESIGNERPATH', widgetsDir)
