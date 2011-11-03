@@ -14,7 +14,6 @@ except ImportError:
 else:
     sys.modules['decimal'] = cdecimal
 
-import wic.widgets.w_widgets_rc # load resources (icons, etc.)
 from wic import w_app, w_main_window
 
 app = w_app.WApp(sys.argv)
@@ -45,16 +44,16 @@ def exception_hook(excType, excValue, excTraceback): # Global function to catch 
 
 sys.excepthook = exception_hook # set our exception hook
 
-sys.path.append(os.path.join(appDir, 'widgets')) # path for searching resources and custom widgets modules
+#sys.path.append(os.path.join(appDir, 'widgets')) # path for searching resources and custom widgets modules
 
 def loadTestConf(): # load default test configuration
     #from wic import w
     #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
     from conf.reports import test
-    f = test.Form(None)
-    window = mainWindow.mdiArea.addSubWindow(f) # create subwindow with the form
-    window.show()
-    f.finished.connect(window.close)
+    form = test.Form(None)
+    window = mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
+    form.finished.connect(window.close)
+
 
 QtCore.QTimer.singleShot(0, loadTestConf) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
 

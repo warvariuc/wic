@@ -10,9 +10,6 @@ class WForm(QtGui.QDialog):
     
     def __init__(self, parentWidget):
         super().__init__(parentWidget)
-        # open form having ui file path
-        # bind events to this Form manipulator
-        # can raise Exception - top prevent loading - аналог СтатусВозврата (1) в 1С
         
         moduleName = self.__class__.__module__
         module = sys.modules[moduleName]
@@ -21,43 +18,18 @@ class WForm(QtGui.QDialog):
             
         uic.loadUi(uiFilePath, self)
         #self.widgets = WFormWidgetHooker(self.form) # helper for the form
-        #self.bindSignals()
-        self.onOpen() # предопределенная процедура
+        self.on_open() # предопределенная процедура
 
     def closeEvent(self, event):
-        if self.aboutToClose() == False: # вызов предопределенной процедуры
+        if self.on_close() == False: # вызов предопределенной процедуры
             event.ignore()
             return
         #self.reject()
 
-    def bindSignals(self):
-        '''Связать стандартные сигналы стандартных виджетов формы к предопределенным процедурам модуля.'''
-        for child in self.dialog.children():
-            childName = child.objectName()
+    def on_close(self):
+        pass
 
-            def bind(signalName):
-                try:
-                    getattr(child, signalName).connect(getattr(self, childName + '_' + signalName))
-                except Exception as err:
-                    err #print('Binding signals notice: %s\n' % str(err))
-
-            if isinstance(child, QtGui.QTextEdit): 
-                bind('textChanged')
-            elif isinstance(child, QtGui.QCheckBox): 
-                bind('stateChanged')
-            elif isinstance(child, (WDateEdit, WDecimalEdit)):
-                bind('edited') # check this classes before QLineEdit, because they are its descendants
-            elif isinstance(child, QtGui.QLineEdit): 
-                bind('textEdited')
-            elif isinstance(child, QtGui.QPushButton): 
-                bind('clicked')
-            elif isinstance(child, QtGui.QSpinBox): 
-                bind('valueChanged')
-    
-    def aboutToClose(self):
-        return
-
-    def onOpen(self):
+    def on_open(self):
         pass
     
     def widgetValidate(self):

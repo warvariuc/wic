@@ -1,9 +1,9 @@
 from PyQt4 import QtGui, QtCore
-from wic.widgets.ui_w_popup_calculator import Ui_WPopupCalculator
+from wic.widgets import ui_w_popup_calculator
 import re, decimal
 Dec = decimal.Decimal
 
-class WPopupCalculator(QtGui.QWidget, Ui_WPopupCalculator):
+class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator):
     '''Popup calculator'''
     
     operators = '+-*/' # static member
@@ -17,7 +17,7 @@ class WPopupCalculator(QtGui.QWidget, Ui_WPopupCalculator):
         '-': 'minusButton', '*': 'multiplyButton', '/': 'divideButton', '.': 'pointButton', '%': 'percentButton'
     }
 
-    def __init__(self, parent, persistent=False):
+    def __init__(self, parent, persistent= False):
         if not parent: persistent = True
         windowStyle = QtCore.Qt.Tool if persistent else QtCore.Qt.Popup #Window | QtCore.Qt.CustomizeWindowHint
         super().__init__(parent, windowStyle) # стандартный попап меня пока не устраивает - он модальный
@@ -151,7 +151,7 @@ class WDecimalEdit(QtGui.QLineEdit):
     
     edited = QtCore.pyqtSignal()
     
-    def __init__(self, parent = None):
+    def __init__(self, parent= None):
         super().__init__(parent)
         #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setAlignment(QtCore.Qt.AlignRight)
@@ -338,10 +338,10 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.setCursorPosition(curPos)
         self.__isHandlingTextChanged = False
 
-    def currentValue(self, currentText=None): #return introduced string as decimal
+    def currentValue(self, currentText= None): #return introduced string as decimal
         return Dec(((currentText if currentText is not None else self.text())).replace(',', ''))
 
-    def applyCurrentValue(self, force=False):
+    def applyCurrentValue(self, force= False):
         currentValue = self.currentValue()
         self.setText(self.regularNotation(currentValue))
         if self.__value != currentValue or force:
@@ -366,9 +366,8 @@ class WDecimalEdit(QtGui.QLineEdit):
 
 
 if __name__ == '__main__': # some tests
-    import sys
-    app = QtGui.QApplication(sys.argv)
+    app = QtGui.QApplication([])
     #m = WPopupCalculator(None, True)
-    m = WDecimalEdit(None)
-    m.show()
-    app.exec_()
+    widget = WDecimalEdit(None)
+    widget.show()
+    app.exec()

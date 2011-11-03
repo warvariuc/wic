@@ -27,7 +27,7 @@
     <rect>
      <x>10</x>
      <y>11</y>
-     <width>64</width>
+     <width>151</width>
      <height>16</height>
     </rect>
    </property>
@@ -38,9 +38,9 @@
   <widget class="QLabel" name="label_4">
    <property name="geometry">
     <rect>
-     <x>240</x>
+     <x>200</x>
      <y>12</y>
-     <width>51</width>
+     <width>111</width>
      <height>16</height>
     </rect>
    </property>
@@ -54,17 +54,17 @@
      <x>10</x>
      <y>30</y>
      <width>151</width>
-     <height>23</height>
+     <height>27</height>
     </rect>
    </property>
   </widget>
   <widget class="WDateEdit" name="dateEdit">
    <property name="geometry">
     <rect>
-     <x>240</x>
+     <x>200</x>
      <y>30</y>
      <width>111</width>
-     <height>23</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="showSelector">
@@ -74,9 +74,9 @@
   <widget class="QCheckBox" name="dteShowSelector">
    <property name="geometry">
     <rect>
-     <x>240</x>
+     <x>200</x>
      <y>60</y>
-     <width>101</width>
+     <width>151</width>
      <height>17</height>
     </rect>
    </property>
@@ -100,8 +100,8 @@
   <widget class="QPushButton" name="testGm">
    <property name="geometry">
     <rect>
-     <x>120</x>
-     <y>250</y>
+     <x>10</x>
+     <y>260</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -115,7 +115,7 @@
     <rect>
      <x>10</x>
      <y>143</y>
-     <width>116</width>
+     <width>181</width>
      <height>17</height>
     </rect>
    </property>
@@ -128,7 +128,7 @@
     <rect>
      <x>10</x>
      <y>166</y>
-     <width>119</width>
+     <width>191</width>
      <height>17</height>
     </rect>
    </property>
@@ -140,9 +140,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>250</y>
-     <width>111</width>
-     <height>31</height>
+     <y>230</y>
+     <width>341</width>
+     <height>21</height>
     </rect>
    </property>
    <property name="text">
@@ -160,7 +160,7 @@
     <rect>
      <x>10</x>
      <y>120</y>
-     <width>101</width>
+     <width>171</width>
      <height>17</height>
     </rect>
    </property>
@@ -173,7 +173,7 @@
     <rect>
      <x>10</x>
      <y>60</y>
-     <width>41</width>
+     <width>101</width>
      <height>21</height>
     </rect>
    </property>
@@ -186,7 +186,7 @@
     <rect>
      <x>10</x>
      <y>90</y>
-     <width>51</width>
+     <width>101</width>
      <height>21</height>
     </rect>
    </property>
@@ -197,7 +197,7 @@
   <widget class="QSpinBox" name="dceTotalDigits">
    <property name="geometry">
     <rect>
-     <x>60</x>
+     <x>120</x>
      <y>60</y>
      <width>41</width>
      <height>22</height>
@@ -213,7 +213,7 @@
   <widget class="QSpinBox" name="dceFractionDigits">
    <property name="geometry">
     <rect>
-     <x>60</x>
+     <x>120</x>
      <y>90</y>
      <width>41</width>
      <height>22</height>
@@ -231,14 +231,31 @@
   <customwidget>
    <class>WDateEdit</class>
    <extends>QLineEdit</extends>
-   <header>w_date_edit</header>
+   <header>wic.widgets.w_date_edit</header>
   </customwidget>
   <customwidget>
    <class>WDecimalEdit</class>
    <extends>QLineEdit</extends>
-   <header>w_decimal_edit</header>
+   <header>wic.widgets.w_decimal_edit</header>
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>Close</sender>
+   <signal>clicked()</signal>
+   <receiver>Dialog</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>327</x>
+     <y>271</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>185</x>
+     <y>147</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

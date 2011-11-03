@@ -1,7 +1,7 @@
 from PyQt4 import QtGui, QtCore
 
 class WLineEdit(QtGui.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit-with-a-clear-button/
-    def __init__(self, parent = None):
+    def __init__(self, parent= None):
         super().__init__(parent)
     
         self.clearButton = QtGui.QToolButton(self)
@@ -33,8 +33,8 @@ class WLineEdit(QtGui.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit
  
 
 if __name__ == '__main__': # some tests
-    import sys
-    app = QtGui.QApplication(sys.argv)
-    m = WLineEdit(None)
-    m.show()
+    import w_widgets_rc
+    app = QtGui.QApplication([])
+    w = WLineEdit(None)
+    w.show()
     app.exec()

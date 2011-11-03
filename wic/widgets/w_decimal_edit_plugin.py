@@ -1,13 +1,19 @@
-import wic.widgets.w_widgets_rc
+import os, sys
+print('Python', sys.version)
+curDir = os.path.dirname(os.path.abspath(__file__))
+wicDir = os.path.abspath(os.path.join(curDir, '..', '..'))
+
+if wicDir not in sys.path:
+    sys.path.insert(0, wicDir)
+    
 
 # Designer plugin for:
 widgetClassName = 'WDecimalEdit'
-widgetModuleName = 'w_decimal_edit'
+widgetModuleName = 'wic.widgets.w_decimal_edit'
 widgetIconName = ':/icons/calculator.png'
 
 from PyQt4 import QtGui, QtDesigner
-widgetModule = __import__(widgetModuleName)
-#from wic.widgets import w_decimal_edit as widgetModule
+from wic.widgets import w_decimal_edit as widgetModule
 
 class DesignerPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     def __init__(self, parent= None):
@@ -57,4 +63,4 @@ if __name__ == '__main__': # some tests
     print(w.group())
     w1 = w.createWidget(None)
     w1.show()
-    app.exec_()
+    app.exec()

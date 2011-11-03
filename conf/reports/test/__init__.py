@@ -2,12 +2,12 @@ import os, sys
 from PyQt4 import QtCore, QtGui, uic
 
 from wic import w
-from wic import w_form
+from wic.w_form import WForm
 from wic.widgets.w_date import Date
-from conf import global_module as gM
+import conf as gM
 
 
-class Form(w_form.WForm):
+class Form(WForm):
     ''''''
 #    @QtCore.pyqtSlot()
 #    def on_pushButton_clicked(self):
@@ -21,28 +21,47 @@ class Form(w_form.WForm):
 #        # It is better explained in the documentation:
 #        # http://www.riverbankcomputing.co.uk/static/Docs/PyQt4/pyqt4ref.html#connecting-slots-by-name
 #        print('!!!')
-    def dceShowSelector_stateChanged(self, _state): # widget 'checkBox' emited signal
-        self.decimalEdit.showSelector = _state
+
+    def on_dceShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
+        self.decimalEdit.showSelector = state
         self.decimalEdit.setFocus()
     
-    def dceNonNegative_stateChanged(self, _state): # widget 'checkBox' emited signal
-        self.decimalEdit.nonNegative = _state
+    def on_dceNonNegative_stateChanged(self, state): # widget 'checkBox' emited signal
+        w.printMessage('on_dceNonNegative_stateChanged')
+        self.decimalEdit.nonNegative = state
 
+    def on_dceSeparateThousands_stateChanged(self, state): # widget 'checkBox' emited signal
+        self.decimalEdit.separateThousands = state
+    
+    def on_decimalEdit_edited(self):
+        w.printMessage('WDecimalEdit отредактирован. Новое значение: ' + self.decimalEdit.valueStr())
 
+    def on_dteShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
+        self.dateEdit.showSelector = state
 
-def module_loaded(): # event called by m_py after it loads module
-    w.printMessage ('Модуль загружен.')
-    return True # аналог СтатусВозврата (1) в 1С
+    def on_dateEdit_edited(self):
+        w.printMessage('WDateEdit отредактирован. Новое значение: %s' % self.dateEdit.value)
 
-def form_loaded(): # event called by m_py after it loads Form
-    w.printMessage ('Форма загружена.')
-    form.setWindowTitle("Тестовые модуль и форма")
-    form.parent().setWindowIcon(QtGui.QIcon(":/icons/fugue/calculator.png"))
-    #Form.parentWidget().setWindowState (Qt.WindowMaximized)
-    widgets.dateEdit = Date.today()
-    widgets.decimalEdit = '20000000000.1251'
-    updateInfoAboutDecimalEdit()
-    form.dteShowSelector.setChecked(form.dateEdit.showSelector)
+    @QtCore.pyqtSlot()
+    def on_testGm_clicked(self):
+        gM.test()
+
+    def on_open(self): # event called by wic after it loads Form
+        w.printMessage ('Форма загружена.')
+        self.setWindowTitle("Тестовые модуль и форма")
+        #self.parentWidget().setWindowIcon(QtGui.QIcon(":/icons/fugue/calculator.png"))
+        self.setWindowIcon(QtGui.QIcon(":/icons/fugue/calculator.png"))
+        #self.parentWidget().setWindowState (Qt.WindowMaximized)
+        self.dteShowSelector.setChecked(self.dateEdit.showSelector)
+#        widgets.dateEdit = Date.today()
+#        widgets.decimalEdit = '20000000000.1251'
+#        updateInfoAboutDecimalEdit()
+
+    def on_close(self): # Form is asked to be closed
+        if QtGui.QMessageBox.question(self, 'Подтверждение', 'Вы действительно хотите закрыть форму?', 
+                        QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) != QtGui.QMessageBox.Yes:
+            return False
+        w.printMessage('Форма закрывается.')
 
 def updateInfoAboutDecimalEdit():
     widgets.dceShowSelector = form.decimalEdit.showSelector
@@ -60,34 +79,11 @@ def dceFractionDigits_valueChanged(i):
     updateInfoAboutDecimalEdit()
 
 
-def dceSeparateThousands_stateChanged(_state): # widget 'checkBox' emited signal
-    form.decimalEdit.separateThousands = _state
-
-def decimalEdit_edited():
-    w.printMessage('WDecimalEdit отредактирован. Новое значение: ' + form.decimalEdit.valueStr())
 
 
-def dteShowSelector_stateChanged(_state): # widget 'checkBox' emited signal
-    form.dateEdit.showSelector = _state
-    # if _state:
-        # form.label.setPixmap(QtGui.QPixmap(":/newPrefix/icons/calendar-blue.png"))
-    # else:
-        # form.label.setPixmap(QtGui.QPixmap())
 
-def dateEdit_edited():
-    w.printMessage('WDateEdit отредактирован. Новое значение: ' + str(form.dateEdit.value))
 
-def testGm_clicked(_checked = False): # widget 'checkBox' emited signal
-    gM.test()
 
-def Close_clicked(_checked = False): # widget 'checkBox' emited signal
-    form.close()
-
-def form_aboutToClose(): # Form is asked to be closed
-    if QtGui.QMessageBox.question(form, 'Подтверждение',
-                'Вы действительно хотите закрыть форму?', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) != QtGui.QMessageBox.Yes:
-        return False
-    w.printMessage('Форма закрывается.')
 
 #todo сделать объект Справочник - буфер между базой данных и формой. будет содержать метод ЗагрузитьДанныеВФорму(), БлокировкаЗаписи (0/1), Записать(), Новый(), Найти(Код) - аналог объект Справочник из 1С
 # форма будет ссылаться на этот объект
