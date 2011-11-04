@@ -2,7 +2,7 @@ import os, sys
 from PyQt4 import QtCore, QtGui, uic
 
 from wic import w
-from wic.w_form import WForm
+from wic.form import WForm
 from wic.widgets.w_date import Date
 import conf as gM
 

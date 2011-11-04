@@ -63,81 +63,7 @@ class WFormWidgetHooker():
 
 
 
-def loadModule(filePath):
-        filePath = str(filePath)
-                
-        try:
-            module = ModuleType('form_module')
-            module.__file__ = filePath
-#            module.QtGui = QtGui
-            #module.__dict__.update(PyQt4.QtCore.__dict__)
-            with open(filePath, 'r', encoding='utf8') as f:
-                exec(f.read(), module.__dict__)
-        except:
-            printMessage('<b>Ошибка при загрузке пользовательского модуля: </b>' + filePath)
-            raise
-        
-        res = execFunc('module_loaded', module)
-        if res == False: return # предопределнная процедура вернула False - отменить дальнейшую загрузку модуля
-        
-        if isinstance(res, type) and issubclass(res, QtGui.QDialog): # предопределенная процедура вернула свой базовый класс формы для использования, т.е. не искать предопределенную форму в той же директории
-            formClass = res
-        else: # загрузить класс формы с диска - в той же директории, что и модуль
-            if isinstance(res, str): # предопределенная процедура вернула свое имя файла с формой в директории модуля
-                if os.path.isabs(res): # указан абсолютный путь
-                    uiFilePath = res
-                else:
-                    uiFilePath = os.path.join(os.path.dirname(filePath), res)
-            else:
-                uiFilePath = os.path.join(os.path.dirname(filePath), 'form.ui')
-            formClass, formBaseClass = uic.loadUiType(uiFilePath)
-            if not issubclass(formBaseClass, QtGui.QDialog):
-                printMessage('<b>Форма не загружена - ожидается QDialog: </b>' + uiFilePath)
-                return
-            
-        class WFormClass(formClass, QtGui.QDialog):
-            def __init__(self, parent, module):
-                super().__init__(parent)
-                self.setupUi(self)
-                self.finished.connect(self.close)
-                self.module = module
-                module.form = self # set reference to the form
-                self.bindSignals()
-            
-            def closeEvent(self, event):
-                if execFunc('form_aboutToClose', self.module) == False: # вызов предопределенной процедуры
-                    event.ignore()
-                    self.show()
-                    return
-                self.parentWidget().close() # close sub window
 
-            def bindSignals(self):
-                'Связать стандартные сигналы стандартных виджетов формы к предопределенным процедурам модуля.'
-                for child in self.children():
-                    childName = child.objectName()
-
-                    def bind(signalName):
-                        try:
-                            getattr(child, signalName).connect(getattr(self.module, childName+'_'+signalName))
-                        except Exception as err:
-                            err #print('Binding signals notice: %s\n' % str(err))
-
-                    if isinstance(child, QtGui.QTextEdit): bind('textChanged')
-                    elif isinstance(child, QtGui.QCheckBox): bind('stateChanged')
-                    elif isinstance(child, (WDateEdit, WDecimalEdit)): bind('edited') # check this classes before QLineEdit, because they are its descendants
-                    elif isinstance(child, QtGui.QLineEdit): bind('textEdited')
-                    elif isinstance(child, QtGui.QPushButton): bind('clicked')
-                    elif isinstance(child, QtGui.QSpinBox): bind('valueChanged')
-
-
-
-        #uiFilename = os.path.join(os.path.dirname(filePath), 'form.ui')
-        #form = uic.loadUi(uiFilename, WFormClass(None)) # create form
-        form = WFormClass(None, module) # create form
-        window = mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
-        window.show()
-        module.widgets = WFormWidgetHooker(form) # helper for the form
-        execFunc('form_loaded', module) # предопределенная процедура
         
         
 
@@ -185,49 +111,6 @@ def saveToFile(data, filePath):
     #print(yaml.dump(data, allow_unicode=True, default_flow_style=False))
 
 
-def putToForm(data, uiFilePath, dialog):
-    'Загрузить форму с диска, заполнить поля данными data и вернуть форму'
-    dialog = uic.loadUi(uiFilePath, QtGui.QDialog(dialog))
-    for name, value in data.items():
-        try: widget = getattr(dialog, name) # ищем нужный атрибут на форме
-        except AttributeError: continue # такого нет
-        if isinstance(widget, QtGui.QLineEdit):
-            widget.setText(value)
-            widget.home(False)
-        elif isinstance(widget, QtGui.QPlainTextEdit):
-            widget.setPlainText(value)
-        elif isinstance(widget, QtGui.QLabel):
-            widget.setText(value)
-        elif isinstance(widget, QtGui.QComboBox):
-            lineEdit = widget.lineEdit()
-            if lineEdit: #Only editable combo boxes have a line edit
-                lineEdit.setText(value)
-        elif isinstance(widget, QtGui.QSpinBox):
-            widget.setValue(int(value))
-        elif isinstance(widget, QtGui.QCheckBox):
-            widget.setChecked(value)
-    return dialog
-
-
-def getFromForm(dialog):
-    data = {}
-    for widget in dialog.children():
-        value = None
-        if isinstance(widget, QtGui.QLineEdit):
-            value = widget.text()
-        elif isinstance(widget, QtGui.QPlainTextEdit):
-            value = widget.toPlainText()
-        elif isinstance(widget, QtGui.QComboBox):
-            lineEdit = widget.lineEdit()
-            if lineEdit: #Only editable combo boxes have a line edit
-                value = lineEdit.text()
-        elif isinstance(widget, QtGui.QSpinBox):
-            value = widget.value()
-        elif isinstance(widget, QtGui.QCheckBox):
-            value = bool(widget.isChecked())
-        if value is not None:
-            data[widget.objectName()] = value
-    return data
 
 
 def editForm(filePath):
