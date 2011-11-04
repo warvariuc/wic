@@ -8,23 +8,25 @@ class WForm(QtGui.QDialog):
     '''QObject allows having signals - f.e. about some value selected.'''
     uiFilePath = 'form.ui'
     
+    closed = QtCore.pyqtSignal()
+    
     def __init__(self, parentWidget):
         super().__init__(parentWidget)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         
         moduleName = self.__class__.__module__
-        module = sys.modules[moduleName]
+        module = sys.modules[moduleName] # module in which the Form class was defined
         moduleDir = os.path.dirname(os.path.abspath(module.__file__)) 
         uiFilePath = os.path.join(moduleDir, self.uiFilePath)
             
         uic.loadUi(uiFilePath, self)
-        #self.widgets = WFormWidgetHooker(self.form) # helper for the form
         self.on_open() # предопределенная процедура
 
     def closeEvent(self, event):
         if self.on_close() == False: # вызов предопределенной процедуры
             event.ignore()
             return
+        self.closed.emit()
         #self.reject()
 
     def on_close(self):
@@ -41,10 +43,9 @@ def setValue(widget, value):
     if isinstance(widget, QtGui.QTextEdit): 
         widget.setPlainText(value)
     elif isinstance(widget, QtGui.QCheckBox): 
-        widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
-        print(widget.objectName(), repr(value))
+        #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
         widget.setChecked(value)
-        widget.blockSignals(False) 
+        #widget.blockSignals(False) 
     elif isinstance(widget, (WDateEdit, WDecimalEdit, QtGui.QSpinBox)):
         widget.setValue(value)
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 

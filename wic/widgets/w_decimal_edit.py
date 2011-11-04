@@ -9,7 +9,7 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
     operators = '+-*/' # static member
     
     keysBindings = {
-        QtCore.Qt.Key_Insert: 'okButton', QtCore.Qt.Key_Enter: 'okButton', QtCore.Qt.Key_Return: 'okButton',
+        QtCore.Qt.Key_Enter: 'okButton', QtCore.Qt.Key_Return: 'okButton',
         QtCore.Qt.Key_Backspace: 'backspaceButton', QtCore.Qt.Key_Delete: 'clearButton',
         '=': 'equalButton', '0': 'digitButton_0', '1': 'digitButton_1', '2': 'digitButton_2', 
         '3': 'digitButton_3', '4': 'digitButton_4', '5': 'digitButton_5', '6': 'digitButton_6', 
@@ -109,15 +109,15 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
         buttonName = ''
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
             key = keyEvent.key()
-            if key in (QtCore.Qt.Key_Escape, QtCore.Qt.Key_End):
+            if key in (QtCore.Qt.Key_Escape, QtCore.Qt.Key_Insert):
                 if not self.persistent:
                     self.close()
                     return
             try: buttonName = self.keysBindings[key] #check a non-text pressed key
-            except: pass
+            except KeyError: pass
         if not buttonName: #check a text pressed key
             try: buttonName = self.keysBindings[keyEvent.text()] 
-            except: pass
+            except KeyError: pass
         if buttonName:
             getattr(self, buttonName).animateClick() #call the method
             return
@@ -131,17 +131,17 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
         
     def positionPopup(self): # taken from qdatetimeedit.cpp
         parent = self.parent()
-        if not isinstance(parent, WDecimalEdit): return
-        pos = parent.mapToGlobal(parent.rect().bottomLeft())
-        screen = QtGui.QApplication.desktop().availableGeometry()
-
-        y = pos.y()
-        if y > screen.bottom() - self.height():
-            y = parent.mapToGlobal(parent.rect().topLeft()).y() - self.height()
-        
-        pos.setX(max(screen.left(), min(screen.right() - self.width(), pos.x())))
-        pos.setY(max(screen.top(), y))
-        self.move(pos)
+        if isinstance(parent, WDecimalEdit): 
+            pos = parent.mapToGlobal(parent.rect().bottomLeft())
+            screen = QtGui.QApplication.desktop().availableGeometry()
+    
+            y = pos.y()
+            if y > screen.bottom() - self.height():
+                y = parent.mapToGlobal(parent.rect().topLeft()).y() - self.height()
+            
+            pos.setX(max(screen.left(), min(screen.right() - self.width(), pos.x())))
+            pos.setY(max(screen.top(), y))
+            self.move(pos)
         
 
 
@@ -186,14 +186,16 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.handleTextChanged(self.text()) #to reflect changes
     totalDigits = QtCore.pyqtProperty(int, getTotalDigits, setTotalDigits) 
 
-    def getFractionDigits(self): return self._fractionDigits
+    def getFractionDigits(self): 
+        return self._fractionDigits
     def setFractionDigits(self, value):
         self._fractionDigits = max(value, -1)
         self._totalDigits = max(self._totalDigits, self._fractionDigits)
         self.handleTextChanged(self.text())
     fractionDigits = QtCore.pyqtProperty(int, getFractionDigits, setFractionDigits)
 
-    def getShowSelector(self): return self.selector.isVisible()
+    def getShowSelector(self): 
+        return not self.selector.isHidden()
     def setShowSelector(self, value):
         self.selector.setVisible(value)
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
@@ -204,26 +206,29 @@ class WDecimalEdit(QtGui.QLineEdit):
                    max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
 
-    def getNonNegative(self): return self._nonNegative
+    def getNonNegative(self): 
+        return self._nonNegative
     def setSetNonegative(self, value): 
         self._nonNegative = bool(value)
         self.handleTextChanged(self.text())
     nonNegative = QtCore.pyqtProperty(bool, getNonNegative, setSetNonegative)
     
-    def getSeparateThousands(self): return self._separateThousands
+    def getSeparateThousands(self): 
+        return self._separateThousands
     def setSeparateThousands(self, value): 
         self._separateThousands = bool(value)
         self.handleTextChanged(self.text())
     separateThousands = QtCore.pyqtProperty(bool, getSeparateThousands, setSeparateThousands)
 
-    def getValue(self): return self.__value
+    def getValue(self): 
+        return self._value
     def setValue(self, value):
         value = Dec(str(value))
         if self._fractionDigits != -1:
             value = round(value, self._fractionDigits)
         self.setText(self.regularNotation(value))
         self.setCursorPosition(0)
-        self.__value = self.currentValue()
+        self._value = self.currentValue()
     value = QtCore.pyqtProperty(float, getValue, setValue)
     
     def resizeEvent(self, event):
@@ -258,7 +263,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
             if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
-                self.applyCurrentValue(force=True)
+                self.applyCurrentValue(force= True)
             if self.cursorPosition() == 0:
                 if self.text().startswith('0'):
                     if keyEvent.text().isdigit() or keyEvent.text() == '.':
@@ -279,7 +284,8 @@ class WDecimalEdit(QtGui.QLineEdit):
     def handleTextChanged(self, txt):
         if self._isHandlingTextChanged: return
         self._isHandlingTextChanged = True
-        if self._fractionDigits > 0: txt += '.' + '0' * self._fractionDigits
+        if self._fractionDigits > 0: 
+            txt += '.' + '0' * self._fractionDigits
         txt = list(txt)
         curPos = self.cursorPosition()
         dotPos = -1
@@ -346,8 +352,8 @@ class WDecimalEdit(QtGui.QLineEdit):
     def applyCurrentValue(self, force= False):
         currentValue = self.currentValue()
         self.setText(self.regularNotation(currentValue))
-        if self.__value != currentValue or force:
-            self.__value = currentValue
+        if self._value != currentValue or force:
+            self._value = currentValue
             self.edited.emit()
 
     def popupCalculator(self):

@@ -27,7 +27,6 @@ class Form(WForm):
         self.decimalEdit.setFocus()
     
     def on_dceNonNegative_stateChanged(self, state): # widget 'checkBox' emited signal
-        w.printMessage('on_dceNonNegative_stateChanged')
         self.decimalEdit.nonNegative = state
 
     def on_dceSeparateThousands_stateChanged(self, state): # widget 'checkBox' emited signal
@@ -46,14 +45,12 @@ class Form(WForm):
     def on_testGm_clicked(self):
         gM.test()
 
-    def on_open(self): # event called by wic after it loads Form
+    def on_open(self): # event called by wic after it loads the Form
         w.printMessage ('Форма загружена.')
-        self.setWindowTitle("Тестовые модуль и форма")
-        #self.parentWidget().setWindowIcon(QtGui.QIcon(":/icons/fugue/calculator.png"))
+        self.setWindowTitle('Тестовые модуль и форма')
         self.setWindowIcon(QtGui.QIcon(":/icons/fugue/calculator.png"))
-        #self.parentWidget().setWindowState (Qt.WindowMaximized)
-        print('self.dateEdit.showSelector', self.dateEdit.showSelector)
-        self.dteShowSelector.setChecked(self.dateEdit.showSelector)
+        
+        self.dteShowSelector.setChecked(self.dateEdit.getShowSelector())
         setValue(self.dateEdit, Date.today())
         setValue(self.decimalEdit, '20000000000.1251')
         self.updateInfoAboutDecimalEdit()
@@ -73,7 +70,6 @@ class Form(WForm):
         self.updateInfoAboutDecimalEdit()
 
     def updateInfoAboutDecimalEdit(self):
-        print(repr(self.decimalEdit.showSelector))
         setValue(self.dceShowSelector, self.decimalEdit.showSelector)
         setValue(self.dceTotalDigits, self.decimalEdit.totalDigits)
         setValue(self.dceFractionDigits, self.decimalEdit.fractionDigits)

@@ -5,9 +5,7 @@
 
 import os, sys
 from types import ModuleType
-from PyQt4 import QtGui, uic
-from wic.widgets.w_date_edit import WDateEdit
-from wic.widgets.w_decimal_edit import WDecimalEdit
+from PyQt4 import QtGui
 import yaml, subprocess, datetime
 
 #shortcuts
@@ -17,50 +15,6 @@ mainWindow = QtGui.qApp.mainWindow
 statusBar = mainWindow.statusBar()
 printMessage = mainWindow.messagesWindow.printMessage
 globalModule = None
-
-
-
-class WFormWidgetHooker():
-    '''Перехватчик виджетов формы. При попытке обращения к стандартным виджетам, класс возвращает/устанавливает значение, а не ссылку.
-    Т.е. вместо form.checkBox.setChecked(True), можно писать widget.checkBox = True или widget['checkBox'] = True.
-    Таким же образом, вместо txt = form.lineEdit.text(), можно писать txt = widget.lineEdit или txt = widget['lineEdit'].
-    Если же требуется работа именно с виджетом, а не с его значением, используйте form.'''
-    def __init__(self, form):
-        super().__setattr__('form', form) # to bypass overriden __setattr__
-        
-    def __setattr__(self, name, value):
-        try:
-            widget = getattr(self.form, name)
-        except AttributeError:
-            raise AttributeError('The hooked form doesn\'t have attribute ' + name)
-
-        if isinstance(widget, QtGui.QTextEdit): widget.setPlainText(value)
-        elif isinstance(widget, QtGui.QCheckBox): 
-            widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
-            widget.setChecked(value)
-            widget.blockSignals(False) 
-        elif isinstance(widget, (WDateEdit, WDecimalEdit, QtGui.QSpinBox)): widget.setValue(value)
-        elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): widget.setText(value)
-
-    def __getattr__(self, name):
-        try:
-            widget = getattr(self.form, name)
-        except AttributeError:
-            raise AttributeError('The hooked form does not have attribute ' + name)
-    
-        if isinstance(widget, QtGui.QTextEdit): return widget.plainText()
-        elif isinstance(widget, QtGui.QCheckBox): return widget.isChecked()
-        elif isinstance(widget, (WDateEdit, WDecimalEdit)): return widget.value
-        elif isinstance(widget, QtGui.QSpinBox): return widget.value()
-        elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): return widget.text()
-
-    def __getitem__(self, name):
-        return self.__getattr__(name)
-
-    def __setitem__(self, name, value):
-        self.__setattr__(name, value)
-
-
 
 
 
@@ -141,7 +95,7 @@ def loadConf(_confDir):
                 'Директория конфигурации заблокирована.')
         return
     else:
-        with open(lockFilePath, 'w', encoding='utf8') as file:
+        with open(lockFilePath, 'w', encoding= 'utf8') as file:
             file.write(str(datetime.datetime.today()))
     global confDir
     confDir = _confDir

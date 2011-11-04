@@ -5,8 +5,9 @@ from wic.widgets import ui_w_popup_calendar
 
 class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
     "Popup window to select date interactively by showing a month calendar."
-    def __init__(self, parent, persistent=False):
-        if not parent: persistent = True
+    def __init__(self, parent, persistent= False):
+        if not parent: 
+            persistent = True
         super().__init__(parent, QtCore.Qt.Tool if persistent else QtCore.Qt.Popup)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose) # освобождать память - надо исследовать этот вопрос
         self.setupUi(self)
@@ -17,7 +18,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         todayFormat.setFontUnderline(True)
         self.calendarWidget.setDateTextFormat(QtCore.QDate.currentDate(), todayFormat) # emphasize current date in calendar
 
-        self.calendarWidget.activated.connect(self.accepted)
+        #self.calendarWidget.activated.connect(self.accepted)
         self.calendarWidget.clicked.connect(self.accepted)
         self.calendarWidget.currentPageChanged.connect(self.currentPageChanged)
         self.calendarWidget.selectionChanged.connect(self.selectionChanged)
@@ -45,7 +46,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         menu.addAction('Сегодня', self.selectDate)
         menu.exec(QtGui.QCursor.pos())
         
-    def selectDate(self, d=None):
+    def selectDate(self, d= None):
         if isinstance(d, QtCore.QDate):
             pass
         elif isinstance(d, Date) and d:
@@ -87,26 +88,21 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         if isinstance(self.parent(), WDateEdit):
             qDate = self.calendarWidget.selectedDate()
             self.parent().setText(str(Date(qDate.year(), qDate.month(), qDate.day())))
-            self.parent().applyCurrentValue(force=True)
+            self.parent().applyCurrentValue(force= True)
         self.close()
     
-    def keyPressEvent(self, event): # keyPress on form
-        key = event.key()
-        if event.modifiers() == QtCore.Qt.NoModifier:
-            if key == QtCore.Qt.Key_Insert:
-                if not self.persistent:
-                    self.accepted()
-                    return # pressing again Insert closes popup calendar
-            elif key == QtCore.Qt.Key_Escape:
-                if not self.persistent:
-                    self.close()
-                    return
-        super().keyPressEvent(event)
-
     def eventFilter(self, target, event): # target - calendarWidget or any of its children
         if event.type() == QtCore.QEvent.KeyPress:
             key = event.key()
-            if event.modifiers() == QtCore.Qt.NoModifier:
+            if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+                if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
+                    if not self.persistent:
+                        self.accepted()
+                        return True 
+                elif key in (QtCore.Qt.Key_Escape, QtCore.Qt.Key_Insert): # pressing again Insert closes popup calendar
+                    if not self.persistent:
+                        self.close()
+                        return True
                 if key == QtCore.Qt.Key_PageDown:
                     self.nextMonth.animateClick()
                     return True
@@ -147,7 +143,7 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.clicked.connect(self.showPopupCalendar)
         self.textChanged.connect(self.handleTextChanged)
 
-        self.showSelector = True
+        #self._showSelector = True
         self.value = None
 
     def resizeEvent(self, event):
@@ -209,7 +205,8 @@ class WDateEdit(QtGui.QLineEdit):
         super().focusOutEvent(focusEvent)
     
     def wheelEvent(self, wheelEvent):
-        if not self.hasFocus(): return
+        if not self.hasFocus(): 
+            return # only on focused widget
         self.setCursorPosition(self.cursorPositionAt(wheelEvent.pos()))
         self.addDays(int(wheelEvent.delta() / 120))
         wheelEvent.ignore()
@@ -233,7 +230,8 @@ class WDateEdit(QtGui.QLineEdit):
         self.selectAll()
         WCalendarPopup(self).show()
 
-    def getShowSelector(self): return self.selector.isVisible()        
+    def getShowSelector(self):
+        return not self.selector.isHidden() # notice that isVisible() is not used (because widget can be non visible but not hidden)        
     def setShowSelector(self, value):
         self.selector.setVisible(value)
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
@@ -244,10 +242,11 @@ class WDateEdit(QtGui.QLineEdit):
                 max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
 
-    def getValue(self): return self.__date
+    def getValue(self): 
+        return self._date
     def setValue(self, value):
-        self.__date = Date(value)
-        self.setText(str(self.__date))
+        self._date = Date(value)
+        self.setText(str(self._date))
         self.setCursorPosition(0)            
     value = QtCore.pyqtProperty(QtCore.QDate, getValue, setValue)
     
@@ -259,10 +258,10 @@ class WDateEdit(QtGui.QLineEdit):
             currentText = self.text()
         return Date(currentText)
 
-    def applyCurrentValue(self, force=False):
+    def applyCurrentValue(self, force= False):
         currentValue = self.currentValue()
-        if self.__date != currentValue or force:
-            self.__date = currentValue
+        if self._date != currentValue or force:
+            self._date = currentValue
             self.edited.emit()
         if not currentValue:
             for char in self.text():

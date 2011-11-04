@@ -1,27 +1,14 @@
-#!/usr/bin/env python3
-
-'''wic (vix, wix?) platform'''
-
 import sys, os
 from PyQt4 import QtCore, QtGui
 
-# monkeypatch: use cdecimal if present instead of decimal = it is much faster
-try: 
-    #sys.modules['decimal'] = __import__('cdecimal') # http://www.bytereef.org/libmpdec-download.html
+
+try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
     import cdecimal
+    sys.modules['decimal'] = cdecimal 
 except ImportError: 
     pass
-else:
-    sys.modules['decimal'] = cdecimal
 
 from wic import w_app, w_main_window
-
-app = w_app.WApp(sys.argv)
-appDir = QtGui.qApp.appDir = os.path.dirname(os.path.abspath(__file__))
-
-
-mainWindow = QtGui.qApp.mainWindow = w_main_window.WMainWindow()
-mainWindow.show()
 
 
 def exception_hook(excType, excValue, excTraceback): # Global function to catch unhandled exceptions (mostly in user modules)
@@ -49,10 +36,18 @@ sys.excepthook = exception_hook # set our exception hook
 def loadTestConf(): # load default test configuration
     #from wic import w
     #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
-    from conf.reports import test
-    form = test.Form(None)
+    from conf.reports import lissajous as test
+    form = test.Form(None) # no parent widget for now
     window = mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
-    form.finished.connect(window.close)
+    form.closed.connect(window.close)
+
+
+app = w_app.WApp(sys.argv)
+appDir = QtGui.qApp.appDir = os.path.dirname(os.path.abspath(__file__))
+
+
+mainWindow = QtGui.qApp.mainWindow = w_main_window.WMainWindow()
+mainWindow.show()
 
 
 QtCore.QTimer.singleShot(0, loadTestConf) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
