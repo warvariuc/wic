@@ -2,7 +2,7 @@ import os, sys
 from PyQt4 import QtCore, QtGui, uic
 
 from wic import w
-from wic.form import WForm
+from wic.form import WForm, setValue, getValue
 from wic.widgets.w_date import Date
 import conf as gM
 
@@ -52,33 +52,33 @@ class Form(WForm):
         #self.parentWidget().setWindowIcon(QtGui.QIcon(":/icons/fugue/calculator.png"))
         self.setWindowIcon(QtGui.QIcon(":/icons/fugue/calculator.png"))
         #self.parentWidget().setWindowState (Qt.WindowMaximized)
+        print('self.dateEdit.showSelector', self.dateEdit.showSelector)
         self.dteShowSelector.setChecked(self.dateEdit.showSelector)
-#        widgets.dateEdit = Date.today()
-#        widgets.decimalEdit = '20000000000.1251'
-#        updateInfoAboutDecimalEdit()
+        setValue(self.dateEdit, Date.today())
+        setValue(self.decimalEdit, '20000000000.1251')
+        self.updateInfoAboutDecimalEdit()
 
     def on_close(self): # Form is asked to be closed
-        if QtGui.QMessageBox.question(self, 'Подтверждение', 'Вы действительно хотите закрыть форму?', 
-                        QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) != QtGui.QMessageBox.Yes:
-            return False
+#        if QtGui.QMessageBox.question(self, 'Подтверждение', 'Вы действительно хотите закрыть форму?', 
+#                        QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) != QtGui.QMessageBox.Yes:
+#            return False
         w.printMessage('Форма закрывается.')
 
-def updateInfoAboutDecimalEdit():
-    widgets.dceShowSelector = form.decimalEdit.showSelector
-    widgets.dceTotalDigits = form.decimalEdit.totalDigits
-    widgets.dceFractionDigits = form.decimalEdit.fractionDigits
-    widgets.dceNonNegative = form.decimalEdit.nonNegative
-    widgets.dceSeparateThousands = form.decimalEdit.separateThousands
+    def on_dceTotalDigits_valueChanged(self, text):
+        self.decimalEdit.setTotalDigits(int(text))
+        self.updateInfoAboutDecimalEdit()
+    
+    def on_dceFractionDigits_valueChanged(self, text):
+        self.decimalEdit.setFractionDigits(int(text))
+        self.updateInfoAboutDecimalEdit()
 
-def dceTotalDigits_valueChanged(i):
-    form.decimalEdit.totalDigits = i
-    updateInfoAboutDecimalEdit()
-
-def dceFractionDigits_valueChanged(i):
-    form.decimalEdit.fractionDigits = i
-    updateInfoAboutDecimalEdit()
-
-
+    def updateInfoAboutDecimalEdit(self):
+        print(repr(self.decimalEdit.showSelector))
+        setValue(self.dceShowSelector, self.decimalEdit.showSelector)
+        setValue(self.dceTotalDigits, self.decimalEdit.totalDigits)
+        setValue(self.dceFractionDigits, self.decimalEdit.fractionDigits)
+        setValue(self.dceNonNegative, self.decimalEdit.nonNegative)
+        setValue(self.dceSeparateThousands, self.decimalEdit.separateThousands)
 
 
 
@@ -88,5 +88,4 @@ def dceFractionDigits_valueChanged(i):
 #todo сделать объект Справочник - буфер между базой данных и формой. будет содержать метод ЗагрузитьДанныеВФорму(), БлокировкаЗаписи (0/1), Записать(), Новый(), Найти(Код) - аналог объект Справочник из 1С
 # форма будет ссылаться на этот объект
 # каким образом узнать какого вида объект БД к к-му привязана форма?
-# will contain info about fields and indexes
     

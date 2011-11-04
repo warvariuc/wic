@@ -170,24 +170,26 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Очистить', self.clear)
 
         self.showSelector = True
-        self.__totalDigits = 15 # total number of digits
-        self.__fractionDigits = 2 # number of digits in fractional part
-        self.__nonNegative = False
-        self.__separateThousands = True
-        self.__isHandlingTextChanged = False
+        self._totalDigits = 15 # total number of digits
+        self._fractionDigits = 2 # number of digits in fractional part
+        self._nonNegative = False
+        self._separateThousands = True
+        self._isHandlingTextChanged = False
         self.value = '0' # will cause text update
 
-    def getTotalDigits(self): return self.__totalDigits
-    def setTotalDigits(self, value): 
-        self.__totalDigits = max(value, 1)
-        self.__fractionDigits = min(self.__fractionDigits, self.__totalDigits)
+    def getTotalDigits(self): 
+        return self._totalDigits
+    def setTotalDigits(self, value):
+        assert isinstance(value, int), 'Pass an integer'
+        self._totalDigits = max(value, 1)
+        self._fractionDigits = min(self._fractionDigits, self._totalDigits)
         self.handleTextChanged(self.text()) #to reflect changes
     totalDigits = QtCore.pyqtProperty(int, getTotalDigits, setTotalDigits) 
 
-    def getFractionDigits(self): return self.__fractionDigits
+    def getFractionDigits(self): return self._fractionDigits
     def setFractionDigits(self, value):
-        self.__fractionDigits = max(value, -1)
-        self.__totalDigits = max(self.__totalDigits, self.__fractionDigits)
+        self._fractionDigits = max(value, -1)
+        self._totalDigits = max(self._totalDigits, self._fractionDigits)
         self.handleTextChanged(self.text())
     fractionDigits = QtCore.pyqtProperty(int, getFractionDigits, setFractionDigits)
 
@@ -202,23 +204,23 @@ class WDecimalEdit(QtGui.QLineEdit):
                    max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
 
-    def getNonNegative(self): return self.__nonNegative
+    def getNonNegative(self): return self._nonNegative
     def setSetNonegative(self, value): 
-        self.__nonNegative = bool(value)
+        self._nonNegative = bool(value)
         self.handleTextChanged(self.text())
     nonNegative = QtCore.pyqtProperty(bool, getNonNegative, setSetNonegative)
     
-    def getSeparateThousands(self): return self.__separateThousands
+    def getSeparateThousands(self): return self._separateThousands
     def setSeparateThousands(self, value): 
-        self.__separateThousands = bool(value)
+        self._separateThousands = bool(value)
         self.handleTextChanged(self.text())
     separateThousands = QtCore.pyqtProperty(bool, getSeparateThousands, setSeparateThousands)
 
     def getValue(self): return self.__value
     def setValue(self, value):
         value = Dec(str(value))
-        if self.__fractionDigits != -1:
-            value = round(value, self.__fractionDigits)
+        if self._fractionDigits != -1:
+            value = round(value, self._fractionDigits)
         self.setText(self.regularNotation(value))
         self.setCursorPosition(0)
         self.__value = self.currentValue()
@@ -251,7 +253,7 @@ class WDecimalEdit(QtGui.QLineEdit):
                     posMove = curPos + 1
                 if 0 <= posDel < len(txt):
                     charDel = txt[posDel] 
-                    if (charDel == '.' and self.__fractionDigits > 0) or charDel == ',': # the char to be deleted is a dot or thousands separator
+                    if (charDel == '.' and self._fractionDigits > 0) or charDel == ',': # the char to be deleted is a dot or thousands separator
                         self.setCursorPosition(posMove) # jump over the char
         
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
@@ -275,9 +277,9 @@ class WDecimalEdit(QtGui.QLineEdit):
         super().focusOutEvent(focusEvent)
         
     def handleTextChanged(self, txt):
-        if self.__isHandlingTextChanged: return
-        self.__isHandlingTextChanged = True
-        if self.__fractionDigits > 0: txt += '.' + '0' * self.__fractionDigits
+        if self._isHandlingTextChanged: return
+        self._isHandlingTextChanged = True
+        if self._fractionDigits > 0: txt += '.' + '0' * self._fractionDigits
         txt = list(txt)
         curPos = self.cursorPosition()
         dotPos = -1
@@ -294,21 +296,21 @@ class WDecimalEdit(QtGui.QLineEdit):
             elif char == '.':
                 if dotPos == -1: # найдена первая точка и предполагается дробная часть
                     dotPos = i
-                    if not self.__fractionDigits:
+                    if not self._fractionDigits:
                         del txt[i:] # удалить оставшуся часть - там ничего важного - точка найдена, а дробной части нет
                         break
                 else: 
-                    if self.__fractionDigits == -1: # вторая точка, а длина дробной части не фиксированна
+                    if self._fractionDigits == -1: # вторая точка, а длина дробной части не фиксированна
                         del txt[i:] # удалить оставшуюся часть
                         break
                     del_ = True # found next dot
             elif not char.isdigit(): #минус и точку проверили, все остальные не-цифры удаляем
                 del_ = True # non-digit
             elif dotPos == -1: # это цифра. точка еще не была
-                if i >= self.__totalDigits - max(self.__fractionDigits, 0): #  отсекаем лишние цифры целой части
+                if i >= self._totalDigits - max(self._fractionDigits, 0): #  отсекаем лишние цифры целой части
                     del_ = True
             else: # это цифра. точка уже была найдена
-                if i - dotPos > self.__fractionDigits >= 0 :#or not self.__fractionDigits: # отсекаем лишние цифры дробной части
+                if i - dotPos > self._fractionDigits >= 0 :#or not self._fractionDigits: # отсекаем лишние цифры дробной части
                     del_ = True # digits number before dot limit reached
             
             if del_: # delete current symbol
@@ -319,7 +321,7 @@ class WDecimalEdit(QtGui.QLineEdit):
                 i += 1
             
         i = dotPos if dotPos != -1 else len(txt)
-        while self.__separateThousands:
+        while self._separateThousands:
             i -= 3
             if i <= 0: break
             txt.insert(i, ',')
@@ -336,7 +338,7 @@ class WDecimalEdit(QtGui.QLineEdit):
 #            self.setStyleSheet("color: black");
         self.setText(''.join(txt))
         self.setCursorPosition(curPos)
-        self.__isHandlingTextChanged = False
+        self._isHandlingTextChanged = False
 
     def currentValue(self, currentText= None): #return introduced string as decimal
         return Dec(((currentText if currentText is not None else self.text())).replace(',', ''))

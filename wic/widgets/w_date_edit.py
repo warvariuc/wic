@@ -133,7 +133,7 @@ class WDateEdit(QtGui.QLineEdit):
     
     edited = QtCore.pyqtSignal()
     
-    def __init__(self, parent = None):
+    def __init__(self, parent= None):
         super().__init__(parent)
         #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -164,7 +164,8 @@ class WDateEdit(QtGui.QLineEdit):
             char = txt[i]
             if not (char.isdigit() or char == ' '): 
                 del txt[i]
-                if i < curPos: curPos -= 1 # курсор должен находится все после той же цифры
+                if i < curPos: 
+                    curPos -= 1 # курсор должен находится все после той же цифры
             else: 
                 i += 1
         len_ = 8 # standard length (__.__.____)
@@ -196,7 +197,7 @@ class WDateEdit(QtGui.QLineEdit):
                 self.addDays(1)
                 return
             elif key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
-                self.applyCurrentValue(force=True)
+                self.applyCurrentValue(force= True)
                 return
             elif key == QtCore.Qt.Key_Left:
                 if self.hasSelectedText():
@@ -225,7 +226,7 @@ class WDateEdit(QtGui.QLineEdit):
             self.setText(str(d.addMonths(number)))
             self.setSelection(3, 2)
         else: # year was 'wheeled'
-            self.setText(str(d.addMonths(number*12)))
+            self.setText(str(d.addMonths(number * 12)))
             self.setSelection(6, 4)
             
     def showPopupCalendar(self):
@@ -253,8 +254,9 @@ class WDateEdit(QtGui.QLineEdit):
     #setMinimumDate
     #setMaximumDate
 
-    def currentValue(self, currentText=''): #return introduced string as date
-        if not currentText: currentText = self.text()
+    def currentValue(self, currentText= ''): #return introduced string as date
+        if not currentText: 
+            currentText = self.text()
         return Date(currentText)
 
     def applyCurrentValue(self, force=False):
@@ -272,8 +274,7 @@ class WDateEdit(QtGui.QLineEdit):
 
 
 if __name__ == '__main__': # some tests
-    import sys
-    app = QtGui.QApplication(sys.argv)
-    m = WDateEdit(None)
-    m.show()
+    app = QtGui.QApplication([])
+    widget = WDateEdit(None)
+    widget.show()
     app.exec()
