@@ -18,11 +18,14 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
     }
 
     def __init__(self, parent, persistent= False):
-        if not parent: persistent = True
+        if not parent: 
+            persistent = True
         windowStyle = QtCore.Qt.Tool if persistent else QtCore.Qt.Popup #Window | QtCore.Qt.CustomizeWindowHint
-        super().__init__(parent, windowStyle) # стандартный попап меня пока не устраивает - он модальный
+        super().__init__(parent, windowStyle)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose) # освобождать память - надо исследовать этот вопрос
         self.setupUi(self)
+        self.setWindowIcon(QtGui.QIcon(':/icons/fugue/calculator-scientific.png'))
+        
         if isinstance(parent, WDecimalEdit):
             parent.setFocus()
             self.value = parent.currentValue()

@@ -5,13 +5,15 @@
 
 import os, sys
 from types import ModuleType
-from PyQt4 import QtGui
 import yaml, subprocess, datetime
+import importlib
+from PyQt4 import QtGui
+import wic
 
 #shortcuts
-appDir = QtGui.qApp.appDir # этот модуль должен загружаться после всех основных модулей
+appDir = wic.appDir # этот модуль должен загружаться после всех основных модулей
 confDir = '' # будет заполнена при загрузке конфигурации
-mainWindow = QtGui.qApp.mainWindow
+mainWindow = wic.mainWindow
 statusBar = mainWindow.statusBar()
 printMessage = mainWindow.messagesWindow.printMessage
 globalModule = None
@@ -19,7 +21,13 @@ globalModule = None
 
 
         
-        
+def openForm(formModulePath, formClassName= 'Form'):
+    formModule = importlib.import_module(formModulePath)
+    FormClass = getattr(formModule, formClassName)
+    assert issubclass(FormClass, wic.form.WForm), 'This is not a WForm.'
+    form = FormClass(None) # no parent widget for now
+    window = mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
+    form.closed.connect(window.close) # when form closes - close subwindow too            
 
 def execFunc(funcName, obj,  **kwargs):
     'Выполнить функцию объекта (обычно, это предопределенная процедура пользовательского модуля).'

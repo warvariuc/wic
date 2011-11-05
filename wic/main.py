@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, importlib
 from PyQt4 import QtCore, QtGui
 
 
@@ -8,12 +8,13 @@ try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
 except ImportError: 
     pass
 
+import wic
 from wic import w_app, w_main_window
 
 
 def exception_hook(excType, excValue, excTraceback): # Global function to catch unhandled exceptions (mostly in user modules)
     import traceback
-    info = ''.join (traceback.format_exception(excType, excValue, excTraceback))
+    info = ''.join(traceback.format_exception(excType, excValue, excTraceback))
     print(info)
 #    import inspect
 #    records = inspect.getinnerframes(exc_traceback) # http://docs.python.org/dev/library/inspect.html#inspect.getinnerframes
@@ -31,22 +32,20 @@ def exception_hook(excType, excValue, excTraceback): # Global function to catch 
 
 sys.excepthook = exception_hook # set our exception hook
 
-#sys.path.append(os.path.join(appDir, 'widgets')) # path for searching resources and custom widgets modules
+
 
 def loadTestConf(): # load default test configuration
     #from wic import w
     #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
-    from conf.reports import lissajous as test
-    form = test.Form(None) # no parent widget for now
-    window = mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
-    form.closed.connect(window.close)
+    from wic.w import openForm
+    openForm('conf.reports.test')
 
 
-app = w_app.WApp(sys.argv)
+app = wic.app = w_app.WApp(sys.argv)
 appDir = QtGui.qApp.appDir = os.path.dirname(os.path.abspath(__file__))
 
 
-mainWindow = QtGui.qApp.mainWindow = w_main_window.WMainWindow()
+mainWindow = wic.mainWindow = QtGui.qApp.mainWindow = w_main_window.WMainWindow()
 mainWindow.show()
 
 

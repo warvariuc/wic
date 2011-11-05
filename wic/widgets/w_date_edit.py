@@ -4,14 +4,15 @@ from wic.widgets import ui_w_popup_calendar
 
 
 class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
-    "Popup window to select date interactively by showing a month calendar."
+    '''Popup window to select date interactively by showing a month calendar.'''
     def __init__(self, parent, persistent= False):
         if not parent: 
             persistent = True
+        self.persistent = persistent
         super().__init__(parent, QtCore.Qt.Tool if persistent else QtCore.Qt.Popup)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose) # освобождать память - надо исследовать этот вопрос
         self.setupUi(self)
-        self.persistent = persistent
+        self.setWindowIcon(QtGui.QIcon(':/icons/fugue/calendar-blue.png'))
 
         todayFormat = QtGui.QTextCharFormat()
         todayFormat.setFontWeight(QtGui.QFont.Bold)
