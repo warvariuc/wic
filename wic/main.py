@@ -28,7 +28,7 @@ def exception_hook(excType, excValue, excTraceback): # Global function to catch 
 #    info = info + '<br>Описание ошибки: <span style="background-color:#EDEFF4">&nbsp;' + exc_type.__name__ + ' </span>: ' \
 #        '<span style="color:maroon">&nbsp;' + str(exc_value).replace('\n', '\n&nbsp;') + '</span>'
 
-    QtGui.qApp.mainWindow.messagesWindow.printMessage(info)
+    wic.mainWindow.messagesWindow.printMessage(info)
 
 sys.excepthook = exception_hook # set our exception hook
 
@@ -37,8 +37,10 @@ sys.excepthook = exception_hook # set our exception hook
 def loadTestConf(): # load default test configuration
     #from wic import w
     #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
-    from wic.w import openForm
+    from wic.form import openForm, openCatalogItemForm
+    from conf.catalogs.persons import Persons
     openForm('conf.reports.test')
+    openCatalogItemForm(Persons)
 
 
 app = wic.app = w_app.WApp(sys.argv)

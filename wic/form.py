@@ -1,12 +1,16 @@
-import os, sys
+import os, sys, importlib
 from PyQt4 import QtGui, QtCore, uic
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
+from wic import orm
+import wic
 
 
 class WForm(QtGui.QDialog):
     '''QObject allows having signals - f.e. about some value selected.'''
     uiFilePath = 'form.ui'
+    iconPath = ':/icons/fugue/application-form.png'
+    formTitle = 'Form'
     
     closed = QtCore.pyqtSignal()
     
@@ -20,6 +24,8 @@ class WForm(QtGui.QDialog):
         uiFilePath = os.path.join(moduleDir, self.uiFilePath)
             
         uic.loadUi(uiFilePath, self)
+        self.setWindowTitle(self.formTitle)
+        self.setWindowIcon(QtGui.QIcon(self.iconPath))
         self.on_open() # предопределенная процедура
 
     def closeEvent(self, event):
@@ -65,6 +71,50 @@ def getValue(widget):
 
 
 
+def openForm(formModulePath, formClassName= 'Form'):
+    formModule = importlib.import_module(formModulePath)
+    FormClass = getattr(formModule, formClassName)
+    assert issubclass(FormClass, wic.form.WForm), 'This is not a WForm.'
+    form = FormClass(None) # no parent widget for now
+    window = wic.mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
+    window.setWindowIcon(form.windowIcon())
+    window.show()
+    form.closed.connect(window.close) # when form closes - close subwindow too            
+
+
+def openCatalogItemForm(model, formClassName= 'Form'):
+    if isinstance(model, type) and issubclass(model, orm.Model):
+        formModulePath = model.__module__
+    elif isinstance(model, orm.Model):
+        formModulePath = model.__class__.__module__
+    else:
+        raise Exception('openCatalogItemForm receives a Model or Model instance.')
+    
+    formModule = importlib.import_module(formModulePath)
+    FormClass = getattr(formModule, formClassName)
+    assert issubclass(FormClass, wic.form.CatalogForm), 'This is not a CatalogForm.'
+    form = FormClass(None, model) # no parent widget for now
+    window = wic.mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
+    window.setWindowIcon(form.windowIcon())
+    window.show()
+    form.closed.connect(window.close) # when form closes - close subwindow too            
+
+
+
+class CatalogForm(WForm):
+    '''Form of a catalog item.'''
+    formTitle = 'Catalog item'
+    iconPath = ':/icons/fugue/card-address.png'
+    CatalogModel = None
+    catalogItem = None
+    
+    def __init__(self, parentWidget, model):
+        super().__init__(parentWidget)
+
+    def on_open(self):
+        pass
+        
+        
 def putToForm(data, uiFilePath, dialog):
     'Загрузить форму с диска, заполнить поля данными data и вернуть форму'
     dialog = uic.loadUi(uiFilePath, QtGui.QDialog(dialog))
@@ -108,3 +158,4 @@ def getFromForm(dialog):
         if value is not None:
             data[widget.objectName()] = value
     return data
+

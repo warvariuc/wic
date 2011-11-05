@@ -3,12 +3,11 @@
 '''This module contains database adapters, which incapsulate all operations specific to a certain database.
 All other ORM modules should be database agnostic.'''
 
-import os, sys, base64, locale
+import os, sys, base64
 import time
 from collections import OrderedDict
 
 import orm
-from sre_parse import isname
 
 
 drivers = []

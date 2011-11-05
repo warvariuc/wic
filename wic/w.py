@@ -21,15 +21,7 @@ globalModule = None
 
 
         
-def openForm(formModulePath, formClassName= 'Form'):
-    formModule = importlib.import_module(formModulePath)
-    FormClass = getattr(formModule, formClassName)
-    assert issubclass(FormClass, wic.form.WForm), 'This is not a WForm.'
-    form = FormClass(None) # no parent widget for now
-    window = mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
-    form.closed.connect(window.close) # when form closes - close subwindow too            
-
-def execFunc(funcName, obj,  **kwargs):
+def execFunc(funcName, obj, **kwargs):
     'Выполнить функцию объекта (обычно, это предопределенная процедура пользовательского модуля).'
     try: func = getattr(obj, funcName)
     except AttributeError: return None

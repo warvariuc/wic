@@ -1,9 +1,14 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
 
-import sys
+import sys, os
 
 if sys.hexversion < 0x03010000:
     raise SystemExit('At least Python 3.1 needed. Exiting.')
+
+
+_parentDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _parentDir not in sys.path:
+    sys.path.append(_parentDir)
 
 
 import logging, inspect
@@ -56,10 +61,10 @@ class TooManyRecords(Exception):
     ''''''
 
 
-from orm.fields import (Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, 
+from .fields import (Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, 
                         RecordIdField, AnyRecordField, COUNT, MAX, MIN)
-from orm.models import Model, Index, Join, LeftJoin
-from orm.adapters import SqliteAdapter, MysqlAdapter, Adapter
+from .models import Model, Index, Join, LeftJoin
+from .adapters import SqliteAdapter, MysqlAdapter, Adapter
 
 #defaultAdapter = _Adapter(connect=False)
 

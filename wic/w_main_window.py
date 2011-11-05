@@ -1,9 +1,9 @@
-from PyQt4 import QtCore, QtGui
 import os, sys
+from PyQt4 import QtCore, QtGui
 
 class WMainWindow(QtGui.QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent= None):
         super().__init__(parent)
         
         self.mdiArea = QtGui.QMdiArea()
@@ -14,7 +14,7 @@ class WMainWindow(QtGui.QMainWindow):
 
         self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
         self.mdiArea.setTabPosition(QtGui.QTabWidget.North)
-        tabBar = self.mdiArea.findChildren(QtGui.QTabBar)[ 0 ] # a hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
+        tabBar = self.mdiArea.findChildren(QtGui.QTabBar)[0] # a hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
         tabBar.setTabsClosable(True)
         tabBar.setExpanding(False)
         #tabBar.setMovable(True)
@@ -87,11 +87,11 @@ class WMainWindow(QtGui.QMainWindow):
 
     def showCalculator(self):
         from wic.widgets import w_decimal_edit
-        w_decimal_edit.WPopupCalculator(self, persistent=True).show()
+        w_decimal_edit.WPopupCalculator(self, persistent= True).show()
         
     def showCalendar(self):
         from wic.widgets import w_date_edit
-        w_date_edit.WCalendarPopup(self, persistent=True).show()
+        w_date_edit.WCalendarPopup(self, persistent= True).show()
 
     def closeTab(self, i):
         subWindow = self.mdiArea.subWindowList()[i]
@@ -156,7 +156,7 @@ class WMainWindow(QtGui.QMainWindow):
     def helpAbout(self):
         __import__('w_help_about').showAboutInfo(self)
         
-    def createAction(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False, signal='triggered'):
+    def createAction(self, text, slot= None, shortcut= None, icon= None, tip= None, checkable= False, signal= 'triggered'):
         #Convenience function to create PyQt actions
         action = QtGui.QAction(text, self)
         if icon is not None: action.setIcon(QtGui.QIcon(icon))
