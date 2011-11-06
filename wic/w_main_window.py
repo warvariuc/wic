@@ -37,7 +37,7 @@ class WMainWindow(QtGui.QMainWindow):
         fileQuitAction = self.createAction('Выход', self.close, 'Ctrl+Q', ':/icons/fugue/cross-button.png')
 
         self.addActions(self.fileMenu, (fileOpenAction, ))
-        self.recentFilesMenu = self.fileMenu.addMenu(QtGui.QIcon(':/icons/fugue/folders-stack.png'),'Недавние файлы')
+        self.recentFilesMenu = self.fileMenu.addMenu(QtGui.QIcon(':/icons/fugue/folders-stack.png'), 'Недавние файлы')
         self.recentFilesMenu.aboutToShow.connect(self.updateRecentFiles)
         self.addActions(self.fileMenu, (self.fileSaveAction, fileQuitAction))
 
@@ -99,12 +99,12 @@ class WMainWindow(QtGui.QMainWindow):
         #self.mdiArea.removeSubWindow(subWindow)
 
     def closeEvent(self, event):
-        self.mdiArea.closeAllSubWindows() #Passes a close event from main window to all subwindows.
-        if self.mdiArea.subWindowList(): #there are still open subwindows
+        self.mdiArea.closeAllSubWindows() # Passes a close event from main window to all subwindows.
+        if self.mdiArea.subWindowList(): # there are still open subwindows
             event.ignore()
             return
         from wic import w
-        if w.requestExit() == False: #именно False, иначе None тоже считается отрицательным
+        if w.requestExit() == False: # именно False, иначе None тоже считается отрицательным
             event.ignore()
             return
         self.settings.saveSettings()

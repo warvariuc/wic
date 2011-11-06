@@ -6,7 +6,6 @@
 import os, sys
 from types import ModuleType
 import yaml, subprocess, datetime
-import importlib
 from PyQt4 import QtGui
 import wic
 

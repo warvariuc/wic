@@ -40,7 +40,7 @@ def loadTestConf(): # load default test configuration
     from wic.form import openForm, openCatalogItemForm
     from conf.catalogs.persons import Persons
     openForm('conf.reports.test')
-    openCatalogItemForm(Persons)
+    openCatalogItemForm(Persons())
 
 
 app = wic.app = w_app.WApp(sys.argv)
@@ -49,6 +49,7 @@ appDir = QtGui.qApp.appDir = os.path.dirname(os.path.abspath(__file__))
 
 mainWindow = wic.mainWindow = QtGui.qApp.mainWindow = w_main_window.WMainWindow()
 mainWindow.show()
+wic.messagesWindow = mainWindow.messagesWindow
 
 
 QtCore.QTimer.singleShot(0, loadTestConf) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию

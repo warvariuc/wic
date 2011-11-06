@@ -19,19 +19,21 @@ class MessagesWindow(QtCore.QObject):
         self.textEdit.customContextMenuRequested.connect (self.showContextMenu)
 
     def showContextMenu(self, coord):
-        if not hasattr(self, "menu"): # create the context menu for Message Window
-            self.menu = QtGui.QMenu(self.text_edit)
-            self.menu.addAction('Очистить', self.text_edit.clear)
-            self.menu.addAction('Запомнить', self.text_edit.copy, QtGui.QKeySequence.Copy)
-            self.menu.addAction('Выделить всё', self.text_edit.selectAll, QtGui.QKeySequence.SelectAll)
+        if not hasattr(self, 'menu'): # create the context menu for Message Window
+            self.menu = QtGui.QMenu(self.textEdit)
+            self.menu.addAction('Очистить', self.textEdit.clear)
+            self.menu.addAction('Запомнить', self.textEdit.copy, QtGui.QKeySequence.Copy)
+            self.menu.addAction('Выделить всё', self.textEdit.selectAll, QtGui.QKeySequence.SelectAll)
 
-        self.menu.popup(self.text_edit.mapToGlobal(coord))
+        self.menu.popup(self.textEdit.mapToGlobal(coord))
 
-    def printMessage(self, txt, showDateTime=False, autoPopup=True):
+    def printMessage(self, txt, showDateTime= False, autoPopup= True):
         tc = self.textEdit.textCursor()
         tc.movePosition(QtGui.QTextCursor.End)
         self.textEdit.setTextCursor(tc)
-        if showDateTime: txt = QtCore.QDateTime.currentDateTime().toString('yyyy/MM/dd hh:mm:ss ') + txt
+        if showDateTime: 
+            txt = QtCore.QDateTime.currentDateTime().toString('yyyy/MM/dd hh:mm:ss ') + txt
         self.textEdit.insertHtml((str(txt) + '\n').replace('\n', '<br>'))
-        self.textEdit.ensureCursorVisible()
-        if autoPopup: self.dockWidget.show()
+        self.textEdit.ensureCursorVisible() # scroll to the new message
+        if autoPopup: 
+            self.dockWidget.show()
