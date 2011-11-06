@@ -1,14 +1,8 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
-print('orm.__init__')
 import sys, os
 
 if sys.hexversion < 0x03010000:
     raise SystemExit('At least Python 3.1 needed. Exiting.')
-
-
-_parentDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _parentDir not in sys.path:
-    sys.path.append(_parentDir)
 
 
 import logging, inspect
