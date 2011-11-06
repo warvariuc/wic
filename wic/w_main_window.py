@@ -1,6 +1,7 @@
 import os, sys
 from PyQt4 import QtCore, QtGui
 
+
 class WMainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent= None):
@@ -44,16 +45,16 @@ class WMainWindow(QtGui.QMainWindow):
         self.serviceMenu = self.menuBar().addMenu('Сервис')
         self.addActions(self.serviceMenu, 
                     (self.createAction('Калькулятор', self.showCalculator, 'Ctrl+F2', ':/icons/fugue/calculator-scientific.png'), 
-                    self.createAction('Календарь', self.showCalendar, icon=':/icons/fugue/calendar-blue.png'), 
+                    self.createAction('Календарь', self.showCalendar, icon= ':/icons/fugue/calendar-blue.png'), 
                     None, 
-                    self.createAction('База данных...', self.editDbInfo, icon=':/icons/fugue/database.png'), 
+                    self.createAction('База данных...', self.editDbInfo, icon= ':/icons/fugue/database.png'), 
                     self.createAction('Дизайнер конфигурации', self.showDesigner, 'Alt+F11', ':/icons/fugue/block.png')))
                     
                    
         self.windowMenu = self.menuBar().addMenu('Окна')
         
         self.helpMenu = self.menuBar().addMenu('Помощь')
-        self.addActions(self.helpMenu, (self.createAction('О программе', self.helpAbout, icon=':/icons/fugue/question-button.png'), ))
+        self.addActions(self.helpMenu, (self.createAction('О программе', self.helpAbout, icon= ':/icons/fugue/question-button.png'), ))
 
         self.windowMessagesAction = self.createAction('Окно сообщений', self.showMessagesWindow)
         self.windowMessagesAction.setCheckable(True)
@@ -70,7 +71,7 @@ class WMainWindow(QtGui.QMainWindow):
                 None,
                 self.windowMessagesAction)
         
-        self.windowMenu.aboutToShow.connect(self.updateWindowMenu) #Before window menu is shown, update the menu with the titles of each open window
+        self.windowMenu.aboutToShow.connect(self.updateWindowMenu) # Before window menu is shown, update the menu with the titles of each open window
 
         self.setWindowTitle('wic')
         
@@ -93,8 +94,8 @@ class WMainWindow(QtGui.QMainWindow):
         from wic.widgets import w_date_edit
         w_date_edit.WCalendarPopup(self, persistent= True).show()
 
-    def closeTab(self, i):
-        subWindow = self.mdiArea.subWindowList()[i]
+    def closeTab(self, windowIndex):
+        subWindow = self.mdiArea.subWindowList()[windowIndex]
         subWindow.close()
         #self.mdiArea.removeSubWindow(subWindow)
 
@@ -109,25 +110,25 @@ class WMainWindow(QtGui.QMainWindow):
             return
         self.settings.saveSettings()
 
-    def updateRecentFiles(self, filePath=''):
-        recentFiles = self.settings.recentFiles
-        for i in range(len(recentFiles)-1, -1, -1): # remove from the list deleted files
-            if not os.path.isfile(recentFiles[i]): del recentFiles[i]
+    def updateRecentFiles(self, filePath= ''):
+        '''Add a file to recent files list if file path given, otherwise update the menu.'''
+        recentFiles = filter(os.path.isfile, self.settings.recentFiles) # remove from the list non existing files
             
-        if filePath: #the funtion adds a file to recent files list if file name given otherwise updates the menu
+        if filePath:
             filePath = os.path.abspath(filePath)
-            try: recentFiles.pop(recentFiles.index(filePath))
+            try: recentFiles.remove(filePath)
             except ValueError: pass
             recentFiles.insert(0, filePath)
             del recentFiles[10:] #keep 10 last files
-            return
-        menu = self.recentFilesMenu
-        menu.clear()
-        for file in recentFiles:
-            menu.addAction(QtGui.QIcon(':/icons/fugue/blue-folder-open-document-text.png'), file, lambda file=file: self._openFile(file))
-        if menu.isEmpty():
-            noItemsAction = menu.addAction('Пусто')
-            noItemsAction.setEnabled(False)
+        else:
+            menu = self.recentFilesMenu
+            menu.clear()
+            for file in recentFiles:
+                menu.addAction(QtGui.QIcon(':/icons/fugue/blue-folder-open-document-text.png'), 
+                               file, lambda file= file: self._openFile(file))
+            if menu.isEmpty():
+                noItemsAction = menu.addAction('Пусто')
+                noItemsAction.setEnabled(False)
     
     def handleFileOpen(self):
         filePath = QtGui.QFileDialog.getOpenFileName(self,
@@ -159,8 +160,10 @@ class WMainWindow(QtGui.QMainWindow):
     def createAction(self, text, slot= None, shortcut= None, icon= None, tip= None, checkable= False, signal= 'triggered'):
         #Convenience function to create PyQt actions
         action = QtGui.QAction(text, self)
-        if icon is not None: action.setIcon(QtGui.QIcon(icon))
-        if shortcut is not None: action.setShortcut(shortcut)
+        if icon is not None: 
+            action.setIcon(QtGui.QIcon(icon))
+        if shortcut is not None: 
+            action.setShortcut(shortcut)
         if tip is not None: 
             action.setToolTip(tip)
             action.setStatusTip(tip)
@@ -190,20 +193,20 @@ class WMainWindow(QtGui.QMainWindow):
         menu.clear()
         self.addActions(self.windowMenu, self.standardWindowActions)
         windows = self.mdiArea.subWindowList()
-        if not windows: return
-        menu.addSeparator()
-        for i, window in enumerate(windows):
-            title = window.windowTitle()
-            if i == 10:
-                self.windowMenu.addSeparator()
-                menu = menu.addMenu('&More')
-            accel = ''
-            if i < 10:
-                accel = '&%d ' % i
-            elif i < 36:
-                accel = '&%c ' % chr(i + ord('@') - 9)
-            menu.addAction("{}{}".format(accel, title),
-                    lambda w=window: self.mdiArea.setActiveSubWindow(w)) #cannot remove parameter w in lambda - looks like var window changes otherwise if we use it
+        if windows: 
+            menu.addSeparator()
+            for i, window in enumerate(windows):
+                title = window.windowTitle()
+                if i == 10:
+                    self.windowMenu.addSeparator()
+                    menu = menu.addMenu('&More')
+                accel = ''
+                if i < 10:
+                    accel = '&%d ' % i
+                elif i < 36:
+                    accel = '&%c ' % chr(i + ord('@') - 9)
+                menu.addAction("{}{}".format(accel, title),
+                        lambda w= window: self.mdiArea.setActiveSubWindow(w)) #cannot remove parameter w in lambda - looks like var window changes otherwise if we use it
 
     def handleSubwindowActivated(self, subwindow): #http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
         save_active = False

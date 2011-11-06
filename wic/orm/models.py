@@ -79,9 +79,13 @@ class ModelMeta(type):
         for index in newClass._indexes :
             assert isinstance(index, Index), 'Found a non Index in the _indexes.'
             
-        fields = [(fieldName, field) for fieldName, field in inspect.getmembers(newClass)
-                    if isinstance(field, orm.fields.Field)]
-        fields.sort(key= lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted)
+        fields = []
+        for fieldName, field in inspect.getmembers(newClass):
+            print(fieldName, repr(field), field.__class__.__bases__, orm.fields.Field)
+            if isinstance(field, orm.fields.Field):
+                fields.append((fieldName, field)) 
+                    
+        fields.sort(key= lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
         
         for fieldName, field in fields:
             if not fieldName.islower() or fieldName.startswith('_'):
@@ -98,8 +102,10 @@ class ModelMeta(type):
     def __getitem__(self, key):
         '''Get a Table Field by name - Table['field_name'].'''
         attr = getattr(self, key, None)
+        print(key, repr(attr))
         if isinstance(attr, orm.fields.Field):
             return attr
+        print('KeyError')
         raise KeyError('Could not find field %s in table %s' % (key, self.__name__))
 
     def __iter__(self):
@@ -190,7 +196,7 @@ class Model(metaclass= ModelMeta):
         
     @classmethod
     def getOneById(cls, db, id):
-        '''Get one record by id'''
+        '''Get one record by id.'''
         return cls.getOne(db, cls.id == id)
 
     @classmethod

@@ -7,29 +7,32 @@ import wic
 
 
 class WForm(QtGui.QDialog):
-    '''QObject allows having signals - f.e. about some value selected.'''
+    '''Base for user forms.'''
+    
     uiFilePath = 'form.ui' # absolute or relative path to the ui file
     iconPath = ':/icons/fugue/application-form.png'
     formTitle = 'Form'
     
-    closed = QtCore.pyqtSignal()
+    closed = QtCore.pyqtSignal() # emitted when the form is closing
     
     def __init__(self, parentWidget):
         super().__init__(parentWidget)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         
-        if os.path.isabs(self.uiFilePath):
-            uiFilePath = self.uiFilePath
-        else: # ui file path is relative. extract module path
-            moduleName = self.__class__.__module__
-            module = sys.modules[moduleName] # module in which the Form class was defined
-            moduleDir = os.path.dirname(os.path.abspath(module.__file__)) 
-            uiFilePath = os.path.join(moduleDir, self.uiFilePath)
-            
-        uic.loadUi(uiFilePath, self)
+        if not self.uiFilePath == '<auto>':
+            if os.path.isabs(self.uiFilePath):
+                uiFilePath = self.uiFilePath
+            else: # ui file path is relative. extract module path
+                moduleName = self.__class__.__module__
+                module = sys.modules[moduleName] # module in which the Form class was defined
+                moduleDir = os.path.dirname(os.path.abspath(module.__file__)) 
+                uiFilePath = os.path.join(moduleDir, self.uiFilePath)
+            uic.loadUi(uiFilePath, self)
+        
         self.setupUi()
         self.setWindowTitle(self.formTitle)
         self.setWindowIcon(QtGui.QIcon(self.iconPath))
+        
         self.on_open()
         
     def closeEvent(self, event):
@@ -114,6 +117,18 @@ class CatalogForm(WForm):
     def __init__(self, parentWidget, catalogItem):
         self.catalogItem = catalogItem
         super().__init__(parentWidget)
+
+    def setupUi(self):
+        '''Initial setting up of the form.
+        Dynamically create form fields, if no ui file is supplied. 
+        Fill form fields with data from DB.'''
+        catalogItem = self.catalogItem
+        if self.uiFilePath == '<auto>':
+            print(repr(catalogItem.__class__))
+            for field in catalogItem.__class__:
+                print(field)
+                print(catalogItem[field])
+            pass
 
         
         

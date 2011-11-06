@@ -69,22 +69,5 @@
   </widget>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>Close</sender>
-   <signal>clicked()</signal>
-   <receiver>Dialog</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>347</x>
-     <y>271</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>195</x>
-     <y>144</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

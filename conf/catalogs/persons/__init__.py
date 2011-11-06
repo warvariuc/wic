@@ -7,6 +7,7 @@ from wic.form import CatalogForm
 
 class Form(CatalogForm):
     ''''''
+    uiFilePath = '<auto>'
 
     @QtCore.pyqtSlot()
     def on_pushButton_clicked(self):
@@ -16,10 +17,10 @@ class Form(CatalogForm):
         #self.setWindowIcon(QtGui.QIcon(self.iconPath))
         #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
 
-from wic import orm
+import orm
 
 class Persons(orm.Model):
-    last_name = orm.StringField(maxLength= 100)
+    last_name = orm.fields.StringField(maxLength= 100)
     first_name = orm.StringField(maxLength= 100)
     middle_name = orm.StringField(maxLength= 100)
     phone_prefix = orm.IntegerField(bytesCount= 2) # phone prefix code of the location
@@ -28,4 +29,5 @@ class Persons(orm.Model):
     def checkNames(self):
         '''An item function, like in Django'''
         pass
-    
+
+print('!')    

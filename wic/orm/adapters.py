@@ -24,7 +24,7 @@ class Adapter():
     '''Generic DB adapter.'''
     def __init__(self, uri= '', connect= True, autocommit= True):
         '''URI is already without protocol.'''
-        print('Creating adapter: %s' % uri)
+        print('Creating adapter for "%s"' % uri)
         self._timings = []
         if connect:
             self.connection = self.connect()
@@ -571,6 +571,9 @@ class SqliteAdapter(Adapter):
         super().__init__(dbPath)
 
     def connect(self):
+        dbPath = self.dbPath
+        if dbPath != ':memory:' and not os.path.isfile(dbPath):
+            print('"%s" is not a file.')
         return self.driver.Connection(self.dbPath, **self.driverArgs)
 
     def _truncate(self, table, mode=''):

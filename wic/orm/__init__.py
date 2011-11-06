@@ -1,5 +1,5 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
-
+print('orm.__init__')
 import sys, os
 
 if sys.hexversion < 0x03010000:
