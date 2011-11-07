@@ -17,7 +17,7 @@ class Form(CatalogForm):
         #self.setWindowIcon(QtGui.QIcon(self.iconPath))
         #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
 
-import orm
+from wic import orm
 
 class Persons(orm.Model):
     last_name = orm.fields.StringField(maxLength= 100)
@@ -29,5 +29,4 @@ class Persons(orm.Model):
     def checkNames(self):
         '''An item function, like in Django'''
         pass
-
-print('!')    
+    

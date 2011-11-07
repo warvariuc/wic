@@ -1,7 +1,9 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
 
 import inspect
-import orm
+#import orm
+import sys
+orm = sys.modules[__name__.rpartition('.')[0]] # parent module
 
 
 class Index():
@@ -81,7 +83,6 @@ class ModelMeta(type):
             
         fields = []
         for fieldName, field in inspect.getmembers(newClass):
-            print(fieldName, repr(field), field.__class__.__bases__, orm.fields.Field)
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field)) 
                     
@@ -102,10 +103,8 @@ class ModelMeta(type):
     def __getitem__(self, key):
         '''Get a Table Field by name - Table['field_name'].'''
         attr = getattr(self, key, None)
-        print(key, repr(attr))
         if isinstance(attr, orm.fields.Field):
             return attr
-        print('KeyError')
         raise KeyError('Could not find field %s in table %s' % (key, self.__name__))
 
     def __iter__(self):

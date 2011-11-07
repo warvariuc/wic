@@ -124,11 +124,48 @@ class CatalogForm(WForm):
         Fill form fields with data from DB.'''
         catalogItem = self.catalogItem
         if self.uiFilePath == '<auto>':
-            print(repr(catalogItem.__class__))
+            self.formLayout = QtGui.QFormLayout(self)
+            formLayout = self.formLayout
+            formLayout.setMargin(2)
+            #self.gridLayout.setObjectName('gridLayout')
             for field in catalogItem.__class__:
-                print(field)
-                print(catalogItem[field])
+                fieldName = field.name
+                assert not hasattr(self, fieldName), 'Form already has attribute with name ""%s' % fieldName
+                labelName = 'label_' + fieldName
+                label = QtGui.QLabel(labelName, self)
+                fieldValue = catalogItem[field]
+                #formLayout.addRow( QWidget * label, QWidget * field)
+                formLayout.addRow(label)
+                print(fieldValue)
             pass
+#        self.label = QtGui.QLabel(Dialog)
+#        self.label.setText(QtGui.QApplication.translate("Dialog", "Идентификатор", None, QtGui.QApplication.UnicodeUTF8))
+#        self.label.setObjectName(_fromUtf8("label"))
+#        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+#        self.identifier = QtGui.QLineEdit(Dialog)
+#        self.identifier.setObjectName(_fromUtf8("identifier"))
+#        self.gridLayout.addWidget(self.identifier, 1, 0, 1, 2)
+#        self.label_2 = QtGui.QLabel(Dialog)
+#        self.label_2.setText(QtGui.QApplication.translate("Dialog", "Название", None, QtGui.QApplication.UnicodeUTF8))
+#        self.label_2.setObjectName(_fromUtf8("label_2"))
+#        self.gridLayout.addWidget(self.label_2, 2, 0, 1, 1)
+#        self.name = QtGui.QLineEdit(Dialog)
+#        self.name.setObjectName(_fromUtf8("name"))
+#        self.gridLayout.addWidget(self.name, 3, 0, 1, 2)
+#        self.label_3 = QtGui.QLabel(Dialog)
+#        self.label_3.setText(QtGui.QApplication.translate("Dialog", "Комментарий", None, QtGui.QApplication.UnicodeUTF8))
+#        self.label_3.setObjectName(_fromUtf8("label_3"))
+#        self.gridLayout.addWidget(self.label_3, 4, 0, 1, 1)
+#        self.description = QtGui.QPlainTextEdit(Dialog)
+#        self.description.setObjectName(_fromUtf8("description"))
+#        self.gridLayout.addWidget(self.description, 5, 0, 1, 2)
+#        self.buttonBox = QtGui.QDialogButtonBox(Dialog)
+#        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+#        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
+#        self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
+#        self.gridLayout.addWidget(self.buttonBox, 6, 1, 1, 1)
+#        self.label.setBuddy(self.identifier)
+#        self.label_2.setBuddy(self.name)
 
         
         

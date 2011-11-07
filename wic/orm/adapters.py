@@ -7,7 +7,8 @@ import os, sys, base64
 import time
 from collections import OrderedDict
 
-import orm
+#import orm
+orm = sys.modules[__name__.rpartition('.')[0]] # parent module
 
 
 drivers = []

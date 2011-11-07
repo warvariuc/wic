@@ -1,10 +1,13 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
 
 from decimal import Decimal
-import orm
+#import orm
+import sys
+orm = sys.modules[__name__.rpartition('.')[0]] # parent module
 
 
-class Nil(): '''Custom None'''
+class Nil(): 
+    '''Custom None'''
     
 
 class Expression():
