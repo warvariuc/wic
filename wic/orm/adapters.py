@@ -4,7 +4,7 @@
 All other ORM modules should be database agnostic.'''
 
 import os, sys, base64
-import time
+import time, re
 from collections import OrderedDict
 
 #import orm
@@ -574,7 +574,7 @@ class SqliteAdapter(Adapter):
     def connect(self):
         dbPath = self.dbPath
         if dbPath != ':memory:' and not os.path.isfile(dbPath):
-            print('"%s" is not a file.')
+            raise orm.ConnectionError('"%s" is not a file.\nFor a new database create an empty file.' % dbPath)
         return self.driver.Connection(self.dbPath, **self.driverArgs)
 
     def _truncate(self, table, mode=''):
@@ -635,6 +635,46 @@ class SqliteAdapter(Adapter):
 
 class MysqlAdapter(Adapter):
     driver = globals().get('mysqldb')
+
+    def __init__(self, db, uri, pool_size= 0, folder= None, db_codec= 'UTF-8',
+                 credential_decoder= lambda x: x, driver_args= {},
+                 adapter_args= {}):
+        self.db = db
+        self.dbengine = "mysql"
+        self.uri = uri
+        self.pool_size = pool_size
+        self.folder = folder
+        self.db_codec = db_codec
+        self.find_or_make_work_folder()
+        uri = uri.split('://')[1]
+        m = re.compile('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)(\?set_encoding=(?P<charset>\w+))?$').match(uri)
+        if not m:
+            raise SyntaxError("Invalid URI: %s" % self.uri)
+        user = credential_decoder(m.group('user'))
+        if not user:
+            raise SyntaxError('User required')
+        password = credential_decoder(m.group('password'))
+        if not password:
+            password = ''
+        host = m.group('host')
+        if not host:
+            raise SyntaxError('Host name required')
+        db = m.group('db')
+        if not db:
+            raise SyntaxError('Database name required')
+        port = int(m.group('port') or '3306')
+        charset = m.group('charset') or 'utf8'
+        driver_args.update(dict(db=db,
+                                user=credential_decoder(user),
+                                passwd=credential_decoder(password),
+                                host=host,
+                                port=port,
+                                charset=charset))
+        def connect(driver_args=driver_args):
+            return self.driver.connect(**driver_args)
+        self.pool_connection(connect)
+        self.execute('SET FOREIGN_KEY_CHECKS=1;')
+        self.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
     
     def _getCreateTableOther(self, table):
         return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__

@@ -2,22 +2,35 @@ import os, sys
 from PyQt4 import QtCore, QtGui
 
 from wic.w import printMessage
-from wic.forms import WForm
+from wic.forms import WForm, getValue
 
 
 class Form(WForm):
     ''''''
 
     @QtCore.pyqtSlot()
-    def on_pushButton_clicked(self):
-        print('!!!')
+    def on_buttonTestConnection_clicked(self):
+        dbUri = getValue(self.dbUri)
+        from wic import orm
+        ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
+        try: # 'sqlite://../mtc.sqlite'
+            db = orm.connect(dbUri, ADAPTERS)
+            if db is None:
+                raise orm.ConnectionError('Could not find suitable DB adapter for the protocol specified.')
+            db.execute('SELECT 1;')
+        except orm.ConnectionError as exc:
+            QtGui.QMessageBox.warning(self, 'Failure', 'Connection failure:\n%s' % exc)
+        else:
+            QtGui.QMessageBox.information(self, 'Success', 'The connection was successfully tested.')
+        
+    def on_buttonBox_accepted(self):
+        print('accepted')
         
     #def on_open(self):
         #self.setWindowIcon(QtGui.QIcon(self.iconPath))
         #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
 
 
-#m = re.compile('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)(\?set_encoding=(?P<charset>\w+))?$').match(uri)
 
 #from PyQt4 import QtGui, QtSql
 #import os

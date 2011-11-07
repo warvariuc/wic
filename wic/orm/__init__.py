@@ -48,15 +48,10 @@ class metamethod():
         return wrapped        
 
 
-class RecordNotFound(Exception):
-    ''''''
+from . import *
 
-class TooManyRecords(Exception):
-    ''''''
-
-
-from .fields import (Expression, Field, IdField, IntegerField, StringField, DecimalFieldI, 
-                        RecordIdField, AnyRecordField, COUNT, MAX, MIN)
+from .fields import Expression, Field, IdField, IntegerField, StringField, DecimalFieldI,\
+                    RecordIdField, AnyRecordField, COUNT, MAX, MIN
 from .models import Model, Index, Join, LeftJoin
 from .adapters import SqliteAdapter, MysqlAdapter, Adapter
 
@@ -69,6 +64,4 @@ def connect(uri, adapters):
         if uri.startswith(uriStart):
             dbAdapter = dbAdapterClass(uri[len(uriStart):])
             return dbAdapter
-
-
 
