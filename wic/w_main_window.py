@@ -11,14 +11,14 @@ class WMainWindow(QtGui.QMainWindow):
         self.mdiArea.setDocumentMode(True)
         self.mdiArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.mdiArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.mdiArea.subWindowActivated.connect(self.handleSubwindowActivated)
+        self.mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
 
         self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
         self.mdiArea.setTabPosition(QtGui.QTabWidget.North)
         tabBar = self.mdiArea.findChildren(QtGui.QTabBar)[0] # a hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
         tabBar.setTabsClosable(True)
         tabBar.setExpanding(False)
-        #tabBar.setMovable(True)
+        tabBar.setMovable(True)
         tabBar.setDrawBase(True)
         #tabBar.setShape(tabBar.TriangularSouth)
         tabBar.tabCloseRequested.connect(self.closeTab)
@@ -32,10 +32,11 @@ class WMainWindow(QtGui.QMainWindow):
 
         #Create menu
         self.fileMenu = self.menuBar().addMenu('Файл')
-        fileOpenAction = self.createAction('Открыть…', self.handleFileOpen, QtGui.QKeySequence.Open, ':/icons/fugue/folder-open-document-text.png')
+        fileOpenAction = self.createAction('Открыть…', self.onFileOpen, QtGui.QKeySequence.Open, ':/icons/fugue/folder-open-document-text.png')
         
         self.fileSaveAction = self.createAction('Сохранить', self.fileSave, QtGui.QKeySequence.Save, ':/icons/fugue/disk-black.png')
-        fileQuitAction = self.createAction('Выход', self.close, 'Ctrl+Q', ':/icons/fugue/cross-button.png')
+        fileQuitAction = self.createAction('Выход', self.close, QtGui.QKeySequence.Quit, ':/icons/fugue/cross-button.png')
+
 
         self.addActions(self.fileMenu, (fileOpenAction, ))
         self.recentFilesMenu = self.fileMenu.addMenu(QtGui.QIcon(':/icons/fugue/folders-stack.png'), 'Недавние файлы')
@@ -43,20 +44,24 @@ class WMainWindow(QtGui.QMainWindow):
         self.addActions(self.fileMenu, (self.fileSaveAction, fileQuitAction))
 
         self.serviceMenu = self.menuBar().addMenu('Сервис')
-        self.addActions(self.serviceMenu, 
-                    (self.createAction('Калькулятор', self.showCalculator, 'Ctrl+F2', ':/icons/fugue/calculator-scientific.png'), 
+        self.addActions(self.serviceMenu, (
+                    self.createAction('Калькулятор', self.showCalculator, 'Ctrl+F2', ':/icons/fugue/calculator-scientific.png'), 
                     self.createAction('Календарь', self.showCalendar, icon= ':/icons/fugue/calendar-blue.png'), 
                     None, 
-                    self.createAction('База данных...', self.editDbInfo, icon= ':/icons/fugue/database.png'), 
-                    self.createAction('Дизайнер конфигурации', self.showDesigner, 'Alt+F11', ':/icons/fugue/block.png')))
-                    
+                    self.createAction('База данных…', self.editDbInfo, None, ':/icons/fugue/database.png',
+                                      'Параметры соединения с базой данных'), 
+                    self.createAction('Дизайнер конфигурации', self.showDesigner, 'Alt+F11', ':/icons/fugue/block.png'),
+                    self.createAction('Дизайнер форм', self.openQtDesigner, None, ':/icons/fugue/application-form.png',
+                                      'Запустить дизайнер с кастомными виджетами'))
+        )            
                    
         self.windowMenu = self.menuBar().addMenu('Окна')
         
         self.helpMenu = self.menuBar().addMenu('Помощь')
-        self.addActions(self.helpMenu, (self.createAction('О программе', self.helpAbout, icon= ':/icons/fugue/question-button.png'), ))
+        self.addActions(self.helpMenu, (self.createAction('О программе', self.helpAbout, 'F1', 
+                            ':/icons/fugue/question-button.png', 'Посмотреть информацию о программе'), ))
 
-        self.windowMessagesAction = self.createAction('Окно сообщений', self.showMessagesWindow)
+        self.windowMessagesAction = self.createAction('Окно сообщений', self.showMessagesWindow, tip= 'Показать/скрыть окно сообщений')
         self.windowMessagesAction.setCheckable(True)
 
         self.standardWindowActions = (
@@ -67,7 +72,8 @@ class WMainWindow(QtGui.QMainWindow):
                 self.createAction('Restore All', self.windowRestoreAll),
                 self.createAction('Iconize All', self.windowMinimizeAll),
                 None, #separator
-                self.createAction("Закрыть", self.mdiArea.closeActiveSubWindow, QtGui.QKeySequence.Close, ':/icons/fugue/cross-white.png'),
+                self.createAction('Закрыть', self.mdiArea.closeActiveSubWindow, QtGui.QKeySequence.Close, 
+                                  ':/icons/fugue/cross-white.png', 'Закрыть активное окно'),
                 None,
                 self.windowMessagesAction)
         
@@ -81,8 +87,13 @@ class WMainWindow(QtGui.QMainWindow):
         self.settings.readSettings()
 
     def editDbInfo(self):
-        __import__('db_info').DbInfo(QtGui.qApp.confDir).edit(self)
+        from wic.forms import openForm
+        openForm('wic.db_info')
 
+    def helpAbout(self):
+        from wic.forms import openForm
+        openForm('wic.help_about')
+        
     def showDesigner(self):
         __import__('w').loadModule(os.path.join(QtGui.qApp.appDir, 'designer.py'))
 
@@ -112,7 +123,7 @@ class WMainWindow(QtGui.QMainWindow):
 
     def updateRecentFiles(self, filePath= ''):
         '''Add a file to recent files list if file path given, otherwise update the menu.'''
-        recentFiles = filter(os.path.isfile, self.settings.recentFiles) # remove from the list non existing files
+        recentFiles = list(filter(os.path.isfile, self.settings.recentFiles)) # remove from the list non existing files
             
         if filePath:
             filePath = os.path.abspath(filePath)
@@ -130,7 +141,7 @@ class WMainWindow(QtGui.QMainWindow):
                 noItemsAction = menu.addAction('Пусто')
                 noItemsAction.setEnabled(False)
     
-    def handleFileOpen(self):
+    def onFileOpen(self):
         filePath = QtGui.QFileDialog.getOpenFileName(self,
                 'Открыть файл', self.settings.lastUsedDirectory, 'Модули (*.py);;Формы (*.ui);;Все файлы (*.*)')
         if filePath: 
@@ -140,13 +151,19 @@ class WMainWindow(QtGui.QMainWindow):
 
     def _openFile(self, filePath):
         if filePath.endswith('.ui'):
-            os.putenv('PYQTDESIGNERPATH', os.path.join(QtGui.qApp.appDir, 'widgets'))
-            os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) #designer needs python.dll to use python based widgets. on windows the dll is not in system32
-            params = ['designer', filePath] # "designer-qt4" on Linux
-            __import__('subprocess').Popen(params)
-            return
+            self.openQtDesigner(filePath)
         else:
             __import__('w').loadModule(filePath)
+
+    def openQtDesigner(self, filePath= None):
+        import subprocess, wic
+        os.putenv('PYQTDESIGNERPATH', os.path.join(wic.appDir, 'widgets'))
+        os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) #designer needs python.dll to use python based widgets. on windows the dll is not in system32
+        params = ['designer']
+        if filePath:
+            params.append(filePath)
+        subprocess.Popen(params)
+        
 
     def fileSave(self):
         QtGui.QMessageBox.warning(self, 'Not implemented', 'This feature is not yet implemented')
@@ -154,11 +171,8 @@ class WMainWindow(QtGui.QMainWindow):
     def showMessagesWindow(self):
         self.messagesWindow.dockWidget.setVisible(self.windowMessagesAction.isChecked())
 
-    def helpAbout(self):
-        __import__('w_help_about').showAboutInfo(self)
-        
     def createAction(self, text, slot= None, shortcut= None, icon= None, tip= None, checkable= False, signal= 'triggered'):
-        #Convenience function to create PyQt actions
+        '''Convenience function to create PyQt actions'''
         action = QtGui.QAction(text, self)
         if icon is not None: 
             action.setIcon(QtGui.QIcon(icon))
@@ -172,11 +186,13 @@ class WMainWindow(QtGui.QMainWindow):
         action.setCheckable(checkable)
         return action
 
-    def addActions(self, target, actions):
-        #Add multiple actions to a menu
+    def addActions(self, menu, actions):
+        '''Add multiple actions to a menu'''
         for action in actions:
-            if not action: target.addSeparator()
-            else: target.addAction(action)
+            if not action: 
+                menu.addSeparator()
+            else: 
+                menu.addAction(action)
 
     def windowRestoreAll(self):
         for window in self.mdiArea.subWindowList():
@@ -205,10 +221,10 @@ class WMainWindow(QtGui.QMainWindow):
                     accel = '&%d ' % i
                 elif i < 36:
                     accel = '&%c ' % chr(i + ord('@') - 9)
-                menu.addAction("{}{}".format(accel, title),
-                        lambda w= window: self.mdiArea.setActiveSubWindow(w)) #cannot remove parameter w in lambda - looks like var window changes otherwise if we use it
+                menu.addAction('%s%s' % (accel, title),
+                        lambda w= window: self.mdiArea.setActiveSubWindow(w))
 
-    def handleSubwindowActivated(self, subwindow): #http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
+    def onSubwindowActivated(self, subwindow): #http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
         save_active = False
         if subwindow and subwindow.isWindowModified():
             save_active = True

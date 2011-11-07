@@ -37,7 +37,7 @@ sys.excepthook = exception_hook # set our exception hook
 def loadTestConf(): # load default test configuration
     #from wic import w
     #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
-    from wic.form import openForm, openCatalogItemForm
+    from wic.forms import openForm, openCatalogItemForm
     from conf.catalogs.persons import Persons
     openForm('conf.reports.test')
     openCatalogItemForm(Persons(db= wic.db))

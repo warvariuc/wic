@@ -1,9 +1,9 @@
 import os, sys
 import math, random
-from PyQt4 import QtCore, QtGui, uic
+from PyQt4 import QtCore, QtGui
 
 from wic import w
-from wic.form import WForm, setValue, getValue
+from wic.forms import WForm, setValue, getValue
 
 
 class Form(WForm):

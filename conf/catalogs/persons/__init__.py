@@ -1,13 +1,13 @@
 import os, sys
-from PyQt4 import QtCore, QtGui, uic
+from PyQt4 import QtCore, QtGui
 
 from wic.w import printMessage
-from wic.form import CatalogForm
+from wic.forms import CatalogForm
 
 
 class Form(CatalogForm):
     ''''''
-    uiFilePath = '<auto>'
+    uiFilePath = '' # auto generated form
 
     @QtCore.pyqtSlot()
     def on_pushButton_clicked(self):
@@ -26,7 +26,7 @@ class Persons(orm.Model):
     phone_prefix = orm.IntegerField(bytesCount= 2) # phone prefix code of the location
     phone_number = orm.IntegerField(bytesCount= 4)
     
-    def checkNames(self):
+    def getFullName(self):
         '''An item function, like in Django'''
-        pass
+        return '%s %s %s' % (self.last_name, self.first_name, self.middle_name)
     
