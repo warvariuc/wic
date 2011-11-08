@@ -5,7 +5,6 @@ All other ORM modules should be database agnostic.'''
 
 import os, sys, base64
 import time, re
-from collections import OrderedDict
 
 #import orm
 orm = sys.modules[__name__.rpartition('.')[0]] # parent module
@@ -14,14 +13,19 @@ orm = sys.modules[__name__.rpartition('.')[0]] # parent module
 drivers = []
 
 try:
-    from sqlite3 import dbapi2 as sqlite3
-    drivers.append('SQLite3')
+    import sqlite3
+    drivers.append('sqlite3')
 except ImportError:
     orm.logger.debug('no sqlite3.dbapi2 driver')
 
+try:
+    import pymysql
+    drivers.append('pymysql')
+except ImportError:
+    orm.logger.debug('no pymysql driver')
 
 
-class Adapter():
+class GenericAdapter():
     '''Generic DB adapter.'''
     def __init__(self, uri= '', connect= True, autocommit= True):
         '''URI is already without protocol.'''
@@ -559,11 +563,11 @@ class Adapter():
 
 
 
-class SqliteAdapter(Adapter):
+class SqliteAdapter(GenericAdapter):
     driver = globals().get('sqlite3')
 
-    def __init__(self, uri, driverArgs= {}):
-        self.driverArgs = driverArgs
+    def __init__(self, uri, driverArgs= None):
+        self.driverArgs = driverArgs or {}
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
         if dbPath != ':memory:' and dbPath[0] != '/':
@@ -633,27 +637,20 @@ class SqliteAdapter(Adapter):
 
 
 
-class MysqlAdapter(Adapter):
-    driver = globals().get('mysqldb')
+class MysqlAdapter(GenericAdapter):
+    driver = globals().get('pymysql')
 
-    def __init__(self, db, uri, pool_size= 0, folder= None, db_codec= 'UTF-8',
-                 credential_decoder= lambda x: x, driver_args= {},
-                 adapter_args= {}):
-        self.db = db
+    def __init__(self, uri, driverArgs= None):
+        self.driverArgs = driverArgs if isinstance(driverArgs, dict) else {}
         self.dbengine = "mysql"
         self.uri = uri
-        self.pool_size = pool_size
-        self.folder = folder
-        self.db_codec = db_codec
-        self.find_or_make_work_folder()
-        uri = uri.split('://')[1]
-        m = re.compile('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)(\?set_encoding=(?P<charset>\w+))?$').match(uri)
+        m = re.match('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)(\?set_encoding=(?P<charset>\w+))?$', uri)
         if not m:
             raise SyntaxError("Invalid URI: %s" % self.uri)
-        user = credential_decoder(m.group('user'))
+        user = m.group('user')
         if not user:
             raise SyntaxError('User required')
-        password = credential_decoder(m.group('password'))
+        password = m.group('password')
         if not password:
             password = ''
         host = m.group('host')
@@ -664,18 +661,14 @@ class MysqlAdapter(Adapter):
             raise SyntaxError('Database name required')
         port = int(m.group('port') or '3306')
         charset = m.group('charset') or 'utf8'
-        driver_args.update(dict(db=db,
-                                user=credential_decoder(user),
-                                passwd=credential_decoder(password),
-                                host=host,
-                                port=port,
-                                charset=charset))
-        def connect(driver_args=driver_args):
-            return self.driver.connect(**driver_args)
-        self.pool_connection(connect)
+        self.driverArgs.update(dict(db= db, user= user, passwd= password, host= host, port= port, charset= charset))
+        super().__init__(uri)
         self.execute('SET FOREIGN_KEY_CHECKS=1;')
         self.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
     
+    def connect(self):
+        return self.driver.connect(**self.driverArgs)
+
     def _getCreateTableOther(self, table):
         return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
     

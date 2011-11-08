@@ -17,7 +17,9 @@ class Form(CatalogForm):
         #self.setWindowIcon(QtGui.QIcon(self.iconPath))
         #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
 
-from wic import orm
+
+
+import orm
 
 class Persons(orm.Model):
     last_name = orm.fields.StringField(maxLength= 100)

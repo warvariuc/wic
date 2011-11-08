@@ -48,12 +48,12 @@ class metamethod():
         return wrapped        
 
 
-from . import *
+from .exceptions import *
 
 from .fields import Expression, Field, IdField, IntegerField, StringField, DecimalFieldI,\
                     RecordIdField, AnyRecordField, COUNT, MAX, MIN
 from .models import Model, Index, Join, LeftJoin
-from .adapters import SqliteAdapter, MysqlAdapter, Adapter
+from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter
 
 #defaultAdapter = _Adapter(connect=False)
 

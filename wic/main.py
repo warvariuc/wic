@@ -36,14 +36,11 @@ sys.excepthook = exception_hook # set our exception hook
 
 
 app = wic.app = w_app.WApp(sys.argv)
-appDir = QtGui.qApp.appDir = os.path.dirname(os.path.abspath(__file__))
 
 
 mainWindow = wic.mainWindow = QtGui.qApp.mainWindow = w_main_window.WMainWindow()
 mainWindow.show()
 wic.messagesWindow = mainWindow.messagesWindow
-from wic import orm
-wic.db = orm.SqliteAdapter('sqlite://../../mtc.sqlite')
 
 
 # load default test configuration

@@ -11,17 +11,17 @@ class Form(WForm):
     @QtCore.pyqtSlot()
     def on_buttonTestConnection_clicked(self):
         dbUri = getValue(self.dbUri)
-        from wic import orm
+        import orm
         ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
         try: # 'sqlite://../mtc.sqlite'
             db = orm.connect(dbUri, ADAPTERS)
             if db is None:
                 raise orm.ConnectionError('Could not find suitable DB adapter for the protocol specified.')
             db.execute('SELECT 1;')
-        except orm.ConnectionError as exc:
-            QtGui.QMessageBox.warning(self, 'Failure', 'Connection failure:\n%s' % exc)
+        except Exception as exc:
+            QtGui.QMessageBox.warning(self, 'Failure', '<b>Connection failure</b><br>%s\n%s' % (dbUri, exc))
         else:
-            QtGui.QMessageBox.information(self, 'Success', 'The connection was successfully tested.')
+            QtGui.QMessageBox.information(self, 'Success', '<b>Connection success</b><br>%s' % dbUri)
         
     def on_buttonBox_accepted(self):
         print('accepted')

@@ -1,19 +1,24 @@
 import sys, os
 from PyQt4 import QtCore, QtGui
-from wic import w
+
 import wic
+from wic import w
+import orm
+from wic.forms import openForm, openCatalogItemForm
 
 
-def on_SystemStart(): # предопределенная процедура запускаемая при начале работы системы
+def on_SystemStart(): # предопределенная процедура запускаемая при начале работы системы - when the core is ready
     w.statusBar.showMessage('Готов...', 5000)
     w.printMessage('<b><span style="color: green">Система запущена.</span> Добро пожаловать!</b>', True, False)
     w.printMessage('Каталог приложения: ' + wic.appDir, False, False)
     w.printMessage('Каталог конфигурации: ' + w.confDir, False, False)
 
-    from wic.forms import openForm, openCatalogItemForm
+    global db
+    db = orm.SqliteAdapter('sqlite://../../mtc.sqlite')
+
     from conf.catalogs.persons import Persons
     openForm('conf.reports.test')
-    for person in Persons.get(wic.db, where= (Persons.last_name == 'Varvariuc'), limit= (0,5)):
+    for person in Persons.get(db, where= (Persons.last_name == 'Varvariuc'), limit= (0,5)):
         openCatalogItemForm(person)
 
     
