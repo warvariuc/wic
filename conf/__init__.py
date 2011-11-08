@@ -18,8 +18,10 @@ def on_SystemStart(): # предопределенная процедура за
 
     from conf.catalogs.persons import Persons
     openForm('conf.reports.test')
-    for person in Persons.get(db, where= (Persons.last_name == 'Varvariuc'), limit= (0,5)):
+    for person in Persons.get(db, where= (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit= (0,5)):
         openCatalogItemForm(person)
+    
+    w.printMessage(db.getLastQuery())
 
     
 def on_systemAboutToExit(): # предопределенная процедура запускаемая при завершении работы системы

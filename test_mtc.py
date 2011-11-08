@@ -1,7 +1,7 @@
 from pprint import pprint
 
-from wic import orm
-from wic.orm import Join, LeftJoin
+import orm
+from orm import Join, LeftJoin
 
 
 class Regions(orm.Model):
@@ -134,5 +134,7 @@ db = dbAdapter
 
 #pprint(db._update(Persons.phone_prefix(Persons.phone_prefix + 1), where= (Persons.id == 1))) # UPDATE persons SET phone_prefix= (persons.phone_prefix + 1) WHERE (persons.id = 1); 
 
-for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
-    print(str(person), str(Locations.getOneById(db, person.location_id)))
+#for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
+#    print(str(person), str(Locations.getOneById(db, person.location_id)))
+pprint(db.select(Persons, where= (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit= (0,5))) 
+print(db.getLastQuery(), '\n')

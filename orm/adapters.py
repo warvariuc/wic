@@ -127,6 +127,13 @@ class GenericAdapter():
     def MIN(self, expression):
         return 'MIN(%s)' % self.render(expression)
     
+    def LOWER(self, expression):
+        return 'LOWER(%s)' % self.render(expression)
+
+    def UPPER(self, expression):
+        return 'UPPER(%s)' % self.render(expression)
+
+    
     def render(self, value, castField= None):
         '''Render of a value in a format suitable for operations with this DB field'''
         if isinstance(value, orm.fields.Expression): # it's an expression

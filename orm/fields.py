@@ -208,9 +208,17 @@ def COUNT(expression, distinct= False):
     return Expression('COUNT', expression, distinct= distinct)
 
 def MAX(expression):
-    assert isinstance(expression, orm.Expression), 'MAX argument must be a Field or an Expression.'
+    assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
     return Expression('MAX', expression)
 
 def MIN(expression):
-    assert isinstance(expression, orm.Expression), 'MIN argument must be a Field or an Expression.'
+    assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
     return Expression('MIN', expression)
+
+def UPPER(expression):
+    assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
+    return Expression('UPPER', expression)
+
+def LOWER(expression):
+    assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
+    return Expression('LOWER', expression)
