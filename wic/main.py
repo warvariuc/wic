@@ -34,14 +34,6 @@ sys.excepthook = exception_hook # set our exception hook
 
 
 
-def loadTestConf(): # load default test configuration
-    #from wic import w
-    #w.loadConf(os.path.join(QtGui.qApp.appDir, '..', 'conf/'))
-    from wic.forms import openForm, openCatalogItemForm
-    from conf.catalogs.persons import Persons
-    openForm('conf.reports.test')
-    openCatalogItemForm(Persons(db= wic.db))
-
 
 app = wic.app = w_app.WApp(sys.argv)
 appDir = QtGui.qApp.appDir = os.path.dirname(os.path.abspath(__file__))
@@ -54,6 +46,8 @@ from wic import orm
 wic.db = orm.SqliteAdapter('sqlite://../../mtc.sqlite')
 
 
-QtCore.QTimer.singleShot(0, loadTestConf) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
+# load default test configuration
+import conf
+QtCore.QTimer.singleShot(0, conf.on_SystemStart) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
 
 app.exec() # start the event loop
