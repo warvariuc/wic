@@ -59,33 +59,6 @@ class WForm(QtGui.QDialog):
     
 
 
-def setValue(widget, value):
-    '''.'''        
-    if isinstance(widget, QtGui.QTextEdit): 
-        widget.setPlainText(value)
-    elif isinstance(widget, QtGui.QCheckBox): 
-        #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
-        widget.setChecked(value)
-        #widget.blockSignals(False) 
-    elif isinstance(widget, (WDateEdit, WDecimalEdit, QtGui.QSpinBox)):
-        widget.setValue(value)
-    elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
-        widget.setText(value)
-
-def getValue(widget):
-    if isinstance(widget, QtGui.QTextEdit): 
-        return widget.plainText()
-    elif isinstance(widget, QtGui.QCheckBox): 
-        return widget.isChecked()
-    elif isinstance(widget, (WDateEdit, WDecimalEdit)): 
-        return widget.value
-    elif isinstance(widget, QtGui.QSpinBox): 
-        return widget.value()
-    elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
-        return widget.text()
-
-
-
 def openForm(formModulePath, formClassName= 'Form'):
     formModule = importlib.import_module(formModulePath)
     FormClass = getattr(formModule, formClassName)
@@ -140,21 +113,34 @@ class CatalogForm(WForm):
                 labelName = 'label_' + fieldName
                 label = QtGui.QLabel(fieldName)
                 label.setObjectName(labelName)
-                fieldValue = catalogItem[field]
-                widget = QtGui.QLineEdit(str(fieldValue))
+                widget = QtGui.QLineEdit()
                 widget.setObjectName(fieldName)
+                setattr(self, fieldName, widget)
                 label.setBuddy(widget)
                 formLayout.addRow(label, widget)
             
-            buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Apply | QtGui.QDialogButtonBox.Cancel)
-            saveButton = buttonBox.button(buttonBox.Apply)
-            saveButton.setText('Save')
-            saveButton.setIcon(QtGui.QIcon(':/icons/fugue/disk-black.png'))
+            buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Reset | QtGui.QDialogButtonBox.Save | QtGui.QDialogButtonBox.Cancel)
+            saveButton = buttonBox.button(buttonBox.Save)
+            buttonBox.addButton(saveButton, buttonBox.ApplyRole)
             saveButton.clicked.connect(self.save)
             buttonBox.rejected.connect(self.reject)
             formLayout.addRow(buttonBox)
             saveShortCut = QtGui.QShortcut(QtGui.QKeySequence('F2'), self)
             saveShortCut.activated.connect(saveButton.animateClick)
+            resetButton = buttonBox.button(buttonBox.Reset)
+            resetButton.clicked.connect(self.fillFormFromItem)
+            
+        self.fillFormFromItem()
+
+    def fillFormFromItem(self):
+        'Automatically fill the form fields using values from the catalog item fields.'
+        catalogItem = self.catalogItem
+        for field in catalogItem.__class__:
+            fieldName = field.name
+            fieldValue = catalogItem[field]
+            widget = getattr(self, fieldName)
+            setValue(widget, fieldValue)
+        
             
     def save(self):
         ''
@@ -162,7 +148,39 @@ class CatalogForm(WForm):
 
 
         
-        
+def createWidgetFromField(field, fieldValue):
+    assert isinstance(field, orm.Field), 'Pass a Field instance.'
+    if isinstance(field, orm.StringField):
+        widget = QtGui.QTextEdit()
+        widget.setMaxLength(field.maxLength)
+
+
+def setValue(widget, value):
+    '''Set value of a widget.'''        
+    if isinstance(widget, QtGui.QTextEdit): 
+        widget.setPlainText(str(value))
+    elif isinstance(widget, QtGui.QCheckBox): 
+        #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
+        widget.setChecked(value)
+        #widget.blockSignals(False) 
+    elif isinstance(widget, (WDateEdit, WDecimalEdit, QtGui.QSpinBox)):
+        widget.setValue(value)
+    elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
+        widget.setText(str(value))
+
+def getValue(widget):
+    if isinstance(widget, QtGui.QTextEdit): 
+        return widget.plainText()
+    elif isinstance(widget, QtGui.QCheckBox): 
+        return widget.isChecked()
+    elif isinstance(widget, (WDateEdit, WDecimalEdit)): 
+        return widget.value
+    elif isinstance(widget, QtGui.QSpinBox): 
+        return widget.value()
+    elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
+        return widget.text()
+
+
 def putToForm(data, uiFilePath, dialog):
     'Загрузить форму с диска, заполнить поля данными data и вернуть форму'
     dialog = uic.loadUi(uiFilePath, QtGui.QDialog(dialog))

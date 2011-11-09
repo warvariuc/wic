@@ -105,6 +105,8 @@ class Field(Expression):
         
 
 class StringField(Field):
+    maxLength = 0
+    
     def _init(self, maxLength, defaultValue= None, index= ''):
         super()._init(orm.adapters.Column(self.name, 'char', self, maxLength= maxLength), 
                       defaultValue, index)
@@ -115,6 +117,8 @@ class StringField(Field):
 
 
 class IntegerField(Field):
+    maxDigits = 19
+    
     def _init(self, bytesCount, defaultValue= None, autoincrement= False, index=''):
         super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= bytesCount, 
                                           autoincrement= autoincrement), defaultValue, index)

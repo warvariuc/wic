@@ -53,7 +53,7 @@
     <rect>
      <x>10</x>
      <y>30</y>
-     <width>151</width>
+     <width>171</width>
      <height>27</height>
     </rect>
    </property>
@@ -90,8 +90,14 @@
      <x>290</x>
      <y>260</y>
      <width>75</width>
-     <height>23</height>
+     <height>27</height>
     </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
    </property>
    <property name="text">
     <string>Закрыть</string>
@@ -103,7 +109,7 @@
      <x>10</x>
      <y>260</y>
      <width>75</width>
-     <height>23</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="text">
