@@ -85,7 +85,8 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         self.move(pos)
         
     def accepted(self):
-        if self.persistent: return
+        if self.persistent: 
+            return
         if isinstance(self.parent(), WDateEdit):
             qDate = self.calendarWidget.selectedDate()
             self.parent().setText(str(Date(qDate.year(), qDate.month(), qDate.day())))
@@ -100,7 +101,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
                     if not self.persistent:
                         self.accepted()
                         return True 
-                elif key in (QtCore.Qt.Key_Escape, QtCore.Qt.Key_Insert): # pressing again Insert closes popup calendar
+                elif key == QtCore.Qt.Key_Escape:
                     if not self.persistent:
                         self.close()
                         return True

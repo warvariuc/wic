@@ -109,23 +109,20 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
         self.close()
         
     def keyPressEvent(self, keyEvent):
-        buttonName = ''
+        buttonName = None
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
             key = keyEvent.key()
-            if key in (QtCore.Qt.Key_Escape, QtCore.Qt.Key_Insert):
+            if key == QtCore.Qt.Key_Escape:
                 if not self.persistent:
                     self.close()
                     return
-            try: buttonName = self.keysBindings[key] #check a non-text pressed key
-            except KeyError: pass
+            buttonName = self.keysBindings.get(key) #check a non-text pressed key
         if not buttonName: #check a text pressed key
-            try: buttonName = self.keysBindings[keyEvent.text()] 
-            except KeyError: pass
+            buttonName = self.keysBindings.get(keyEvent.text())
         if buttonName:
             getattr(self, buttonName).animateClick() #call the method
-            return
-        
-        super().keyPressEvent(keyEvent) 
+        else:
+            super().keyPressEvent(keyEvent) 
 
     def event(self, event):
         if event.type() == QtCore.QEvent.WindowDeactivate and not self.persistent: # стандартный попап меня пока не устраивает - 'слишком' модальный
