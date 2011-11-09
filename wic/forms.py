@@ -113,8 +113,9 @@ class CatalogForm(WForm):
                 labelName = 'label_' + fieldName
                 label = QtGui.QLabel(fieldName)
                 label.setObjectName(labelName)
-                widget = QtGui.QLineEdit()
-                widget.setObjectName(fieldName)
+                #widget = QtGui.QLineEdit()
+                widget = createWidgetFromField(field)
+                #widget.setObjectName(fieldName)
                 setattr(self, fieldName, widget)
                 label.setBuddy(widget)
                 formLayout.addRow(label, widget)
@@ -148,12 +149,22 @@ class CatalogForm(WForm):
 
 
         
-def createWidgetFromField(field, fieldValue):
+def createWidgetFromField(field):
     assert isinstance(field, orm.Field), 'Pass a Field instance.'
     if isinstance(field, orm.StringField):
-        widget = QtGui.QTextEdit()
+        widget = QtGui.QLineEdit()
         widget.setMaxLength(field.maxLength)
-
+    elif isinstance(field, orm.IntegerField):
+        widget = WDecimalEdit()
+        #widget.setTotalDigits(value)
+        widget.setFractionDigits(0)
+    elif isinstance(field, orm.IdField):
+        widget = WDecimalEdit()
+        #widget.setTotalDigits(value)
+        widget.setFractionDigits(0)
+    else:
+        raise Exception('Could not find a widget for field %s' % field)
+    return widget
 
 def setValue(widget, value):
     '''Set value of a widget.'''        
