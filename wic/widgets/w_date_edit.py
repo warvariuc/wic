@@ -67,7 +67,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
     def positionPopup(self): # taken from QtCore.QDatetimeedit.cpp
         parent = self.parent()
         if isinstance(parent, WDateEdit):
-            pos = parent.mapToGlobal(parent.rect().bottomLeft())
+            pos = parent.mapToGlobal(parent.rect().bottomLeft()) # bottom left corner of the lineedit widget
             screen = QtGui.QApplication.desktop().availableGeometry()
     
             y = pos.y()
