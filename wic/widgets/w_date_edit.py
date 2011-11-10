@@ -64,25 +64,19 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         months = (year - self.calendarWidget.selectedDate().year()) * 12 + month - self.calendarWidget.selectedDate().month()
         self.calendarWidget.setSelectedDate(self.calendarWidget.selectedDate().addMonths(months))
 
-    def event(self, event):
-        if event.type() == QtCore.QEvent.WindowDeactivate and not self.persistent: # стандартный попап меня пока не устраивает
-            self.close() 
-            return True # should return true if the event was recognized and processed
-        return super().event(event)
-
     def positionPopup(self): # taken from QtCore.QDatetimeedit.cpp
         parent = self.parent()
-        if not isinstance(parent, WDateEdit): return
-        pos = parent.mapToGlobal(parent.rect().bottomLeft())
-        screen = QtGui.QApplication.desktop().availableGeometry()
-
-        y = pos.y()
-        if y > screen.bottom() - self.height():
-            y = parent.mapToGlobal(parent.rect().topLeft()).y() - self.height()
-        
-        pos.setX(max(screen.left(), min(screen.right() - self.width(), pos.x())))
-        pos.setY(max(screen.top(), y))
-        self.move(pos)
+        if isinstance(parent, WDateEdit):
+            pos = parent.mapToGlobal(parent.rect().bottomLeft())
+            screen = QtGui.QApplication.desktop().availableGeometry()
+    
+            y = pos.y()
+            if y > screen.bottom() - self.height():
+                y = parent.mapToGlobal(parent.rect().topLeft()).y() - self.height()
+            
+            pos.setX(max(screen.left(), min(screen.right() - self.width(), pos.x())))
+            pos.setY(max(screen.top(), y))
+            self.move(pos)
         
     def accepted(self):
         if self.persistent: 
@@ -134,6 +128,7 @@ class WDateEdit(QtGui.QLineEdit):
     def __init__(self, parent= None):
         super().__init__(parent)
         #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setAlignment(QtCore.Qt.AlignRight)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.selector = QtGui.QToolButton(self)
@@ -154,6 +149,18 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height()) / 2)
                       
+    def getShowSelector(self):
+        return not self.selector.isHidden() # notice that isVisible() is not used (because widget can be non visible but not hidden)        
+    def setShowSelector(self, value):
+        self.selector.setVisible(value)
+        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
+        paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0)
+        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % paddingRight)
+        fm = QtGui.QFontMetrics(self.font()) # font metrics
+        self.setMinimumSize(fm.width(str(Date.today())) + self.selector.sizeHint().height() + borderWidth * 2,
+                max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
+    showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
+
     def handleTextChanged(self, txt):
         txt = list(str(txt))
         curPos = self.cursorPosition()
@@ -203,7 +210,9 @@ class WDateEdit(QtGui.QLineEdit):
         super().keyPressEvent(keyEvent)
 
     def focusOutEvent(self, focusEvent):
-        self.applyCurrentValue()
+        'Check for changes when leaving the widget'
+        if focusEvent.reason() != QtCore.Qt.PopupFocusReason: # контекстное меню выскочило или еще что
+            self.applyCurrentValue()
         super().focusOutEvent(focusEvent)
     
     def wheelEvent(self, wheelEvent):
@@ -232,18 +241,6 @@ class WDateEdit(QtGui.QLineEdit):
         self.selectAll()
         WCalendarPopup(self).show()
 
-    def getShowSelector(self):
-        return not self.selector.isHidden() # notice that isVisible() is not used (because widget can be non visible but not hidden)        
-    def setShowSelector(self, value):
-        self.selector.setVisible(value)
-        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
-        paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0) 
-        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % paddingRight)
-        fm = QtGui.QFontMetrics(self.font()) # font metrics
-        self.setMinimumSize(fm.width(str(Date.today())) + self.selector.sizeHint().height() + borderWidth * 2,
-                max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
-    showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
-
     def getValue(self): 
         return self._date
     def setValue(self, value):
@@ -265,12 +262,12 @@ class WDateEdit(QtGui.QLineEdit):
         if self._date != currentValue or force:
             self._date = currentValue
             self.edited.emit()
-        if not currentValue:
-            for char in self.text():
-                if char.isdigit():
-                    self.setStyleSheet('QLineEdit { background-color: yellow }')
-                    return
-        self.setStyleSheet('QLineEdit { background-color: white }')
+#        if not currentValue:
+#            for char in self.text():
+#                if char.isdigit():
+#                    self.setStyleSheet('QLineEdit { background-color: yellow }')
+#                    return
+#        self.setStyleSheet('QLineEdit { background-color: white }')
             
 
 

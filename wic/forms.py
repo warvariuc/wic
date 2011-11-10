@@ -154,14 +154,9 @@ def createWidgetFromField(field):
     if isinstance(field, orm.StringField):
         widget = QtGui.QLineEdit()
         widget.setMaxLength(field.maxLength)
-    elif isinstance(field, orm.IntegerField):
-        widget = WDecimalEdit()
-        #widget.setTotalDigits(value)
-        widget.setFractionDigits(0)
-    elif isinstance(field, orm.IdField):
-        widget = WDecimalEdit()
-        #widget.setTotalDigits(value)
-        widget.setFractionDigits(0)
+    elif isinstance(field, (orm.IntegerField, orm.IdField)):
+        widget = QtGui.QLineEdit()
+        widget.setValidator(QtGui.QIntValidator())
     else:
         raise Exception('Could not find a widget for field %s' % field)
     return widget

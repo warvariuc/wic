@@ -20,6 +20,7 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
     def __init__(self, parent, persistent= False):
         if not parent: 
             persistent = True
+        self.persistent = persistent
         windowStyle = QtCore.Qt.Tool if persistent else QtCore.Qt.Popup #Window | QtCore.Qt.CustomizeWindowHint
         super().__init__(parent, windowStyle)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose) # освобождать память - надо исследовать этот вопрос
@@ -33,26 +34,28 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
             self.value = Dec(0)
         
         self.positionPopup()
-        self.persistent = persistent
         self.okButton.setDisabled(persistent)
         self.display.setText(WDecimalEdit.regularNotation(self.value))
 
+        bindings = {'0': self.digitButton_0, '1': self.digitButton_1,
+                    '2': self.digitButton_2, '3': self.digitButton_3,
+                    '4': self.digitButton_4, '5': self.digitButton_5,
+                    '6': self.digitButton_6, '7': self.digitButton_7,
+                    '8': self.digitButton_8, '9': self.digitButton_9,
+                    '.': self.pointButton, '+/-': self.changeSignButton,
+                    'b': self.backspaceButton, 'c': self.clearButton,
+                    '/': self.divideButton, '*': self.multiplyButton,
+                    '-': self.minusButton, '+': self.plusButton,
+                    '=': self.equalButton, 'sqrt': self.squareRootButton,
+                    'x**2': self.powerButton, '1/x': self.reciprocalButton,
+                    '%': self.percentButton}
         def bind(button, code):
             button.clicked.connect(lambda: self.buttonClicked(code))
-
-        bind(self.digitButton_0, '0'); bind(self.digitButton_1, '1')
-        bind(self.digitButton_2, '2'); bind(self.digitButton_3, '3')
-        bind(self.digitButton_4, '4'); bind(self.digitButton_5, '5')
-        bind(self.digitButton_6, '6'); bind(self.digitButton_7, '7')
-        bind(self.digitButton_8, '8'); bind(self.digitButton_9, '9')
-        bind(self.pointButton, '.'); bind(self.changeSignButton, '+/-')
-        bind(self.backspaceButton, 'b'); bind(self.clearButton, 'c')
-        bind(self.divideButton, '/'); bind(self.multiplyButton, '*')
-        bind(self.minusButton, '-'); bind(self.plusButton, '+')
-        bind(self.equalButton, '='); bind(self.squareRootButton, 'sqrt')
-        bind(self.powerButton, 'x**2'); bind(self.reciprocalButton, '1/x')
-        bind(self.percentButton, '%')
+        for code, button in bindings.items():
+            bind(button, code)
+            
         self.okButton.clicked.connect(self.okButtonClicked)
+
  
     def buttonClicked(self, code):
         expr = str(self.display.text())
@@ -62,18 +65,18 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
         elif code == 'c': # clear
             self.calculateResult('')
         elif code == '+/-':
-            self.calculateResult('-(' + expr + ')')
+            self.calculateResult('-(%s)' % expr)
         elif code == 'sqrt':
-            self.calculateResult('(' + expr + ').sqrt()')
+            self.calculateResult('(%s).sqrt()' % expr)
         elif code == 'x**2':
-            self.calculateResult('(' + expr + ')**2')
+            self.calculateResult('(%s)**2' % expr)
         elif code == '.':
             if expr[-1:] != '%':
                 parts = re.split('([' + re.escape(self.operators) + '])', expr)
                 if '.' not in parts[-1]: #проверим, если последнее введенное число уже содержит точку
                     self.display.setText(expr + '.')
         elif code == '1/x':
-            self.calculateResult('1/(' + expr + ')')
+            self.calculateResult('1/(%s)' % expr)
         elif code == '=':
             self.calculateResult(expr)
         elif code in self.operators: 
@@ -105,7 +108,7 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
     def okButtonClicked(self):
         self.calculateResult(str(self.display.text()))
         self.parent().value = self.display.text()
-        self.parent().applyCurrentValue(force=True)
+        self.parent().applyCurrentValue(force= True)
         self.close()
         
     def keyPressEvent(self, keyEvent):
@@ -124,11 +127,6 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
         else:
             super().keyPressEvent(keyEvent) 
 
-    def event(self, event):
-        if event.type() == QtCore.QEvent.WindowDeactivate and not self.persistent: # стандартный попап меня пока не устраивает - 'слишком' модальный
-            self.close() 
-        return super().event(event)
-        
     def positionPopup(self): # taken from qdatetimeedit.cpp
         parent = self.parent()
         if isinstance(parent, WDecimalEdit): 
@@ -160,6 +158,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.selector.setCursor(QtCore.Qt.ArrowCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
+        
         self.selector.clicked.connect(self.popupCalculator)
         self.textChanged.connect(self.handleTextChanged)
         
@@ -194,18 +193,6 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.handleTextChanged(self.text())
     fractionDigits = QtCore.pyqtProperty(int, getFractionDigits, setFractionDigits)
 
-    def getShowSelector(self): 
-        return not self.selector.isHidden()
-    def setShowSelector(self, value):
-        self.selector.setVisible(value)
-        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
-        paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0) 
-        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % paddingRight)
-        fm = QtGui.QFontMetrics(self.font()) # font metrics
-        self.setMinimumSize(fm.width(str('0.00')) + self.selector.sizeHint().height() + borderWidth * 2,
-                   max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
-    showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
-
     def getNonNegative(self): 
         return self._nonNegative
     def setSetNonegative(self, value): 
@@ -237,6 +224,18 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.selector.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height()) / 2)
     
+    def getShowSelector(self): 
+        return not self.selector.isHidden()
+    def setShowSelector(self, value):
+        self.selector.setVisible(value)
+        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
+        paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0) 
+        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % paddingRight)
+        fm = QtGui.QFontMetrics(self.font()) # font metrics
+        self.setMinimumSize(fm.width(str('0.00')) + self.selector.sizeHint().height() + borderWidth * 2,
+                   max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
+    showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
+
     def mouseDoubleClickEvent(self, mouseEvent):
         if mouseEvent.button() == QtCore.Qt.LeftButton:
             self.selectAll() # select all on double click, otherwise only group of digits will be selected
