@@ -7,7 +7,7 @@ import orm
 from wic.forms import openForm, openCatalogItemForm
 
 
-def on_SystemStart(): # предопределенная процедура запускаемая при начале работы системы - when the core is ready
+def on_systemStart(): # предопределенная процедура запускаемая при начале работы системы - when the core is ready
     w.statusBar.showMessage('Готов...', 5000)
     w.printMessage('<b><span style="color: green">Система запущена.</span> Добро пожаловать!</b>', True, False)
     w.printMessage('Каталог приложения: ' + wic.appDir, False, False)

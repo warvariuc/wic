@@ -1,4 +1,4 @@
-import sys, os, importlib
+import sys, os
 from PyQt4 import QtCore, QtGui
 
 
@@ -45,6 +45,6 @@ wic.messagesWindow = mainWindow.messagesWindow
 
 # load default test configuration
 import conf
-QtCore.QTimer.singleShot(0, conf.on_SystemStart) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
+QtCore.QTimer.singleShot(0, conf.on_systemStart) # когда начнет работать очередь сообщений - загрузить тестовую конфигурацию
 
 app.exec() # start the event loop

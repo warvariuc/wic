@@ -50,7 +50,6 @@ class WMainWindow(QtGui.QMainWindow):
                     None, 
                     self.createAction('База данных…', self.editDbInfo, None, ':/icons/fugue/database.png',
                                       'Параметры соединения с базой данных'), 
-                    self.createAction('Дизайнер конфигурации', self.showDesigner, 'Alt+F11', ':/icons/fugue/block.png'),
                     self.createAction('Дизайнер форм', self.openQtDesigner, None, ':/icons/fugue/application-form.png',
                                       'Запустить дизайнер с кастомными виджетами'))
         )            
@@ -94,9 +93,6 @@ class WMainWindow(QtGui.QMainWindow):
         from wic.forms import openForm
         openForm('wic.help_about')
         
-    def showDesigner(self):
-        __import__('w').loadModule(os.path.join(QtGui.qApp.appDir, 'designer.py'))
-
     def showCalculator(self):
         from wic.widgets import w_decimal_edit
         w_decimal_edit.WPopupCalculator(self, persistent= True).show()

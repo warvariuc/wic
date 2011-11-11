@@ -130,14 +130,14 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
     def positionPopup(self): # taken from qdatetimeedit.cpp
         parent = self.parent()
         if isinstance(parent, WDecimalEdit): 
-            pos = parent.mapToGlobal(parent.rect().bottomLeft())
+            pos = parent.mapToGlobal(parent.rect().bottomRight())
             screen = QtGui.QApplication.desktop().availableGeometry()
     
             y = pos.y()
             if y > screen.bottom() - self.height():
                 y = parent.mapToGlobal(parent.rect().topLeft()).y() - self.height()
             
-            pos.setX(max(screen.left(), min(screen.right() - self.width(), pos.x())))
+            pos.setX(max(screen.left(), min(screen.right() - self.width(), pos.x() - self.width())))
             pos.setY(max(screen.top(), y))
             self.move(pos)
         

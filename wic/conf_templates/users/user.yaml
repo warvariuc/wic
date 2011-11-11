@@ -1,7 +1,0 @@
-canChangePassword: true
-description: ''
-identifier: Пользователь
-name: ''
-password: ''
-password_hash: ''
-showInList: true
