@@ -74,46 +74,46 @@ class GenericAdapter():
     def execute(self, *args, **kwargs):
         return self.logExecute(*args, **kwargs)
 
-    def AND(self, left, right):
+    def _AND(self, left, right):
         '''Render the AND clause.'''
         return '(%s AND %s)' % (self.render(left), self.render(right, left))
 
-    def OR(self, left, right):
+    def _OR(self, left, right):
         '''Render the OR clause.'''
         return '(%s OR %s)' % (self.render(left), self.render(right, left))
     
-    def EQ(self, left, right):
+    def _EQ(self, left, right):
         if right is None:
             return '(%s IS NULL)' % self.render(left)
         return '(%s = %s)' % (self.render(left), self.render(right, left))
 
-    def NE(self, left, right):
+    def _NE(self, left, right):
         if right is None:
             return '(%s IS NOT NULL)' % self.render(left)
         return '(%s <> %s)' % (self.render(left), self.render(right, left))
 
-    def GT(self, left, right):
+    def _GT(self, left, right):
         return '(%s > %s)' % (self.render(left), self.render(right, left))
 
-    def GE(self, left, right):
+    def _GE(self, left, right):
         return '(%s >= %s)' % (self.render(left), self.render(right, left))
 
-    def LT(self, left, right):
+    def _LT(self, left, right):
         return '(%s < %s)' % (self.render(left), self.render(right, left))
 
-    def LE(self, left, right):
+    def _LE(self, left, right):
         return '(%s <= %s)' % (self.render(left), self.render(right, left))
 
-    def ADD(self, left, right):
+    def _ADD(self, left, right):
         return '(%s + %s)' % (self.render(left), self.render(right, left))
     
-    def IN(self, first, second):
+    def _IN(self, first, second):
         if isinstance(second, str):
             return '(%s IN (%s))' % (self.render(first), second[:-1])
         items = ', '.join(self.render(item, first) for item in second)
         return '(%s IN (%s))' % (self.render(first), items)
 
-    def COUNT(self, expression):
+    def _COUNT(self, expression):
         expression = '*' if orm.isModel(expression) else self.render(expression)
         distinct = getattr(expression, 'distinct', False)
         if distinct:
@@ -121,16 +121,16 @@ class GenericAdapter():
         else:
             return 'COUNT(%s)' % expression
 
-    def MAX(self, expression):
+    def _MAX(self, expression):
         return 'MAX(%s)' % self.render(expression)
     
-    def MIN(self, expression):
+    def _MIN(self, expression):
         return 'MIN(%s)' % self.render(expression)
     
-    def LOWER(self, expression):
+    def _LOWER(self, expression):
         return 'LOWER(%s)' % self.render(expression)
 
-    def UPPER(self, expression):
+    def _UPPER(self, expression):
         return 'UPPER(%s)' % self.render(expression)
 
     
@@ -155,7 +155,7 @@ class GenericAdapter():
         
     def _render(self, value, column):
         if value is None:
-            return self.NULL()
+            return self._NULL()
         if isinstance(column, Column):
             renderFunc = getattr(self, 'render' + column.type.capitalize(), None)
             if hasattr(renderFunc, '__call__'): 
@@ -173,7 +173,7 @@ class GenericAdapter():
         for field in table:
             column = field.column
             if column is not None:
-                colFunc = getattr(self, 'type' + column.type.capitalize())
+                colFunc = getattr(self, '_' + column.type.upper())
                 columnType = colFunc(**column.props)
                 columns.append('%s %s' % (column.name, columnType))
         return columns
@@ -217,13 +217,13 @@ class GenericAdapter():
         query += '\n) ' + other + ';'
         return query
 
-    def NULL(self):   
+    def _NULL(self):   
         return 'NULL'
         
-    def RANDOM(self):
+    def _RANDOM(self):
         return 'RANDOM()'
 
-    def typeInt(self, bytesCount= 4, intMap= [(1, 'TINYINT'), (2, 'SMALLINT'), 
+    def _INT(self, bytesCount= 4, intMap= [(1, 'TINYINT'), (2, 'SMALLINT'), 
                     (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')], autoincrement= False, **kwargs):
         '''INT column type.'''
         for _bytesCount, _columnType in intMap:
@@ -244,19 +244,21 @@ class GenericAdapter():
     def renderBlob(self, value):
         return base64.b64encode(str(value))
     
-    def typeDecimal(self, maxDigits, decimalPlaces= 0, **kwargs):
-        '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). The ranges of values for the arguments in MySQL 5.1 are as follows:
-        M is the maximum number of digits (the precision). It has a range of 1 to 65. (Older versions of MySQL permitted a range of 1 to 254.)
-        D is the number of digits to the right of the decimal point (the scale). It has a range of 0 to 30 and must be no larger than M.'''
-        return 'DECIMAL (%s, %s)' % (maxDigits, decimalPlaces)
-    
-    def typeChar(self, maxLength, lengthFixed= False, **kwargs):
+    def _CHAR(self, maxLength, lengthFixed= False, **kwargs):
         '''CHAR, VARCHAR'''
         if lengthFixed:
             return 'CHAR(%i)' % maxLength
         else:
             return 'VARCHAR(%i)' % maxLength
             
+    def _DECIMAL(self, maxDigits, decimalPlaces, **kwargs):
+        '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
+        The ranges of values for the arguments in MySQL 5.1 are as follows:
+        M is the maximum number of digits (the precision). It has a range of 1 to 65.
+        D is the number of digits to the right of the decimal point (the scale). 
+        It has a range of 0 to 30 and must be no larger than M.'''
+        return 'DECIMAL (%s, %s)' % (maxDigits, decimalPlaces)
+    
     def getExpressionTables(self, expression):
         '''Get tables involved in WHERE expression.'''
         tables = set()
@@ -316,7 +318,7 @@ class GenericAdapter():
         self.execute(sql)
         try:
             return self.cursor.rowcount
-        except:
+        except Exception:
             return None
 
     def _delete(self, table, where, limit= None):
@@ -330,7 +332,7 @@ class GenericAdapter():
         self.execute(sql)
         try:
             return self.cursor.rowcount
-        except:
+        except Exception:
             return None
 
     def _select(self, *args, where= None, orderBy= False, limit= False, 
@@ -679,7 +681,7 @@ class MysqlAdapter(GenericAdapter):
     def _getCreateTableOther(self, table):
         return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
     
-    def RANDOM(self):
+    def _RANDOM(self):
         return 'RAND()'
 
     def lastInsertId(self):

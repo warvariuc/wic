@@ -3,7 +3,7 @@ from pprint import pprint
 import orm
 
 
-class Authors(orm.Table):
+class Authors(orm.Model):
     '''Authors catalog'''
     _tableId = 1
     # id field is already present 
@@ -11,13 +11,13 @@ class Authors(orm.Table):
     last_name = orm.StringField(maxLength=100)
 
 
-class Books(orm.Table):
+class Books(orm.Model):
     '''Books catalog'''
     _tableId = 2
     # id field is already present 
     name = orm.StringField(maxLength=100, defaultValue='a very good book!!!')
-    price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00', index=True) # 2 decimal places
-    old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
+#    price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00', index=True) # 2 decimal places
+#    old_price = orm.DecimalFieldI(maxDigits=10, decimalPlaces=2, defaultValue='0.00') # 2 decimal places
     author_id = orm.RecordIdField('Authors', index=True)
 #    fan = orm.AnyRecordField(index=True) # None means that this field may contain reference to any other table in the DB
 

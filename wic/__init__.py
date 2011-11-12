@@ -1,9 +1,10 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 import sys, os
 
-if sys.hexversion < 0x03010000:
-    sys.exit("Python 3.1 or newer required.")
-
-appDir = os.path.dirname(os.path.abspath(__file__))
+pythonRequiredVersion = '3.2'
+if sys.version < pythonRequiredVersion:
+    sys.exit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
 try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
     import cdecimal
@@ -11,13 +12,13 @@ try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
 except ImportError: 
     pass
 
-from PyQt4 import QtGui
+appDir = os.path.dirname(os.path.abspath(__file__))
+
 from .widgets import w_widgets_rc # load resources (icons, etc.)
-from wic import w_app, w_main_window
+from . import w_app, w_main_window
 
 app = w_app.WApp(sys.argv)
-
-mainWindow = QtGui.qApp.mainWindow = w_main_window.WMainWindow()
+mainWindow = w_main_window.WMainWindow()
 messagesWindow = mainWindow.messagesWindow
 
 def exception_hook(excType, excValue, excTraceback): # Global function to catch unhandled exceptions (mostly in user modules)
@@ -39,6 +40,3 @@ def exception_hook(excType, excValue, excTraceback): # Global function to catch 
     mainWindow.messagesWindow.printMessage(info)
 
 sys.excepthook = exception_hook # set our exception hook
-
-mainWindow.show()
-#wic.app.exec() # start the event loop

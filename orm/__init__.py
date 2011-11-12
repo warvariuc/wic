@@ -1,8 +1,9 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
 import sys, os
 
-if sys.hexversion < 0x03010000:
-    raise SystemExit('At least Python 3.1 needed. Exiting.')
+pythonRequiredVersion = '3.2'
+if sys.version < pythonRequiredVersion:
+    sys.exit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
 
 import logging, inspect

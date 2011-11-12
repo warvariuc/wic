@@ -30,23 +30,23 @@ class Expression():
         self.__dict__.update(kwargs) # additional arguments
         
     def __and__(self, other): 
-        return Expression('AND', self, other)
+        return Expression('_AND', self, other)
     def __or__(self, other): 
-        return Expression('OR', self, other)
+        return Expression('_OR', self, other)
     def __eq__(self, other): 
-        return Expression('EQ', self, other)
+        return Expression('_EQ', self, other)
     def __ne__(self, other): 
-        return Expression('NE', self, other)
+        return Expression('_NE', self, other)
     def __gt__(self, other): 
-        return Expression('GT', self, other)
+        return Expression('_GT', self, other)
     def __ge__(self, other): 
-        return Expression('GE', self, other)
+        return Expression('_GE', self, other)
     def __lt__(self, other): 
-        return Expression('LT', self, other)
+        return Expression('_LT', self, other)
     def __le__(self, other): 
-        return Expression('LE', self, other)
+        return Expression('_LE', self, other)
     def __add__(self, other): 
-        return Expression('ADD', self, other)
+        return Expression('_ADD', self, other)
     
     def __neg__(self):
         '''-Field: sort DESC'''
@@ -59,7 +59,7 @@ class Expression():
     
     def IN(self, *items):
         '''The IN clause.''' 
-        return Expression('IN', self, items)
+        return Expression('_IN', self, items)
     
     def _render(self, adapter):
         '''Construct the text of the WHERE clause from this Expression.
@@ -120,7 +120,7 @@ class IntegerField(Field):
     maxDigits = 19
     
     def _init(self, bytesCount, defaultValue= None, autoincrement= False, index=''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= bytesCount, 
+        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= bytesCount, 
                                           autoincrement= autoincrement), defaultValue, index)
         self.bytesCount = bytesCount
         self.autoincrement = autoincrement
@@ -130,7 +130,7 @@ class DecimalFieldI(Field):
     '''Decimals stored as 8 byte INT (up to 18 digits).
     TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
     def _init(self, maxDigits, decimalPlaces, defaultValue, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 8), defaultValue, index)
+        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8), defaultValue, index)
         self.maxDigits = maxDigits
         self.decimalPlaces = decimalPlaces
     
@@ -147,13 +147,13 @@ class DecimalFieldI(Field):
 class IdField(Field):
     '''ID - implicitly present in each table.'''
     def _init(self):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 8, autoincrement= True), None, 'primary')
+        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8, autoincrement= True), None, 'primary')
         
 
 class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 8), None, index)
+        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8), None, index)
         self._referTable = referTable # foreign key - referenced type of table
         
     def getReferTable(self):
@@ -174,7 +174,7 @@ class RecordIdField(Field):
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
     def _init(self, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'int', self, bytesCount= 2), None, index)
+        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 2), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Model) or orm.isModel(value):
@@ -208,21 +208,21 @@ class AnyRecordField(Field):
 
 
 def COUNT(expression, distinct= False):
-    assert isinstance(expression, orm.Expression) or orm.isModel(expression), 'COUNT argument must be a Field, an Expression or a Table.'
-    return Expression('COUNT', expression, distinct= distinct)
+    assert isinstance(expression, orm.Expression) or orm.isModel(expression), 'Argument must be a Field, an Expression or a Table.'
+    return Expression('_COUNT', expression, distinct= distinct)
 
 def MAX(expression):
     assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
-    return Expression('MAX', expression)
+    return Expression('_MAX', expression)
 
 def MIN(expression):
     assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
-    return Expression('MIN', expression)
+    return Expression('_MIN', expression)
 
 def UPPER(expression):
     assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
-    return Expression('UPPER', expression)
+    return Expression('_UPPER', expression)
 
 def LOWER(expression):
     assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'
-    return Expression('LOWER', expression)
+    return Expression('_LOWER', expression)
