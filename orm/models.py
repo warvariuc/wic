@@ -225,14 +225,3 @@ class Model(metaclass= ModelMeta):
             ', '.join('%s= %r' % (field.name, getattr(self, field.name))
                        for field in self.__class__)) 
 
-
-
-def makeRecord(db, table, row, fields):
-    _fields = {}
-    for i, field in enumerate(fields.values()):
-        if isinstance(field, orm.Field) and field.table is table:
-            _fields[field.name] = row[i]
-    return table.new(db, **_fields)
-
-        
-

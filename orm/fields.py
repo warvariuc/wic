@@ -144,6 +144,22 @@ class DecimalFieldI(Field):
         return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
 
 
+class DecimalField(Field):
+    def _init(self, totalDigits, fractionDigits, defaultValue, index= ''):
+        super()._init(orm.adapters.Column(self.name, 'DECIMAL', self, totalDigits= totalDigits, fractionDigits= fractionDigits), defaultValue, index)
+        #self.totalDigits = totalDigits
+        #self.fractionDigits = fractionDigits
+    
+#    def _cast(self, value):
+#        if isinstance(value, Field):
+#            if not isinstance(value, DecimalFieldI):
+#                raise SyntaxError('Only DecimalFieldI cooperands are supported.')
+#            if value.decimalPlaces != self.decimalPlaces:
+#                raise SyntaxError('Cooperand field must have the same number of decimal places.')
+#            return value
+#        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
+
+
 class IdField(Field):
     '''ID - implicitly present in each table.'''
     def _init(self):

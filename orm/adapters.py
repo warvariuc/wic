@@ -160,7 +160,7 @@ class GenericAdapter():
             renderFunc = getattr(self, 'render' + column.type.capitalize(), None)
             if hasattr(renderFunc, '__call__'): 
                 return renderFunc(value)
-        return "'%s'" % value  
+        return "'%s'" % str(value).replace("'", "''") # escaping single quotes  
 
     def IntegrityError(self): 
         return self.driver.IntegrityError
@@ -239,7 +239,7 @@ class GenericAdapter():
         return str(int(value))
 
     def renderStr(self, value):
-        return "'%s'" % value
+        return "'%s'" % value.replace("'", "''")
 
     def renderBlob(self, value):
         return base64.b64encode(str(value))
@@ -247,17 +247,17 @@ class GenericAdapter():
     def _CHAR(self, maxLength, lengthFixed= False, **kwargs):
         '''CHAR, VARCHAR'''
         if lengthFixed:
-            return 'CHAR(%i)' % maxLength
+            return 'CHAR (%i)' % maxLength
         else:
-            return 'VARCHAR(%i)' % maxLength
+            return 'VARCHAR (%i)' % maxLength
             
-    def _DECIMAL(self, maxDigits, decimalPlaces, **kwargs):
+    def _DECIMAL(self, totalDigits, fractionDigits, **kwargs):
         '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
         It has a range of 0 to 30 and must be no larger than M.'''
-        return 'DECIMAL (%s, %s)' % (maxDigits, decimalPlaces)
+        return 'DECIMAL (%s, %s)' % (totalDigits, fractionDigits)
     
     def getExpressionTables(self, expression):
         '''Get tables involved in WHERE expression.'''
@@ -357,7 +357,7 @@ class GenericAdapter():
             elif isinstance(arg, orm.Join):
                 joins.append(arg)
             else:
-                raise SyntaxError('Uknown argument.')
+                raise SyntaxError('Uknown argument: %r' % arg)
                 
         if not fields: # if not fields specified take them all from the requested tables
             raise SyntaxError('Please indicate at least one field.')
@@ -639,7 +639,7 @@ class SqliteAdapter(GenericAdapter):
             table = index.fields[0].table
             indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, table, ', '.join(columns)))
             
-        return (';\n' + ';\n'.join(indexes)) if indexes else ''
+        return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''
 
     def columnInt(self, **kwargs):
         return 'INTEGER'

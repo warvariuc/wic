@@ -1,4 +1,5 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 import sys, os
 
 pythonRequiredVersion = '3.2'
@@ -8,7 +9,7 @@ if sys.version < pythonRequiredVersion:
 
 import logging, inspect
 
-logger = logging.getLogger("wic.orm")
+logger = logging.getLogger('wic.orm')
 
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
 _tablesCount = 0 
@@ -50,7 +51,6 @@ class metamethod():
 
 
 from .exceptions import *
-
 from .fields import Expression, Field, IdField, IntegerField, StringField, \
                     RecordIdField, AnyRecordField, COUNT, MAX, MIN, UPPER, LOWER
 from .models import Model, Index, Join, LeftJoin
@@ -65,4 +65,4 @@ def connect(uri, adapters):
         if uri.startswith(uriStart):
             dbAdapter = dbAdapterClass(uri[len(uriStart):])
             return dbAdapter
-
+    raise Exception('Could not find a suitable adapter for the URI ""%s' % uri)
