@@ -1,5 +1,4 @@
-from PyQt4 import QtGui, QtCore
-import os
+from PyQt4 import QtGui
 
 class WApp(QtGui.QApplication):
     def __init__(self, argv):
