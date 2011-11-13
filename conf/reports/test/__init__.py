@@ -5,7 +5,7 @@ from wic import w
 from wic.forms import WForm, setValue, getValue
 from datetime import date as Date
 from dateutil.relativedelta import relativedelta as RelDelta
-import conf as gM
+import conf as globalModule
 
 
 class Form(WForm):
@@ -48,7 +48,7 @@ class Form(WForm):
 
     @QtCore.pyqtSlot()
     def on_testGm_clicked(self):
-        gM.test()
+        globalModule.test()
 
     def on_dceTotalDigits_valueChanged(self, text):
         self.decimalEdit.setTotalDigits(int(text))
