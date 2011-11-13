@@ -3,6 +3,7 @@ from wic.widgets import ui_w_popup_calculator
 import re, decimal
 Dec = decimal.Decimal
 
+
 class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator):
     '''Popup calculator'''
     
@@ -50,16 +51,15 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
                     'x**2': self.powerButton, '1/x': self.reciprocalButton,
                     '%': self.percentButton}
         def bind(button, code):
-            button.clicked.connect(lambda: self.buttonClicked(code))
+            button.clicked.connect(lambda: self.on_buttonClicked(code))
         for code, button in bindings.items():
             bind(button, code)
             
-        self.okButton.clicked.connect(self.okButtonClicked)
-
  
-    def buttonClicked(self, code):
+    def on_buttonClicked(self, code):
         expr = str(self.display.text())
-        if expr == 'NaN': expr = '0'
+        if expr == 'NaN': 
+            expr = '0'
         if code == 'b': # backspace
             self.display.setText(expr[:-1]  if len(expr) != 1 else '0')
         elif code == 'c': # clear
@@ -105,25 +105,25 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
             result = eval(expr)
         self.display.setText(WDecimalEdit.regularNotation(result))
 
-    def okButtonClicked(self):
+    @QtCore.pyqtSlot()
+    def on_okButton_clicked(self):
         self.calculateResult(str(self.display.text()))
-        self.parent().value = self.display.text()
-        self.parent().applyCurrentValue(force= True)
+        self.parent().setValue(self.display.text(), emitEdited= True) 
         self.close()
         
     def keyPressEvent(self, keyEvent):
         buttonName = None
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
             key = keyEvent.key()
-            if key == QtCore.Qt.Key_Escape:
+            if key in (QtCore.Qt.Key_Escape, QtCore.Qt.Key_Insert):
                 if not self.persistent:
                     self.close()
                     return
-            buttonName = self.keysBindings.get(key) #check a non-text pressed key
-        if not buttonName: #check a text pressed key
+            buttonName = self.keysBindings.get(key) # check a non-text pressed key
+        if not buttonName: # check a text pressed key
             buttonName = self.keysBindings.get(keyEvent.text())
         if buttonName:
-            getattr(self, buttonName).animateClick() #call the method
+            getattr(self, buttonName).animateClick() # call the slot
         else:
             super().keyPressEvent(keyEvent) 
 
@@ -160,7 +160,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
         
         self.selector.clicked.connect(self.popupCalculator)
-        self.textChanged.connect(self.handleTextChanged)
+        self.textChanged.connect(self.onTextChanged)
         
         self.menu = QtGui.QMenu(self) # context menu
         self.menu.addAction(QtGui.QIcon(':/icons/calculator.png'), 'Калькулятор', self.popupCalculator, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
@@ -182,7 +182,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         assert isinstance(value, int), 'Pass an integer'
         self._totalDigits = max(value, 1)
         self._fractionDigits = min(self._fractionDigits, self._totalDigits)
-        self.handleTextChanged(self.text()) #to reflect changes
+        self.onTextChanged(self.text()) #to reflect changes
     totalDigits = QtCore.pyqtProperty(int, getTotalDigits, setTotalDigits) 
 
     def getFractionDigits(self): 
@@ -190,32 +190,34 @@ class WDecimalEdit(QtGui.QLineEdit):
     def setFractionDigits(self, value):
         self._fractionDigits = max(value, -1)
         self._totalDigits = max(self._totalDigits, self._fractionDigits)
-        self.handleTextChanged(self.text())
+        self.onTextChanged(self.text())
     fractionDigits = QtCore.pyqtProperty(int, getFractionDigits, setFractionDigits)
 
     def getNonNegative(self): 
         return self._nonNegative
     def setSetNonegative(self, value): 
         self._nonNegative = bool(value)
-        self.handleTextChanged(self.text())
+        self.onTextChanged(self.text())
     nonNegative = QtCore.pyqtProperty(bool, getNonNegative, setSetNonegative)
     
     def getSeparateThousands(self): 
         return self._separateThousands
     def setSeparateThousands(self, value): 
         self._separateThousands = bool(value)
-        self.handleTextChanged(self.text())
+        self.onTextChanged(self.text())
     separateThousands = QtCore.pyqtProperty(bool, getSeparateThousands, setSeparateThousands)
 
     def getValue(self): 
         return self._value
-    def setValue(self, value):
+    def setValue(self, value, emitEdited= False):
         value = Dec(str(value))
         if self._fractionDigits != -1:
             value = round(value, self._fractionDigits)
         self.setText(self.regularNotation(value))
         self.setCursorPosition(0)
         self._value = self.currentValue()
+        if emitEdited:
+            self.edited.emit()
     value = QtCore.pyqtProperty(float, getValue, setValue)
     
     def resizeEvent(self, event):
@@ -269,18 +271,13 @@ class WDecimalEdit(QtGui.QLineEdit):
                         self.setCursorPosition(1)
         super().keyPressEvent(keyEvent)
 
-#    def focusInEvent(self, focusEvent):
-#        super().focusInEvent(focusEvent)
-#        QtCore.QTimer.singleShot(0, self.selectAll)
-#        #self.selectAll()
-        
     def focusOutEvent(self, focusEvent):
         'Check for changes when leaving the widget'
         if focusEvent.reason() != QtCore.Qt.PopupFocusReason: # контекстное меню выскочило или еще что
             self.applyCurrentValue()
         super().focusOutEvent(focusEvent)
         
-    def handleTextChanged(self, txt):
+    def onTextChanged(self, txt):
         if self._isHandlingTextChanged: return
         self._isHandlingTextChanged = True
         if self._fractionDigits > 0: 
@@ -338,9 +335,6 @@ class WDecimalEdit(QtGui.QLineEdit):
         if negative and not self.nonNegative:# and self.currentValue(txt) != Dec(0):
             txt.insert(0, '-')
             curPos += 1
-#            self.setStyleSheet("color: red"); # show negative number in red
-#        else:
-#            self.setStyleSheet("color: black");
         self.setText(''.join(txt))
         self.setCursorPosition(curPos)
         self._isHandlingTextChanged = False
@@ -352,8 +346,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         currentValue = self.currentValue()
         self.setText(self.regularNotation(currentValue))
         if self._value != currentValue or force:
-            self._value = currentValue
-            self.edited.emit()
+            self.setValue(currentValue, emitEdited= True)
 
     def popupCalculator(self):
         self.selectAll()
@@ -363,9 +356,9 @@ class WDecimalEdit(QtGui.QLineEdit):
         return self.regularNotation(self.value)
 
     @staticmethod
-    def regularNotation(d):
-        d = '{:.14f}'.format(d).rpartition('.') # 14 цифр после запятой
-        return d if not d[1] else d[0] + (d[1] + d[2]).rstrip('.0') # убираем последние нули в дробной части
+    def regularNotation(value):
+        v = '{:.14f}'.format(value).rpartition('.') # 14 цифр после запятой
+        return v if not v[1] else v[0] + (v[1] + v[2]).rstrip('.0') # убираем последние нули в дробной части
         
     def contextMenuEvent(self, qContextMenuEvent):
         self.selectAll()

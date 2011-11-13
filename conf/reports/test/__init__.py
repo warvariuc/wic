@@ -3,7 +3,8 @@ from PyQt4 import QtCore, QtGui
 
 from wic import w
 from wic.forms import WForm, setValue, getValue
-from wic.widgets.w_date import Date
+from datetime import date as Date
+from dateutil.relativedelta import relativedelta as RelDelta
 import conf as gM
 
 
@@ -17,7 +18,7 @@ class Form(WForm):
         
         self.dteShowSelector.setChecked(self.dateEdit.getShowSelector())
         setValue(self.dateEdit, Date.today())
-        setValue(self.decimalEdit, '20000000000.1251')
+        setValue(self.decimalEdit, '20000000.1251')
         self.updateInfoAboutDecimalEdit()
 
     def on_close(self): # Form is asked to be closed
@@ -37,13 +38,13 @@ class Form(WForm):
         self.decimalEdit.separateThousands = state
     
     def on_decimalEdit_edited(self):
-        w.printMessage('WDecimalEdit отредактирован. Новое значение: ' + self.decimalEdit.valueStr())
+        w.printMessage('WDecimalEdit отредактирован. Новое значение: %s' % self.decimalEdit.value)
 
     def on_dteShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
         self.dateEdit.showSelector = state
 
     def on_dateEdit_edited(self):
-        w.printMessage('WDateEdit отредактирован. Новое значение: %s' % self.dateEdit.value)
+        w.printMessage('WDateEdit отредактирован. Новое значение: %s' % self.dateEdit.date)
 
     @QtCore.pyqtSlot()
     def on_testGm_clicked(self):

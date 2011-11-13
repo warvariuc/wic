@@ -102,10 +102,7 @@
    </palette>
   </property>
   <property name="windowTitle">
-   <string>Калькулятор</string>
-  </property>
-  <property name="styleSheet">
-   <string notr="true">background-color: rgb(245, 245, 245);</string>
+   <string>Calculator</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="margin">

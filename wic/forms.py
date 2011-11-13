@@ -167,7 +167,9 @@ def setValue(widget, value):
         #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
         widget.setChecked(value)
         #widget.blockSignals(False) 
-    elif isinstance(widget, (WDateEdit, WDecimalEdit, QtGui.QSpinBox)):
+    elif isinstance(widget, WDateEdit):
+        widget.setDate(value)
+    elif isinstance(widget, (WDecimalEdit, QtGui.QSpinBox)):
         widget.setValue(value)
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
         widget.setText(str(value))

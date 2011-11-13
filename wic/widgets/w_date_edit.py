@@ -1,6 +1,7 @@
 from PyQt4 import QtGui, QtCore
-from wic.widgets.w_date import Date
 from wic.widgets import ui_w_popup_calendar
+from datetime import date as Date, datetime as DateTime
+from dateutil.relativedelta import relativedelta as RelDelta
 
 
 class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
@@ -31,7 +32,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         
         if isinstance(parent, WDateEdit):
             parent.setFocus()
-            self.selectDate(parent.currentValue())
+            self.selectDate(parent.currentDate())
         else:
             self.selectDate()
             
@@ -44,17 +45,17 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
 
     def showMenu(self):
         menu = QtGui.QMenu(self)
-        menu.addAction('Сегодня', self.selectDate)
+        menu.addAction('Today', self.selectDate)
         menu.exec(QtGui.QCursor.pos())
         
-    def selectDate(self, d= None):
-        if isinstance(d, QtCore.QDate):
+    def selectDate(self, date= None):
+        if isinstance(date, QtCore.QDate):
             pass
-        elif isinstance(d, Date) and d:
-            d = QtCore.QDate(d.year(), d.month(), d.day())
+        elif isinstance(date, Date):
+            date = QtCore.QDate(date.year, date.month, date.day)
         else:
-            d = QtCore.QDate.currentDate()
-        self.calendarWidget.setSelectedDate(d)
+            date = QtCore.QDate.currentDate()
+        self.calendarWidget.setSelectedDate(date)
         self.onSelectionChanged()
 
     def onSelectionChanged(self):
@@ -83,8 +84,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
             return
         if isinstance(self.parent(), WDateEdit):
             qDate = self.calendarWidget.selectedDate()
-            self.parent().setText(str(Date(qDate.year(), qDate.month(), qDate.day())))
-            self.parent().applyCurrentValue(force= True)
+            self.parent().setDate(Date(qDate.year(), qDate.month(), qDate.day()), emitEdited= True)
         self.close()
     
     def eventFilter(self, target, event): # target - calendarWidget or any of its children
@@ -95,7 +95,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
                     if not self.persistent:
                         self.accepted()
                         return True 
-                elif key == QtCore.Qt.Key_Escape:
+                elif key in (QtCore.Qt.Key_Escape, QtCore.Qt.Key_Insert):
                     if not self.persistent:
                         self.close()
                         return True
@@ -141,7 +141,7 @@ class WDateEdit(QtGui.QLineEdit):
         self.textChanged.connect(self.onTextChanged)
 
         #self._showSelector = True
-        self.value = None
+        self.setDate(None)
 
     def resizeEvent(self, event):
         sz = self.selector.sizeHint()
@@ -157,7 +157,7 @@ class WDateEdit(QtGui.QLineEdit):
         paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0)
         self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % paddingRight)
         fm = QtGui.QFontMetrics(self.font()) # font metrics
-        self.setMinimumSize(fm.width(str(Date.today())) + self.selector.sizeHint().height() + borderWidth * 2,
+        self.setMinimumSize(fm.width('99.99.9999') + self.selector.sizeHint().height() + borderWidth * 2,
                 max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
 
@@ -173,7 +173,7 @@ class WDateEdit(QtGui.QLineEdit):
                     curPos -= 1 # курсор должен находится все после той же цифры
             else: 
                 i += 1
-        len_ = 8 # standard length (__.__.____)
+        len_ = 8 # standard length '__.__.____'
         fstPart = txt[:min(curPos, len_)]
         lstPart = txt[max(len(fstPart), len(txt) - len_ + len(fstPart)): len(txt)]
         midPart = [' ' for i in range(len_ - len(fstPart) - len(lstPart))]
@@ -202,7 +202,7 @@ class WDateEdit(QtGui.QLineEdit):
                 self.addDays(1)
                 return
             elif key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
-                self.applyCurrentValue(force= True)
+                self.applyCurrentDate(force= True)
                 return
             elif key == QtCore.Qt.Key_Left:
                 if self.hasSelectedText():
@@ -212,7 +212,7 @@ class WDateEdit(QtGui.QLineEdit):
     def focusOutEvent(self, focusEvent):
         'Check for changes when leaving the widget'
         if focusEvent.reason() != QtCore.Qt.PopupFocusReason: # контекстное меню выскочило или еще что
-            self.applyCurrentValue()
+            self.applyCurrentDate()
         super().focusOutEvent(focusEvent)
     
     def wheelEvent(self, wheelEvent):
@@ -224,44 +224,53 @@ class WDateEdit(QtGui.QLineEdit):
 
     def addDays(self, number): # target - lineEdit
         curPos = self.cursorPosition()
-        d = Date(self.text())
-        if not d: # empty or malformed date
-            return
-        if curPos <= 2: # day was 'wheeled'
-            self.setText(str(d + number))
-            self.setSelection(0, 2)
-        elif curPos <= 5: # month was 'wheeled'
-            self.setText(str(d.addMonths(number)))
-            self.setSelection(3, 2)
-        else: # year was 'wheeled'
-            self.setText(str(d.addMonths(number * 12)))
-            self.setSelection(6, 4)
+        date = self.currentDate()
+        if date: # empty or malformed date
+            if curPos <= 2: # day was 'wheeled'
+                self.setText((date + RelDelta(days= number)).strftime('%d.%m.%Y'))
+                self.setSelection(0, 2)
+            elif curPos <= 5: # month was 'wheeled'
+                self.setText((date + RelDelta(months= number)).strftime('%d.%m.%Y'))
+                self.setSelection(3, 2)
+            else: # year was 'wheeled'
+                self.setText((date + RelDelta(years= number)).strftime('%d.%m.%Y'))
+                self.setSelection(6, 4)
             
     def showPopupCalendar(self):
         self.selectAll()
         WCalendarPopup(self).show()
 
-    def getValue(self): 
+    def getDate(self): 
         return self._date
-    def setValue(self, value):
-        self._date = Date(value)
-        self.setText(str(self._date))
-        self.setCursorPosition(0)            
-    value = QtCore.pyqtProperty(QtCore.QDate, getValue, setValue)
+    def setDate(self, value, emitEdited= False):
+        if value is None:
+            strValue = '  .  .    '
+        elif isinstance(value, Date):
+            strValue = value.strftime('%d.%m.%Y')
+        else:
+            raise Exception('Value must a datetime.date or None.')
+        self._date = value
+        self.setText(strValue)
+        self.setCursorPosition(0)
+        if emitEdited:
+            self.edited.emit()
+    date = QtCore.pyqtProperty(Date, getDate, setDate)
     
     #setMinimumDate
     #setMaximumDate
 
-    def currentValue(self, currentText= ''): #return introduced string as date
-        if not currentText: 
-            currentText = self.text()
-        return Date(currentText)
+    def currentDate(self, text= ''): # interpret entered string as date
+        text = text or self.text()
+        try:
+            datetime = DateTime.strptime(text, '%d.%m.%Y')
+        except ValueError:
+            return None
+        return datetime.date()
 
-    def applyCurrentValue(self, force= False):
-        currentValue = self.currentValue()
-        if self._date != currentValue or force:
-            self._date = currentValue
-            self.edited.emit()
+    def applyCurrentDate(self, force= False):
+        curDate = self.currentDate()
+        if self._date != curDate or force:
+            self.setDate(curDate, emitEdited= True)
 #        if not currentValue:
 #            for char in self.text():
 #                if char.isdigit():
