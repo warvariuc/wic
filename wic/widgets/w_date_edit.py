@@ -19,10 +19,10 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         todayFormat.setFontUnderline(True)
         self.calendarWidget.setDateTextFormat(QtCore.QDate.currentDate(), todayFormat) # emphasize current date in calendar
 
-        #self.calendarWidget.activated.connect(self.accepted)
-        self.calendarWidget.clicked.connect(self.accepted)
-        self.calendarWidget.currentPageChanged.connect(self.currentPageChanged)
-        self.calendarWidget.selectionChanged.connect(self.selectionChanged)
+        self.calendarWidget.activated.connect(self.accepted)
+        #self.calendarWidget.clicked.connect(self.accepted)
+        self.calendarWidget.currentPageChanged.connect(self.onCurrentPageChanged)
+        self.calendarWidget.selectionChanged.connect(self.onSelectionChanged)
         self.nextMonth.clicked.connect(self.calendarWidget.showNextMonth)
         self.nextYear.clicked.connect(self.calendarWidget.showNextYear)
         self.prevMonth.clicked.connect(self.calendarWidget.showPreviousMonth)
@@ -55,12 +55,12 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         else:
             d = QtCore.QDate.currentDate()
         self.calendarWidget.setSelectedDate(d)
-        self.selectionChanged()
+        self.onSelectionChanged()
 
-    def selectionChanged(self):
+    def onSelectionChanged(self):
         self.date.setText(self.calendarWidget.selectedDate().toString('dd MMM yyyy'))
 
-    def currentPageChanged(self, year,  month):
+    def onCurrentPageChanged(self, year,  month):
         months = (year - self.calendarWidget.selectedDate().year()) * 12 + month - self.calendarWidget.selectedDate().month()
         self.calendarWidget.setSelectedDate(self.calendarWidget.selectedDate().addMonths(months))
 
@@ -105,7 +105,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
                 if key == QtCore.Qt.Key_PageUp:
                     self.prevMonth.animateClick()
                     return True
-            elif event.modifiers() == QtCore.Qt.ControlModifier:
+            elif event.modifiers() in (QtCore.Qt.ControlModifier, QtCore.Qt.ShiftModifier):
                 if key == QtCore.Qt.Key_PageDown:
                     self.nextYear.animateClick()
                     return True
@@ -138,7 +138,7 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
 
         self.selector.clicked.connect(self.showPopupCalendar)
-        self.textChanged.connect(self.handleTextChanged)
+        self.textChanged.connect(self.onTextChanged)
 
         #self._showSelector = True
         self.value = None
@@ -161,7 +161,7 @@ class WDateEdit(QtGui.QLineEdit):
                 max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
 
-    def handleTextChanged(self, txt):
+    def onTextChanged(self, txt):
         txt = list(str(txt))
         curPos = self.cursorPosition()
         i = 0

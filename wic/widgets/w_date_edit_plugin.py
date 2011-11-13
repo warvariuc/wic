@@ -4,7 +4,7 @@ curDir = os.path.dirname(os.path.abspath(__file__))
 wicDir = os.path.abspath(os.path.join(curDir, '..', '..'))
 
 if wicDir not in sys.path:
-    sys.path.insert(0, wicDir)
+    sys.path.append(wicDir)
     
     
 # Designer plugin for:
@@ -14,6 +14,7 @@ widgetIconName = ':/icons/fugue/calendar-blue.png'
 
 from PyQt4 import QtGui, QtDesigner
 from wic.widgets import w_date_edit as widgetModule
+
 
 class DesignerPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     def __init__(self, parent= None):

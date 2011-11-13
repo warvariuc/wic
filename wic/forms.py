@@ -59,9 +59,7 @@ class WForm(QtGui.QDialog):
     
 
 
-def openForm(formModulePath, formClassName= 'Form'):
-    formModule = importlib.import_module(formModulePath)
-    FormClass = getattr(formModule, formClassName)
+def openForm(FormClass):
     assert issubclass(FormClass, WForm), 'This is not a WForm.'
     form = FormClass(None) # no parent widget for now
     window = wic.mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
@@ -70,13 +68,13 @@ def openForm(formModulePath, formClassName= 'Form'):
     form.closed.connect(window.close) # when form closes - close subwindow too            
 
 
-def openCatalogItemForm(catalogItem, formClassName= 'Form'):
+def openCatalogItemForm(catalogItem, FormClass= None):
     assert isinstance(catalogItem, orm.Model), 'Pass an item (model instance).'
-    formModulePath = catalogItem.__class__.__module__
+    if FormClass is None:
+        formModulePath = catalogItem.__class__.__module__
+        FormClass = getattr(sys.modules[formModulePath], 'Form')
+    assert issubclass(FormClass, CatalogForm), 'This is not a CatalogForm'
     
-    formModule = importlib.import_module(formModulePath)
-    FormClass = getattr(formModule, formClassName)
-    assert issubclass(FormClass, CatalogForm), 'This is not a CatalogForm: %s - %s' % (formModulePath, formClassName)
     form = FormClass(None, catalogItem) # no parent widget for now
     window = wic.mainWindow.mdiArea.addSubWindow(form) # create subwindow with the form
     window.setWindowIcon(form.windowIcon())

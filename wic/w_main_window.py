@@ -87,11 +87,13 @@ class WMainWindow(QtGui.QMainWindow):
 
     def editDbInfo(self):
         from wic.forms import openForm
-        openForm('wic.db_info')
+        import wic.db_info
+        openForm(wic.db_info.Form)
 
     def helpAbout(self):
         from wic.forms import openForm
-        openForm('wic.help_about')
+        import wic.help_about
+        openForm(wic.help_about.Form)
         
     def showCalculator(self):
         from wic.widgets import w_decimal_edit
@@ -126,7 +128,7 @@ class WMainWindow(QtGui.QMainWindow):
             try: recentFiles.remove(filePath)
             except ValueError: pass
             recentFiles.insert(0, filePath)
-            del recentFiles[10:] #keep 10 last files
+            del recentFiles[10:] # keep only 10 of recently used files
         else:
             menu = self.recentFilesMenu
             menu.clear()

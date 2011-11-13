@@ -47,7 +47,7 @@
       <string>Previous month</string>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgb(232, 232, 232);</string>
+      <string notr="true">QToolButton { background-color: rgb(232, 232, 232); }</string>
      </property>
      <property name="text">
       <string>‹</string>
@@ -90,7 +90,7 @@
       <string>Next month</string>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgb(232, 232, 232);</string>
+      <string notr="true">QToolButton { background-color: rgb(232, 232, 232); }</string>
      </property>
      <property name="text">
       <string>›</string>
@@ -133,7 +133,7 @@
       <string>Previous year</string>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgb(232, 232, 232);</string>
+      <string notr="true">QToolButton { background-color: rgb(232, 232, 232); }</string>
      </property>
      <property name="text">
       <string>‹‹</string>
@@ -173,7 +173,7 @@
       <string>Next year</string>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgb(232, 232, 232);</string>
+      <string notr="true">QToolButton { background-color: rgb(232, 232, 232); }</string>
      </property>
      <property name="text">
       <string>››</string>
@@ -255,7 +255,6 @@
       <font>
        <weight>75</weight>
        <bold>true</bold>
-       <kerning>true</kerning>
       </font>
      </property>
      <property name="cursor">
@@ -268,16 +267,13 @@
       <string comment="Select special date">Special date</string>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: rgb(232, 232, 232);</string>
+      <string notr="true">QToolButton { background-color: rgb(232, 232, 232); }</string>
      </property>
      <property name="text">
       <string>Selected date</string>
      </property>
      <property name="autoRaise">
       <bool>true</bool>
-     </property>
-     <property name="arrowType">
-      <enum>Qt::NoArrow</enum>
      </property>
     </widget>
    </item>

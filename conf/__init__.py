@@ -5,6 +5,7 @@ import wic
 from wic import w
 import orm
 from wic.forms import openForm, openCatalogItemForm
+from conf import settings
 
 confDir = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,10 +16,11 @@ def on_systemStarted(): # предопределенная процедура з
     w.printMessage('Каталог конфигурации: ' + w.confDir, False, False)
 
     global db
-    db = orm.SqliteAdapter('sqlite://../../mtc.sqlite')
+    db = orm.SqliteAdapter(settings.dbUri)
 
+    import conf.reports.test
     from conf.catalogs.persons import Persons
-    openForm('conf.reports.test')
+    openForm(conf.reports.test.Form)
     for person in Persons.get(db, where= (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit= (0,5)):
         openCatalogItemForm(person)
     
