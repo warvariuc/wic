@@ -1,6 +1,20 @@
+sudo apt-get install qt4-dev-tools qt4-doc
+qt4-dev-tools - linguist-qt4, assistant-qt4
+
+/usr/share/doc/python-qt4-doc/examples/demos/qtdemo
+
+
+
+если дизайнер не видит виджеты, на установить пакет python2.6-dev
+http://www.riverbankcomputing.com/pipermail/pyqt/2009-June/023142.html
+>Turns out there is a dependency on python2.6-dev, specifically /usr/lib/libpython2.6.so
+on Windows make sure that this file exists: c:\Python26\Lib\site-packages\PyQt4\python26.dll (т.е. дизайнер должен видеть библиотеку питона - можно и пути прописать)
+
+
 http://blindvic.blogspot.com/2011/09/today-i-wanted-to-use-pyqt4-with-python.html
 
 Installing PyQt4 for Python3 on Ubuntu
+
 Today i wanted to use PyQt4 with Python 3 on my Kubuntu machine.
 Here i log my actions.
 

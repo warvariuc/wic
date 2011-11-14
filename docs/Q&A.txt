@@ -3,11 +3,6 @@ entry - проводка
 catalog - справочник
 record, item - запись (элемент) справочника
 
-если дизайнер не видит виджеты, на установить пакет python2.6-dev
-http://www.riverbankcomputing.com/pipermail/pyqt/2009-June/023142.html
->Turns out there is a dependency on python2.6-dev, specifically /usr/lib/libpython2.6.so
-on Windows make sure that this file exists: c:\Python26\Lib\site-packages\PyQt4\python26.dll (т.е. дизайнер должен видеть библиотеку питона - можно и пути прописать)
-
 
 Most of the good tech companies, major web companies, etc. have gotten their start not because of an idea person, but because of a programmer who had an idea. Programmers (and, to some degree, non-programmer computer power users) are much more likely to have a concept of what's possible, practical, and useful in technology. The farther you get from that, the less likely you are to have a good idea. Either way, the first thing you should do if you have an idea is to discuss it with people who do have a background in programming. Don't be surprised if it gets shot down as impossible or impractical.
 http://developers.slashdot.org/story/10/12/06/0124241/I-Just-Need-a-Programmer
@@ -23,4 +18,4 @@ A. Specify a slot signature:
 Q. Designer does not see custom widgets written in PyQt.
 A. 1. Check the paths (PYQTDESIGNERPATH environment variable).
    2. Be sure you have designer for Python 3. Your linux package manager may overwrite it with a version
-   for Python 2. 
+   for Python 2.

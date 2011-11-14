@@ -9,20 +9,20 @@ import conf as globalModule
 
 
 class Form(WForm):
-    ''''''
+
     iconPath = ':/icons/fugue/leaf-wormhole.png'
     formTitle = 'Тестовые модуль и форма'
 
     def on_open(self): # called by the system after it loads the Form
-        w.printMessage ('Форма загружена.')
-        
+        w.printMessage (self.tr('Форма загружена.'))
+
         self.dteShowSelector.setChecked(self.dateEdit.getShowSelector())
         setValue(self.dateEdit, Date.today())
         setValue(self.decimalEdit, '20000000.1251')
         self.updateInfoAboutDecimalEdit()
 
     def on_close(self): # Form is asked to be closed
-#        if QtGui.QMessageBox.question(self, 'Подтверждение', 'Вы действительно хотите закрыть форму?', 
+#        if QtGui.QMessageBox.question(self, 'Подтверждение', 'Вы действительно хотите закрыть форму?',
 #                        QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) != QtGui.QMessageBox.Yes:
 #            return False
         w.printMessage('Форма закрывается.')
@@ -30,13 +30,13 @@ class Form(WForm):
     def on_dceShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
         self.decimalEdit.showSelector = state
         self.decimalEdit.setFocus()
-            
+
     def on_dceNonNegative_stateChanged(self, state): # widget 'checkBox' emited signal
         self.decimalEdit.nonNegative = state
 
     def on_dceSeparateThousands_stateChanged(self, state): # widget 'checkBox' emited signal
         self.decimalEdit.separateThousands = state
-    
+
     def on_decimalEdit_edited(self):
         w.printMessage('WDecimalEdit отредактирован. Новое значение: %s' % self.decimalEdit.value)
 
@@ -53,7 +53,7 @@ class Form(WForm):
     def on_dceTotalDigits_valueChanged(self, text):
         self.decimalEdit.setTotalDigits(int(text))
         self.updateInfoAboutDecimalEdit()
-    
+
     def on_dceFractionDigits_valueChanged(self, text):
         self.decimalEdit.setFractionDigits(int(text))
         self.updateInfoAboutDecimalEdit()
