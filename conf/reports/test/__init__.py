@@ -14,7 +14,7 @@ class Form(WForm):
     formTitle = 'Тестовые модуль и форма'
 
     def on_open(self): # called by the system after it loads the Form
-        w.printMessage (self.tr('Форма загружена.'))
+        w.printMessage('Форма загружена.')
 
         self.dteShowSelector.setChecked(self.dateEdit.getShowSelector())
         setValue(self.dateEdit, Date.today())

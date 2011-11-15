@@ -91,6 +91,8 @@ for data in booksData:
 
 print('\nSELECT query:')
 print(db._select(Books.id, where= (Books.price > 5), limit= (0, 10)))
+pprint(db.select(Books.id, Books.name, where= (Books.price > 14), limit= (0, 10)))
+print(Books.getOne(db, where= (Books.price > 14)))
 
 #print(Books(Books.price > 5).select(dbAdapter, join=[Authors]))
 
@@ -119,4 +121,4 @@ print(db._select(Books.id, where= (Books.price > 5), limit= (0, 10)))
 #Persons(Persons.name.lower() == 'jim').delete()
 
 
-os.unlink(filePath) # delete the temporary db file
+#os.unlink(filePath) # delete the temporary db file

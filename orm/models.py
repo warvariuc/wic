@@ -130,7 +130,7 @@ class ModelMeta(type):
 class Model(metaclass= ModelMeta):
     '''Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields.'''
-    id = orm.IdField() # this field is present in all tables
+    id = orm.fields.IdField() # this field is present in all tables
     #timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record  
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
     _ordering = [] # default order for select when not specified

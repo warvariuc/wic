@@ -1,4 +1,4 @@
-import os, sys, importlib
+import os, sys, traceback
 from PyQt4 import QtGui, QtCore, uic
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
@@ -23,14 +23,17 @@ class WForm(QtGui.QDialog):
             if os.path.isabs(self.uiFilePath):
                 uiFilePath = self.uiFilePath
             else: # ui file path is relative. extract module path
-                moduleName = self.__class__.__module__
-                module = sys.modules[moduleName] # module in which the Form class was defined
+                module = sys.modules[self.__class__.__module__] # module in which the Form class was defined
                 moduleDir = os.path.dirname(os.path.abspath(module.__file__)) 
                 self.uiFilePath = os.path.join(moduleDir, self.uiFilePath)
         
         self.setupUi()
         
-        self.on_open()
+        try:
+            self.on_open()
+        except Exception:
+            wic.mainWindow.messagesWindow.printMessage(''.join(traceback.format_exc()))
+
         
     def setupUi(self):
         '''Initial setting up of the form. 
@@ -49,7 +52,6 @@ class WForm(QtGui.QDialog):
             event.ignore()
             return
         self.closed.emit()
-        #self.reject()
 
     def on_close(self):
         return
@@ -118,7 +120,8 @@ class CatalogForm(WForm):
                 label.setBuddy(widget)
                 formLayout.addRow(label, widget)
             
-            buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Reset | QtGui.QDialogButtonBox.Save | QtGui.QDialogButtonBox.Cancel)
+            buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Reset 
+                            | QtGui.QDialogButtonBox.Save | QtGui.QDialogButtonBox.Cancel)
             saveButton = buttonBox.button(buttonBox.Save)
             buttonBox.addButton(saveButton, buttonBox.ApplyRole)
             saveButton.clicked.connect(self.save)
