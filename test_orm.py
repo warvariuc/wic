@@ -18,7 +18,7 @@ class Books(orm.Model):
     _tableId = 2
     # id field is already present 
     name = orm.StringField(maxLength= 100, defaultValue= 'a very good book!!!')
-    price = orm.fields.DecimalField(totalDigits= 10, fractionDigits= 2, defaultValue= '0.00', index= True) # 2 decimal places
+    price = orm.fields.DecimalField(maxDigits= 10, fractionDigits= 2, defaultValue= '0.00', index= True) # 2 decimal places
     author_id = orm.RecordIdField('Authors', index= True)
     publication_date = orm.StringField(maxLength= 10)
 #    fan = orm.AnyRecordField(index=True) # None means that this field may contain reference to any other table in the DB

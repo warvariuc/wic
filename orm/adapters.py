@@ -4,7 +4,7 @@
 All other ORM modules should be database agnostic.'''
 
 import os, sys, base64
-import time, re
+import time, re, math
 
 #import orm
 orm = sys.modules[__name__.rpartition('.')[0]] # parent module
@@ -223,14 +223,18 @@ class GenericAdapter():
     def _RANDOM(self):
         return 'RANDOM()'
 
-    def _INT(self, bytesCount= 4, intMap= [(1, 'TINYINT'), (2, 'SMALLINT'), 
+    def _INT(self, maxDigits= 9, intMap= [(1, 'TINYINT'), (2, 'SMALLINT'), 
                     (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')], autoincrement= False, **kwargs):
         '''INT column type.'''
+        maxInt = int('9' * maxDigits)
+        bitsCount = len(bin(maxInt)) - 2
+        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
                 break
         else:
-            raise Exception('Too many bytes specified.')
+            raise Exception('Too many digits specified.')
         if autoincrement:
             _columnType += ' AUTO_INCREMENT'
         return _columnType
@@ -251,13 +255,13 @@ class GenericAdapter():
         else:
             return 'VARCHAR (%i)' % maxLength
             
-    def _DECIMAL(self, totalDigits, fractionDigits, **kwargs):
+    def _DECIMAL(self, maxDigits, fractionDigits, **kwargs):
         '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
         It has a range of 0 to 30 and must be no larger than M.'''
-        return 'DECIMAL (%s, %s)' % (totalDigits, fractionDigits)
+        return 'DECIMAL (%s, %s)' % (maxDigits, fractionDigits)
     
     def getExpressionTables(self, expression):
         '''Get tables involved in WHERE expression.'''
@@ -641,8 +645,19 @@ class SqliteAdapter(GenericAdapter):
             
         return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''
 
-    def columnInt(self, **kwargs):
-        return 'INTEGER'
+    def _INT(self, maxDigits= 9, intMap= [(8, 'INTEGER')], autoincrement= False, **kwargs):
+        '''INTEGER column type for Sqlite.'''
+        maxInt = int('9' * maxDigits)
+        bitsCount = len(bin(maxInt)) - 2
+        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+
+        for _bytesCount, _columnType in intMap:
+            if bytesCount <= _bytesCount:
+                break
+        else:
+            raise Exception('Too many digits specified.')
+        return _columnType
+
 
 
 

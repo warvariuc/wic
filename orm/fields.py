@@ -119,34 +119,34 @@ class StringField(Field):
 class IntegerField(Field):
     maxDigits = 19
     
-    def _init(self, bytesCount, defaultValue= None, autoincrement= False, index=''):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= bytesCount, 
+    def _init(self, maxDigits, defaultValue= None, autoincrement= False, index=''):
+        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= maxDigits, 
                                           autoincrement= autoincrement), defaultValue, index)
-        self.bytesCount = bytesCount
+        self.maxDigits = maxDigits
         self.autoincrement = autoincrement
 
 
-class DecimalFieldI(Field):
-    '''Decimals stored as 8 byte INT (up to 18 digits).
-    TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
-    def _init(self, maxDigits, decimalPlaces, defaultValue, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8), defaultValue, index)
-        self.maxDigits = maxDigits
-        self.decimalPlaces = decimalPlaces
-    
-    def _cast(self, value):
-        if isinstance(value, Field):
-            if not isinstance(value, DecimalFieldI):
-                raise SyntaxError('Only DecimalFieldI cooperands are supported.')
-            if value.decimalPlaces != self.decimalPlaces:
-                raise SyntaxError('Cooperand field must have the same number of decimal places.')
-            return value
-        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
+#class DecimalFieldI(Field):
+#    '''Decimals stored as 8 byte INT (up to 18 digits).
+#    TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
+#    def _init(self, maxDigits, decimalPlaces, defaultValue, index= ''):
+#        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8), defaultValue, index)
+#        self.maxDigits = maxDigits
+#        self.decimalPlaces = decimalPlaces
+#    
+#    def _cast(self, value):
+#        if isinstance(value, Field):
+#            if not isinstance(value, DecimalFieldI):
+#                raise SyntaxError('Only DecimalFieldI cooperands are supported.')
+#            if value.decimalPlaces != self.decimalPlaces:
+#                raise SyntaxError('Cooperand field must have the same number of decimal places.')
+#            return value
+#        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
 
 
 class DecimalField(Field):
-    def _init(self, totalDigits, fractionDigits, defaultValue, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'DECIMAL', self, totalDigits= totalDigits, fractionDigits= fractionDigits), defaultValue, index)
+    def _init(self, maxDigits, fractionDigits, defaultValue, index= ''):
+        super()._init(orm.adapters.Column(self.name, 'DECIMAL', self, maxDigits= maxDigits, fractionDigits= fractionDigits), defaultValue, index)
         #self.totalDigits = totalDigits
         #self.fractionDigits = fractionDigits
     
@@ -163,13 +163,13 @@ class DecimalField(Field):
 class IdField(Field):
     '''ID - implicitly present in each table.'''
     def _init(self):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8, autoincrement= True), None, 'primary')
+        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= 19, autoincrement= True), None, 'primary')
         
 
 class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8), None, index)
+        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= 19), None, index)
         self._referTable = referTable # foreign key - referenced type of table
         
     def getReferTable(self):
@@ -190,7 +190,7 @@ class RecordIdField(Field):
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
     def _init(self, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 2), None, index)
+        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= 5), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Model) or orm.isModel(value):
