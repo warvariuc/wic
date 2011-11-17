@@ -441,7 +441,7 @@ class GenericAdapter():
             for j in range(len(fields)):
                 field = fields[j]
                 value = row[j]
-                if isinstance(field, orm.Field):
+                if value is not None and isinstance(field, orm.Field):
                     column = field.column
                     if isinstance(column, Column):
                         decodeFunc = getattr(self, 'decode' + column.type.upper(), None)
@@ -452,146 +452,6 @@ class GenericAdapter():
     
         return fields, rows
     
-#        db = self.db
-#        virtualtables = []
-#        new_rows = []
-#        for (i,row) in enumerate(rows):
-#            new_row = Row()
-#            for j,colname in enumerate(colnames):
-#                value = row[j]
-#                if not table_field.match(colnames[j]):
-#                    if not '_extra' in new_row:
-#                        new_row['_extra'] = Row()
-#                    new_row['_extra'][colnames[j]] = value
-#                    select_as_parser = re.compile("\s+AS\s+(\S+)")
-#                    new_column_name = select_as_parser.search(colnames[j])
-#                    if not new_column_name is None:
-#                        column_name = new_column_name.groups(0)
-#                        setattr(new_row,column_name[0],value)
-#                    continue
-#                (tablename, fieldname) = colname.split('.')
-#                table = db[tablename]
-#                field = table[fieldname]
-#                field_type = field.type
-#                if field.type != 'blob' and isinstance(value, str):
-#                    try:
-#                        value = value.decode(db._db_codec)
-#                    except Exception:
-#                        pass
-#                if isinstance(value, unicode):
-#                    value = value.encode('utf-8')
-#                if not tablename in new_row:
-#                    colset = new_row[tablename] = Row()
-#                    if tablename not in virtualtables:
-#                        virtualtables.append(tablename)
-#                else:
-#                    colset = new_row[tablename]
-#
-#                if isinstance(field_type, SQLCustomType):
-#                    colset[fieldname] = field_type.decoder(value)
-#                    # field_type = field_type.type
-#                elif not isinstance(field_type, str) or value is None:
-#                    colset[fieldname] = value
-#                elif isinstance(field_type, str) and \
-#                        field_type.startswith('reference'):
-#                    referee = field_type[10:].strip()
-#                    if not '.' in referee:
-#                        colset[fieldname] = rid = Reference(value)
-#                        (rid._table, rid._record) = (db[referee], None)
-#                    else: ### reference not by id
-#                        colset[fieldname] = value
-#                elif field_type == 'boolean':
-#                    if value == True or str(value)[:1].lower() == 't':
-#                        colset[fieldname] = True
-#                    else:
-#                        colset[fieldname] = False
-#                elif field_type == 'date' \
-#                        and (not isinstance(value, datetime.date)\
-#                                 or isinstance(value, datetime.datetime)):
-#                    (y, m, d) = map(int, str(value)[:10].strip().split('-'))
-#                    colset[fieldname] = datetime.date(y, m, d)
-#                elif field_type == 'time' \
-#                        and not isinstance(value, datetime.time):
-#                    time_items = map(int,str(value)[:8].strip().split(':')[:3])
-#                    if len(time_items) == 3:
-#                        (h, mi, s) = time_items
-#                    else:
-#                        (h, mi, s) = time_items + [0]
-#                    colset[fieldname] = datetime.time(h, mi, s)
-#                elif field_type == 'datetime'\
-#                        and not isinstance(value, datetime.datetime):
-#                    (y, m, d) = map(int,str(value)[:10].strip().split('-'))
-#                    time_items = map(int,str(value)[11:19].strip().split(':')[:3])
-#                    if len(time_items) == 3:
-#                        (h, mi, s) = time_items
-#                    else:
-#                        (h, mi, s) = time_items + [0]
-#                    colset[fieldname] = datetime.datetime(y, m, d, h, mi, s)
-#                elif field_type == 'blob' and blob_decode:
-#                    colset[fieldname] = base64.b64decode(str(value))
-#                elif field_type.startswith('decimal'):
-#                    decimals = int(field_type[8:-1].split(',')[-1])
-#                    if self.dbengine == 'sqlite':
-#                        value = ('%.' + str(decimals) + 'f') % value
-#                    if not isinstance(value, decimal.Decimal):
-#                        value = decimal.Decimal(str(value))
-#                    colset[fieldname] = value
-#                elif field_type.startswith('list:integer'):
-#                    if not self.dbengine=='google:datastore':
-#                        colset[fieldname] = bar_decode_integer(value)
-#                    else:
-#                        colset[fieldname] = value
-#                elif field_type.startswith('list:reference'):
-#                    if not self.dbengine=='google:datastore':
-#                        colset[fieldname] = bar_decode_integer(value)
-#                    else:
-#                        colset[fieldname] = value
-#                elif field_type.startswith('list:string'):
-#                    if not self.dbengine=='google:datastore':
-#                        colset[fieldname] = bar_decode_string(value)
-#                    else:
-#                        colset[fieldname] = value
-#                else:
-#                    colset[fieldname] = value
-#                if field_type == 'id':
-#                    id = colset[field.name]
-#                    colset.update_record = lambda _ = (colset, table, id), **a: update_record(_, a)
-#                    colset.delete_record = lambda t = table, i = id: t._db(t._id==i).delete()
-#                    for (referee_table, referee_name) in \
-#                            table._referenced_by:
-#                        s = db[referee_table][referee_name]
-#                        referee_link = db._referee_name and \
-#                            db._referee_name % dict(table=referee_table,field=referee_name)
-#                        if referee_link and not referee_link in colset:
-#                            colset[referee_link] = Set(db, s == id)
-#                    colset['id'] = id
-#            new_rows.append(new_row)
-#
-#        rowsobj = Rows(db, new_rows, colnames, rawrows=rows)
-#
-#        for tablename in virtualtables:
-#            ### new style virtual fields
-#            table = db[tablename]
-#            fields_virtual = [(f,v) for (f,v) in table.items() if isinstance(v,FieldVirtual)]
-#            fields_lazy = [(f,v) for (f,v) in table.items() if isinstance(v,FieldLazy)]
-#            if fields_virtual or fields_lazy:
-#                for row in rowsobj.records:
-#                    box = row[tablename]
-#                    for f,v in fields_virtual:
-#                        box[f] = v.f(row)
-#                    for f,v in fields_lazy:
-#                        box[f] = (v.handler or VirtualCommand)(v.f,row)
-#
-#            ### old style virtual fields
-#            for item in table.virtualfields:
-#                try:
-#                    rowsobj = rowsobj.setvirtualfields(**{tablename:item})
-#                except KeyError:
-#                    # to avoid breaking virtualfields when partial select
-#                    pass
-#        return rowsobj
-#
-
 
 
 class SqliteAdapter(GenericAdapter):
@@ -680,9 +540,11 @@ class SqliteAdapter(GenericAdapter):
         return 'TEXT'
 
     def encodeDATE(self, value, **kwargs):
+        if isinstance(value, str):
+            value = self.decodeDATE(value)
         if isinstance(value, Date):
             return value.strftime("'%Y-%m-%d'")
-        return value
+        raise SyntaxError('Pass date "YYYY-MM-DD" or datetime.date.')
 
     def decodeDATE(self, value, **kwargs):
         return DateTime.strptime(value, '%Y-%m-%d').date()
@@ -755,10 +617,10 @@ class MysqlAdapter(GenericAdapter):
 
 class Column():
     '''Abstract DB column, supported natively by the DB.'''
-    def __init__(self, name, type, field, **kwargs):
-        self.name = name
+    def __init__(self, type, field, name= '', **kwargs):
         self.type = type
         self.field = field
+        self.name = name or field.name
         self.props = kwargs # properties 
         
 

@@ -3,6 +3,7 @@ from decimal import Decimal
 import tempfile, os
 
 import orm
+from datetime import datetime as DateTime
 
 
 class Authors(orm.Model):
@@ -20,10 +21,16 @@ class Books(orm.Model):
     name = orm.StringField(maxLength= 100, defaultValue= 'a very good book!!!')
     price = orm.fields.DecimalField(maxDigits= 10, fractionDigits= 2, defaultValue= '0.00', index= True) # 2 decimal places
     author_id = orm.RecordIdField('Authors', index= True)
-    publication_date = orm.StringField(maxLength= 10)
+    publication_date = orm.fields.DateField(defaultValue= None)
+    timestamp = orm.fields.DateTimeField(defaultValue= None)
 #    fan = orm.AnyRecordField(index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
+
+    def save(self):
+        self.timestamp = DateTime.now()
+        super().save()
+    
 
 ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 
@@ -63,13 +70,13 @@ for data in authorsData:
 
 print('\nInserting books:')
 booksData = (dict(name= '''Free as in Freedom: Richard Stallman's Crusade for Free Software''', 
-                  author_id= authors[1].id, price= '9.55', publication_date= '08.03.2002'),
+                  author_id= authors[1].id, price= '9.55', publication_date= '2002-03-08'),
              dict(name= '''Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition''', 
-                  author_id= authors[2].id, price= '14.95', publication_date= '27.03.2010'),
+                  author_id= authors[2].id, price= '14.95', publication_date= '2010-03-27'),
              dict(name= '''In The Plex: How Google Thinks, Works, and Shapes Our Lives''', 
-                  author_id= authors[2].id, price= '13.98', publication_date= '12.04.2011'),
+                  author_id= authors[2].id, price= '13.98', publication_date= '2011-04-12'),
              dict(name= '''Just for Fun.''', 
-                  author_id= authors[0].id, price= '11.20', publication_date= '01.12.2002'),
+                  author_id= authors[0].id, price= '11.20', publication_date= '2002-12-01'),
 )
 for data in booksData:
     data['db'] = db
@@ -83,33 +90,7 @@ print('\nSELECT query:')
 print(db._select(Books.id, where= (Books.price > '14.00'), limit= (0, 10)))
 pprint(db.select(Books, where= (Books.price > '14'), limit= (0, 10)))
 book = Books.getOne(db, where= (Books.price > 14))
-print(book, type(book.price))
-
-#print(Books(Books.price > 5).select(dbAdapter, join=[Authors]))
-
-#print(Books((Books.fan == author) | ((1 <= Books.id) & (Books.price > 9.99)))._render())
-
-#book.author = Authors.load(1)
-#book.save(adapter)
-#bookId = book.id
-#print(bookId)
-
-#book = Books.load(bookId)
-#book.price -= Decimal('3.75')
-#book.save()
-#book.lock(False) # unlock table record
-
-#books = Books((Books.id >= bookId) & (Books.price >= Decimal('0.01'))).select(adapter)
-#print(books[0])
-
-#Persons(Persons.name.like('J%')).update(name='James')
-#>>> 1 # number of affected rows
-
-#Persons(Persons.id.in(1, 1001)).select()
-#>>> 1 # number of affected rows
-
-### delete records by query
-#Persons(Persons.name.lower() == 'jim').delete()
+print(book)
 
 
 #os.unlink(filePath) # delete the temporary db file

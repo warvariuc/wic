@@ -93,7 +93,7 @@ class Field(Expression):
         if index:
             self.table._indexes.append(orm.Index([self], index))
             
-    def _render(self, adapter=None): # adapter - not needed?
+    def _render(self, adapter):
         return '%s.%s' % (self.table, self.column.name)
     
     def __str__(self):
@@ -104,23 +104,21 @@ class Field(Expression):
         return (self, value)
         
 
+
 class StringField(Field):
     maxLength = 0
     
     def _init(self, maxLength, defaultValue= None, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'char', self, maxLength= maxLength), 
+        super()._init(orm.adapters.Column('CHAR', self, maxLength= maxLength), 
                       defaultValue, index)
         self.maxLength = maxLength
     
-    def __str__(self):
-        return '%s(%s)' % (self.__class__.__name__, self.maxLength)
-
 
 class IntegerField(Field):
     maxDigits = 19
     
     def _init(self, maxDigits, defaultValue= None, autoincrement= False, index=''):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= maxDigits, 
+        super()._init(orm.adapters.Column('INT', self, maxDigits= maxDigits, 
                                           autoincrement= autoincrement), defaultValue, index)
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
@@ -146,9 +144,18 @@ class IntegerField(Field):
 
 class DecimalField(Field):
     def _init(self, maxDigits, fractionDigits, defaultValue, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'DECIMAL', self, maxDigits= maxDigits, fractionDigits= fractionDigits), defaultValue, index)
-        #self.totalDigits = totalDigits
-        #self.fractionDigits = fractionDigits
+        super()._init(orm.adapters.Column('DECIMAL', self, maxDigits= maxDigits, fractionDigits= fractionDigits), defaultValue, index)
+    
+
+class DateField(Field):
+    def _init(self, defaultValue, index= ''):
+        super()._init(orm.adapters.Column('DATE', self), defaultValue, index)
+
+
+class DateTimeField(Field):
+    def _init(self, defaultValue, index= ''):
+        super()._init(orm.adapters.Column('DATETIME', self), defaultValue, index)
+
     
 #    def _cast(self, value):
 #        if isinstance(value, Field):
@@ -163,13 +170,13 @@ class DecimalField(Field):
 class IdField(Field):
     '''ID - implicitly present in each table.'''
     def _init(self):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= 19, autoincrement= True), None, 'primary')
+        super()._init(orm.adapters.Column('INT', self, maxDigits= 19, autoincrement= True), None, 'primary')
         
 
 class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= 19), None, index)
+        super()._init(orm.adapters.Column('INT', self, maxDigits= 19), None, index)
         self._referTable = referTable # foreign key - referenced type of table
         
     def getReferTable(self):
@@ -190,7 +197,7 @@ class RecordIdField(Field):
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
     def _init(self, index= ''):
-        super()._init(orm.adapters.Column(self.name, 'INT', self, maxDigits= 5), None, index)
+        super()._init(orm.adapters.Column('INT', self, maxDigits= 5), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Model) or orm.isModel(value):
