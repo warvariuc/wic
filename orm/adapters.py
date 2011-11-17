@@ -5,9 +5,10 @@ All other ORM modules should be database agnostic.'''
 
 import os, sys, base64
 import time, re, math
+from datetime import date as Date, datetime as DateTime
+from decimal import Decimal
 
-#import orm
-orm = sys.modules[__name__.rpartition('.')[0]] # parent module
+import orm
 
 
 drivers = []
@@ -27,7 +28,7 @@ except ImportError:
 
 class GenericAdapter():
     '''Generic DB adapter.'''
-    def __init__(self, uri= '', connect= True, autocommit= True):
+    def __init__(self, uri='', connect=True, autocommit=True):
         '''URI is already without protocol.'''
         print('Creating adapter for "%s"' % uri)
         self._timings = []
@@ -134,7 +135,7 @@ class GenericAdapter():
         return 'UPPER(%s)' % self.render(expression)
 
     
-    def render(self, value, castField= None):
+    def render(self, value, castField=None):
         '''Render of a value in a format suitable for operations with this DB field'''
         if isinstance(value, orm.fields.Expression): # it's an expression
             return value._render(self) # render sub-expression
@@ -157,9 +158,9 @@ class GenericAdapter():
         if value is None:
             return self._NULL()
         if isinstance(column, Column):
-            renderFunc = getattr(self, 'render' + column.type.capitalize(), None)
-            if hasattr(renderFunc, '__call__'): 
-                return renderFunc(value)
+            encodeFunc = getattr(self, 'encode' + column.type.upper(), None)
+            if hasattr(encodeFunc, '__call__'): 
+                return encodeFunc(value, **column.props)
         return "'%s'" % str(value).replace("'", "''") # escaping single quotes  
 
     def IntegrityError(self): 
@@ -223,32 +224,23 @@ class GenericAdapter():
     def _RANDOM(self):
         return 'RANDOM()'
 
-    def _INT(self, maxDigits= 9, intMap= [(1, 'TINYINT'), (2, 'SMALLINT'), 
-                    (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')], autoincrement= False, **kwargs):
+    def _INT(self, maxDigits= 9, autoincrement=False, **kwargs):
         '''INT column type.'''
         maxInt = int('9' * maxDigits)
         bitsCount = len(bin(maxInt)) - 2
         bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
 
+        intMap = [(1, 'TINYINT'), (2, 'SMALLINT'),
+                 (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]
+        
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
-                break
-        else:
-            raise Exception('Too many digits specified.')
-        if autoincrement:
-            _columnType += ' AUTO_INCREMENT'
-        return _columnType
+                if autoincrement:
+                    _columnType += ' AUTO_INCREMENT'
+                return _columnType
+        raise Exception('Too many digits specified.')
     
-    def renderInt(self, value):
-        return str(int(value))
-
-    def renderStr(self, value):
-        return "'%s'" % value.replace("'", "''")
-
-    def renderBlob(self, value):
-        return base64.b64encode(str(value))
-    
-    def _CHAR(self, maxLength, lengthFixed= False, **kwargs):
+    def _CHAR(self, maxLength, lengthFixed=False, **kwargs):
         '''CHAR, VARCHAR'''
         if lengthFixed:
             return 'CHAR (%i)' % maxLength
@@ -263,6 +255,15 @@ class GenericAdapter():
         It has a range of 0 to 30 and must be no larger than M.'''
         return 'DECIMAL (%s, %s)' % (maxDigits, fractionDigits)
     
+    def encodeINT(self, value, **kwargs):
+        return str(int(value))
+
+    def encodeSTR(self, value, **kwargs):
+        return "'%s'" % value.replace("'", "''")
+
+    def encodeBLOB(self, value, **kwargs):
+        return base64.b64encode(str(value))
+
     def getExpressionTables(self, expression):
         '''Get tables involved in WHERE expression.'''
         tables = set()
@@ -302,7 +303,7 @@ class GenericAdapter():
         self._autocommit()
         return result
     
-    def _update(self, *fields, where= None, limit= None):
+    def _update(self, *fields, where=None, limit=None):
         '''UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
           [ WHERE expression ] [ LIMIT limit_amount ]'''
         table = None
@@ -317,21 +318,21 @@ class GenericAdapter():
         sql_v = ', '.join(['%s= %s' % (field.name, self.render(value, field)) for (field, value) in fields])
         return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
 
-    def update(self, *fields, where= None, limit= None):
-        sql = self._update(*fields, where= where)
+    def update(self, *fields, where=None, limit=None):
+        sql = self._update(*fields, where=where)
         self.execute(sql)
         try:
             return self.cursor.rowcount
         except Exception:
             return None
 
-    def _delete(self, table, where, limit= None):
+    def _delete(self, table, where, limit=None):
         '''DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]'''
         assert orm.isModel(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
         return 'DELETE FROM %s%s;' % (table, sql_w)
 
-    def delete(self, table, where, limit= None):
+    def delete(self, table, where, limit=None):
         sql = self._delete(table, where)
         self.execute(sql)
         try:
@@ -339,8 +340,8 @@ class GenericAdapter():
         except Exception:
             return None
 
-    def _select(self, *args, where= None, orderBy= False, limit= False, 
-                distinct= False, groupBy= False, having= False):
+    def _select(self, *args, where=None, orderBy=False, limit=False,
+                distinct=False, groupBy=False, having=False):
         '''SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
           [ FROM from_clause ]
           [ WHERE where_expression ]
@@ -420,20 +421,37 @@ class GenericAdapter():
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, *args, where= None, **attributes):
+    def select(self, *args, where=None, **attributes):
         '''Create and return SELECT query.
         fields: one or list of fields to select;
         where: expression for where;
         join: one or list of tables to join, in form Table(join_on_expression);
         tables are taken from fields and `where` expression;
         limitBy: a tuple (start, end).'''
-        fields, sql = self._select(*args, where= where, **attributes)
+        fields, sql = self._select(*args, where=where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
         return self.parseResponse(fields, rows)
 
-    def parseResponse(self, fields, rows, blob_decode= True):
+    def parseResponse(self, fields, rows):
+        
+        for i in range(len(rows)):
+            row = rows[i]
+            newRow = []
+            for j in range(len(fields)):
+                field = fields[j]
+                value = row[j]
+                if isinstance(field, orm.Field):
+                    column = field.column
+                    if isinstance(column, Column):
+                        decodeFunc = getattr(self, 'decode' + column.type.upper(), None)
+                        if hasattr(decodeFunc, '__call__'): 
+                            value = decodeFunc(value, **column.props)
+                newRow.append(value)
+            rows[i] = newRow
+    
         return fields, rows
+    
 #        db = self.db
 #        virtualtables = []
 #        new_rows = []
@@ -579,7 +597,7 @@ class GenericAdapter():
 class SqliteAdapter(GenericAdapter):
     driver = globals().get('sqlite3')
 
-    def __init__(self, uri, driverArgs= None):
+    def __init__(self, uri, driverArgs=None):
         self.driverArgs = driverArgs or {}
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
@@ -645,26 +663,57 @@ class SqliteAdapter(GenericAdapter):
             
         return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''
 
-    def _INT(self, maxDigits= 9, intMap= [(8, 'INTEGER')], autoincrement= False, **kwargs):
+    def _CHAR(self, **kwargs):
+        return 'TEXT'
+
+    def _INT(self, maxDigits= 9, **kwargs):
         '''INTEGER column type for Sqlite.'''
         maxInt = int('9' * maxDigits)
         bitsCount = len(bin(maxInt)) - 2
         bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
 
-        for _bytesCount, _columnType in intMap:
-            if bytesCount <= _bytesCount:
-                break
-        else:
+        if bytesCount > 8:
             raise Exception('Too many digits specified.')
-        return _columnType
+        return 'INTEGER'
 
+    def _DATE(self, **kwargs):
+        return 'TEXT'
+
+    def encodeDATE(self, value, **kwargs):
+        if isinstance(value, Date):
+            return value.strftime("'%Y-%m-%d'")
+        return value
+
+    def decodeDATE(self, value, **kwargs):
+        return DateTime.strptime(value, '%Y-%m-%d').date()
+
+    def _DATETIME(self, **kwargs):
+        return 'TEXT'
+
+    def encodeDATETIME(self, value, **kwargs):
+        if isinstance(value, DateTime):
+            return value.strftime("'%Y-%m-%d %H:%M:%S.%f'")
+        return value
+    
+    def decodeDATETIME(self, value, **kwargs):
+        return DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+    
+    def _DECIMAL(self, **kwargs):
+        return 'TEXT'
+
+    def encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
+        _format = "'%% %d.%df'" % (maxDigits + 1, fractionDigits)
+        return _format % Decimal(value)
+
+    def decodeDECIMAL(self, value, **kwargs):
+        return Decimal(str(value))
 
 
 
 class MysqlAdapter(GenericAdapter):
     driver = globals().get('pymysql')
 
-    def __init__(self, uri, driverArgs= None):
+    def __init__(self, uri, driverArgs=None):
         self.driverArgs = driverArgs if isinstance(driverArgs, dict) else {}
         self.dbengine = "mysql"
         self.uri = uri
@@ -685,7 +734,7 @@ class MysqlAdapter(GenericAdapter):
             raise SyntaxError('Database name required')
         port = int(m.group('port') or '3306')
         charset = m.group('charset') or 'utf8'
-        self.driverArgs.update(dict(db= db, user= user, passwd= password, host= host, port= port, charset= charset))
+        self.driverArgs.update(dict(db=db, user=user, passwd=password, host=host, port=port, charset=charset))
         super().__init__(uri)
         self.execute('SET FOREIGN_KEY_CHECKS=1;')
         self.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
@@ -700,7 +749,7 @@ class MysqlAdapter(GenericAdapter):
         return 'RAND()'
 
     def lastInsertId(self):
-        return self.cursor.insert_id()
+        return self.cursor.lastrowid
 
     
 

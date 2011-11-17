@@ -29,20 +29,10 @@ ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available 
 
 fd, filePath = tempfile.mkstemp(suffix= '.sqlite')
 os.close(fd)
-
 db = orm.connect('sqlite://' + filePath, ADAPTERS)
-
-#print('\nBooks indexes:')
-#for index in Books._indexes:
-#    print(' ', index)
-#    
-#print('\nTextual representation of a field:')
-#print(Books.author)
-#
-#print('\nBooks fields:')
-#for i in Books:
-#    print(' ', i)
-#
+#db = orm.connect('mysql://root@localhost/test', ADAPTERS)
+#db.execute('DROP TABLE IF EXISTS authors')
+#db.execute('DROP TABLE IF EXISTS books')
 
 #print('\nCREATE TABLE query for Authors table:')
 print(db.getCreateTableQuery(Authors))
@@ -55,7 +45,7 @@ for query in db.getCreateTableQuery(Books).split('\n\n'):
     db.execute(query)
 
 
-#print(Authors.id.table, Books.id.table) # though id is inehrited from base model - you can see that now each table has its own id field
+#print(Authors.id.table, Books.id.table) # though id is inherited from base model - you can see that now each table has its own id field
 
 print('\nInserting authors:')
 authorsData = (dict(first_name= 'Linus', last_name= 'Torvalds'),
@@ -79,7 +69,7 @@ booksData = (dict(name= '''Free as in Freedom: Richard Stallman's Crusade for Fr
              dict(name= '''In The Plex: How Google Thinks, Works, and Shapes Our Lives''', 
                   author_id= authors[2].id, price= '13.98', publication_date= '12.04.2011'),
              dict(name= '''Just for Fun.''', 
-                  author_id= authors[0].id, price= '11.21', publication_date= '01.12.2002'),
+                  author_id= authors[0].id, price= '11.20', publication_date= '01.12.2002'),
 )
 for data in booksData:
     data['db'] = db
@@ -90,9 +80,10 @@ for data in booksData:
 
 
 print('\nSELECT query:')
-print(db._select(Books.id, where= (Books.price > 5), limit= (0, 10)))
-pprint(db.select(Books.id, Books.name, where= (Books.price > 14), limit= (0, 10)))
-print(Books.getOne(db, where= (Books.price > 14)))
+print(db._select(Books.id, where= (Books.price > '14.00'), limit= (0, 10)))
+pprint(db.select(Books, where= (Books.price > '14'), limit= (0, 10)))
+book = Books.getOne(db, where= (Books.price > 14))
+print(book, type(book.price))
 
 #print(Books(Books.price > 5).select(dbAdapter, join=[Authors]))
 
