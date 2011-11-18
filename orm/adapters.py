@@ -5,8 +5,9 @@ All other ORM modules should be database agnostic.'''
 
 import os, sys, base64
 import time, re, math
-from datetime import date as Date, datetime as DateTime
+from datetime import date as Date, datetime as DateTime, timedelta as TimeDelta
 from decimal import Decimal
+import time
 
 import orm
 
@@ -26,9 +27,19 @@ except ImportError:
     orm.logger.debug('no pymysql driver')
 
 
+
+class Column():
+    '''Abstract DB column, supported natively by the DB.'''
+    def __init__(self, type, field, name= '', **kwargs):
+        self.type = type
+        self.field = field
+        self.name = name or field.name
+        self.props = kwargs # properties 
+        
+
 class GenericAdapter():
     '''Generic DB adapter.'''
-    def __init__(self, uri='', connect=True, autocommit=True):
+    def __init__(self, uri= '', connect= True, autocommit= True):
         '''URI is already without protocol.'''
         print('Creating adapter for "%s"' % uri)
         self._timings = []
@@ -55,7 +66,7 @@ class GenericAdapter():
     def rollback(self):
         return self.connection.rollback()
 
-    def close(self):
+    def disconnect(self):
         return self.connection.close()
 
     def logExecute(self, *a, **b):
@@ -160,7 +171,7 @@ class GenericAdapter():
         if isinstance(column, Column):
             encodeFunc = getattr(self, 'encode' + column.type.upper(), None)
             if hasattr(encodeFunc, '__call__'): 
-                return encodeFunc(value, **column.props)
+                return str(encodeFunc(value, **column.props))
         return "'%s'" % str(value).replace("'", "''") # escaping single quotes  
 
     def IntegrityError(self): 
@@ -258,11 +269,8 @@ class GenericAdapter():
     def encodeINT(self, value, **kwargs):
         return str(int(value))
 
-    def encodeSTR(self, value, **kwargs):
-        return "'%s'" % value.replace("'", "''")
-
     def encodeBLOB(self, value, **kwargs):
-        return base64.b64encode(str(value))
+        return "'%s'" % base64.b64encode(value)
 
     def getExpressionTables(self, expression):
         '''Get tables involved in WHERE expression.'''
@@ -456,8 +464,9 @@ class GenericAdapter():
 
 class SqliteAdapter(GenericAdapter):
     driver = globals().get('sqlite3')
+    epoch = Date(1970, 1, 1) # from this date number of days will be counted when storing DATE values in the DB
 
-    def __init__(self, uri, driverArgs=None):
+    def __init__(self, uri, driverArgs= None):
         self.driverArgs = driverArgs or {}
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
@@ -537,47 +546,80 @@ class SqliteAdapter(GenericAdapter):
         return 'INTEGER'
 
     def _DATE(self, **kwargs):
-        return 'TEXT'
+        return 'INTEGER'
 
     def encodeDATE(self, value, **kwargs):
         if isinstance(value, str):
-            value = self.decodeDATE(value)
+            value = DateTime.strptime(value, '%Y-%m-%d').date()
         if isinstance(value, Date):
-            return value.strftime("'%Y-%m-%d'")
-        raise SyntaxError('Pass date "YYYY-MM-DD" or datetime.date.')
+            return (value - self.epoch).days
+        raise SyntaxError('Expected "YYYY-MM-DD" or datetime.date.')
 
     def decodeDATE(self, value, **kwargs):
-        return DateTime.strptime(value, '%Y-%m-%d').date()
+        return self.epoch + TimeDelta(days= value)
 
     def _DATETIME(self, **kwargs):
-        return 'TEXT'
+        return 'INTEGER'
 
     def encodeDATETIME(self, value, **kwargs):
         if isinstance(value, DateTime):
-            return value.strftime("'%Y-%m-%d %H:%M:%S.%f'")
-        return value
+            return int(time.mktime(value.timetuple()) * 1000000) + value.microsecond # in microseconds since the UNIX epoch  
+        raise SyntaxError('Expected datetime.datetime.')
     
     def decodeDATETIME(self, value, **kwargs):
-        return DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+        return DateTime.fromtimestamp(value / 1000000)
     
     def _DECIMAL(self, **kwargs):
-        return 'TEXT'
+        return 'INTEGER'
 
     def encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
-        _format = "'%% %d.%df'" % (maxDigits + 1, fractionDigits)
-        return _format % Decimal(value)
+        return Decimal(value) * (10 ** fractionDigits)
 
-    def decodeDECIMAL(self, value, **kwargs):
-        return Decimal(str(value))
+    def decodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
+        return Decimal(value) / (10 ** fractionDigits)
+
+# alternative store format - using strings
+#    def _DATE(self, **kwargs):
+#        return 'TEXT'
+#
+#    def encodeDATE(self, value, **kwargs):
+#        if isinstance(value, str):
+#            value = self.decodeDATE(value)
+#        if isinstance(value, Date):
+#            return value.strftime("'%Y-%m-%d'")
+#        raise SyntaxError('Expected "YYYY-MM-DD" or datetime.date.')
+#
+#    def decodeDATE(self, value, **kwargs):
+#        return DateTime.strptime(value, '%Y-%m-%d').date()
+#
+#    def _DATETIME(self, **kwargs):
+#        return 'TEXT'
+#
+#    def encodeDATETIME(self, value, **kwargs):
+#        if isinstance(value, DateTime):
+#            return value.strftime("'%Y-%m-%d %H:%M:%S.%f'")
+#        raise SyntaxError('Expected datetime.datetime.')
+#    
+#    def decodeDATETIME(self, value, **kwargs):
+#        return DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+#
+#    def _DECIMAL(self, **kwargs):
+#        return 'TEXT'
+#
+#    def encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
+#        _format = "'%% %d.%df'" % (maxDigits + 1, fractionDigits)
+#        return _format % Decimal(value)
+#
+#    def decodeDECIMAL(self, value, **kwargs):
+#        return Decimal(str(value))
 
 
 
 class MysqlAdapter(GenericAdapter):
     driver = globals().get('pymysql')
 
-    def __init__(self, uri, driverArgs=None):
-        self.driverArgs = driverArgs if isinstance(driverArgs, dict) else {}
-        self.dbengine = "mysql"
+    def __init__(self, uri, driverArgs= None):
+        self.driverArgs = driverArgs or {}
         self.uri = uri
         m = re.match('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)(\?set_encoding=(?P<charset>\w+))?$', uri)
         if not m:
@@ -596,7 +638,7 @@ class MysqlAdapter(GenericAdapter):
             raise SyntaxError('Database name required')
         port = int(m.group('port') or '3306')
         charset = m.group('charset') or 'utf8'
-        self.driverArgs.update(dict(db=db, user=user, passwd=password, host=host, port=port, charset=charset))
+        self.driverArgs.update(dict(db= db, user= user, passwd= password, host= host, port= port, charset= charset))
         super().__init__(uri)
         self.execute('SET FOREIGN_KEY_CHECKS=1;')
         self.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
@@ -615,14 +657,6 @@ class MysqlAdapter(GenericAdapter):
 
     
 
-class Column():
-    '''Abstract DB column, supported natively by the DB.'''
-    def __init__(self, type, field, name= '', **kwargs):
-        self.type = type
-        self.field = field
-        self.name = name or field.name
-        self.props = kwargs # properties 
-        
 
 
 def xorify(orderBy):
@@ -634,4 +668,3 @@ def xorify(orderBy):
     for item in orderBy[1:]:
         orderBy2 = orderBy2 | item
     return orderBy2
-

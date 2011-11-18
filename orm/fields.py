@@ -124,24 +124,6 @@ class IntegerField(Field):
         self.autoincrement = autoincrement
 
 
-#class DecimalFieldI(Field):
-#    '''Decimals stored as 8 byte INT (up to 18 digits).
-#    TODO: DecimalFieldS - decimals stored as strings - unlimited number of digits.'''
-#    def _init(self, maxDigits, decimalPlaces, defaultValue, index= ''):
-#        super()._init(orm.adapters.Column(self.name, 'INT', self, bytesCount= 8), defaultValue, index)
-#        self.maxDigits = maxDigits
-#        self.decimalPlaces = decimalPlaces
-#    
-#    def _cast(self, value):
-#        if isinstance(value, Field):
-#            if not isinstance(value, DecimalFieldI):
-#                raise SyntaxError('Only DecimalFieldI cooperands are supported.')
-#            if value.decimalPlaces != self.decimalPlaces:
-#                raise SyntaxError('Cooperand field must have the same number of decimal places.')
-#            return value
-#        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
-
-
 class DecimalField(Field):
     def _init(self, maxDigits, fractionDigits, defaultValue, index= ''):
         super()._init(orm.adapters.Column('DECIMAL', self, maxDigits= maxDigits, fractionDigits= fractionDigits), defaultValue, index)
@@ -157,18 +139,9 @@ class DateTimeField(Field):
         super()._init(orm.adapters.Column('DATETIME', self), defaultValue, index)
 
     
-#    def _cast(self, value):
-#        if isinstance(value, Field):
-#            if not isinstance(value, DecimalFieldI):
-#                raise SyntaxError('Only DecimalFieldI cooperands are supported.')
-#            if value.decimalPlaces != self.decimalPlaces:
-#                raise SyntaxError('Cooperand field must have the same number of decimal places.')
-#            return value
-#        return (Decimal(value) * (10 ** self.decimalPlaces)).normalize() # strip trailing zeroes after the decimal point
-
 
 class IdField(Field):
-    '''ID - implicitly present in each table.'''
+    '''Primary integer autoincrement key. ID - implicitly present in each table.'''
     def _init(self):
         super()._init(orm.adapters.Column('INT', self, maxDigits= 19, autoincrement= True), None, 'primary')
         
