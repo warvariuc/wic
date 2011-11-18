@@ -1,4 +1,4 @@
-dbUri = 'sqlite://../../mtc.sqlite'
+dbUri = 'conf/databases/db.sqlite'
 
 author = 'Виктор Варварюк <victor.varvariuc@gmail.com>'
 description = '''This is a configuration for testing purposes.

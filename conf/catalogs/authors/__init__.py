@@ -21,14 +21,6 @@ class Form(CatalogForm):
 
 import orm
 
-class Persons(orm.Model):
-    last_name = orm.fields.StringField(maxLength= 100)
+class Authors(orm.Model):
     first_name = orm.StringField(maxLength= 100)
-    middle_name = orm.StringField(maxLength= 100)
-    phone_prefix = orm.IntegerField(bytesCount= 2) # phone prefix code of the location
-    phone_number = orm.IntegerField(bytesCount= 4)
-    
-    def getFullName(self):
-        '''An item function, like in Django'''
-        return '%s %s %s' % (self.last_name, self.first_name, self.middle_name)
-    
+    last_name = orm.StringField(maxLength= 100)

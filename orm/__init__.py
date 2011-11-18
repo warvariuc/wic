@@ -51,7 +51,7 @@ class metamethod():
 
 
 from .exceptions import *
-from .fields import Expression, Field, IntegerField, StringField, \
+from .fields import Expression, Field, IdField, IntegerField, StringField, DecimalField, DateField, DateTimeField, \
                     RecordIdField, AnyRecordField, COUNT, MAX, MIN, UPPER, LOWER
 from .models import Model, Index, Join, LeftJoin
 from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter

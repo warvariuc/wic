@@ -168,7 +168,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Вставить', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Очистить', self.clear)
 
-        self.showSelector = True
+        self.setShowSelector(True)
         self._totalDigits = 15 # total number of digits
         self._fractionDigits = 2 # number of digits in fractional part
         self._nonNegative = False
@@ -176,14 +176,14 @@ class WDecimalEdit(QtGui.QLineEdit):
         self._isHandlingTextChanged = False
         self.value = '0' # will cause text update
 
-    def getTotalDigits(self): 
+    def getMaxDigits(self): 
         return self._totalDigits
-    def setTotalDigits(self, value):
+    def setMaxDigits(self, value):
         assert isinstance(value, int), 'Pass an integer'
         self._totalDigits = max(value, 1)
         self._fractionDigits = min(self._fractionDigits, self._totalDigits)
         self.onTextChanged(self.text()) #to reflect changes
-    totalDigits = QtCore.pyqtProperty(int, getTotalDigits, setTotalDigits) 
+    maxDigits = QtCore.pyqtProperty(int, getMaxDigits, setMaxDigits) 
 
     def getFractionDigits(self): 
         return self._fractionDigits

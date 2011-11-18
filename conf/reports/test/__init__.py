@@ -51,7 +51,7 @@ class Form(WForm):
         globalModule.test()
 
     def on_dceTotalDigits_valueChanged(self, text):
-        self.decimalEdit.setTotalDigits(int(text))
+        self.decimalEdit.setMaxDigits(int(text))
         self.updateInfoAboutDecimalEdit()
 
     def on_dceFractionDigits_valueChanged(self, text):
@@ -60,7 +60,7 @@ class Form(WForm):
 
     def updateInfoAboutDecimalEdit(self):
         setValue(self.dceShowSelector, self.decimalEdit.showSelector)
-        setValue(self.dceTotalDigits, self.decimalEdit.totalDigits)
+        setValue(self.dceTotalDigits, self.decimalEdit.maxDigits)
         setValue(self.dceFractionDigits, self.decimalEdit.fractionDigits)
         setValue(self.dceNonNegative, self.decimalEdit.nonNegative)
         setValue(self.dceSeparateThousands, self.decimalEdit.separateThousands)

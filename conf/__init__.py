@@ -18,13 +18,16 @@ def on_systemStarted(): # предопределенная процедура з
     global db
     db = orm.SqliteAdapter(settings.dbUri)
 
-    import conf.reports.test
-    from conf.catalogs.persons import Persons
-    openForm(conf.reports.test.Form)
-    for person in Persons.get(db, where= (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit= (0,5)):
-        openCatalogItemForm(person)
+    from conf.reports.test import Form
+    openForm(Form)
     
+    from conf.catalogs.books import Books
+    book = Books.getOne(db, where= (Books.price > 14))
     w.printMessage(db.getLastQuery())
+
+    openCatalogItemForm(book)
+    
+    wic.mainWindow.windowRestoreAll()
 
     
 def on_systemAboutToExit(): # предопределенная процедура запускаемая при завершении работы системы

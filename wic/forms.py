@@ -155,15 +155,22 @@ def createWidgetFromField(field):
     if isinstance(field, orm.StringField):
         widget = QtGui.QLineEdit()
         widget.setMaxLength(field.maxLength)
-    elif isinstance(field, (orm.IntegerField, orm.IdField)):
+    elif isinstance(field, (orm.IntegerField, orm.IdField, orm.RecordIdField)):
         widget = QtGui.QLineEdit()
         widget.setValidator(QtGui.QIntValidator())
+    elif isinstance(field, orm.DecimalField):
+        widget = WDecimalEdit()
+        widget.setMaxDigits(field.column.props['maxDigits'])
+        widget.setFractionDigits(field.column.props['fractionDigits'])
+    elif isinstance(field, orm.DateField):
+        widget = WDateEdit()
     else:
-        raise Exception('Could not find a widget for field %s' % field)
+        widget = QtGui.QLineEdit()
+        #raise Exception('Could not find a widget for field %s' % field)
     return widget
 
 def setValue(widget, value):
-    '''Set value of a widget.'''        
+    '''Automatically set a widget's value depending on its type.'''        
     if isinstance(widget, QtGui.QTextEdit): 
         widget.setPlainText(str(value))
     elif isinstance(widget, QtGui.QCheckBox): 
@@ -176,8 +183,25 @@ def setValue(widget, value):
         widget.setValue(value)
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
         widget.setText(str(value))
+        widget.home(False)
+#        if isinstance(widget, QtGui.QLineEdit):
+#            widget.setText(value)
+#            widget.home(False)
+#        elif isinstance(widget, QtGui.QPlainTextEdit):
+#            widget.setPlainText(value)
+#        elif isinstance(widget, QtGui.QLabel):
+#            widget.setText(value)
+#        elif isinstance(widget, QtGui.QComboBox):
+#            lineEdit = widget.lineEdit()
+#            if lineEdit: #Only editable combo boxes have a line edit
+#                lineEdit.setText(value)
+#        elif isinstance(widget, QtGui.QSpinBox):
+#            widget.setValue(int(value))
+#        elif isinstance(widget, QtGui.QCheckBox):
+#            widget.setChecked(value)
 
 def getValue(widget):
+    '''Automatically extract a widget's value depending on its type.'''
     if isinstance(widget, QtGui.QTextEdit): 
         return widget.plainText()
     elif isinstance(widget, QtGui.QCheckBox): 
@@ -188,49 +212,19 @@ def getValue(widget):
         return widget.value()
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
         return widget.text()
-
-
-def putToForm(data, uiFilePath, dialog):
-    'Загрузить форму с диска, заполнить поля данными data и вернуть форму'
-    dialog = uic.loadUi(uiFilePath, QtGui.QDialog(dialog))
-    for name, value in data.items():
-        try: widget = getattr(dialog, name) # ищем нужный атрибут на форме
-        except AttributeError: continue # такого нет
-        if isinstance(widget, QtGui.QLineEdit):
-            widget.setText(value)
-            widget.home(False)
-        elif isinstance(widget, QtGui.QPlainTextEdit):
-            widget.setPlainText(value)
-        elif isinstance(widget, QtGui.QLabel):
-            widget.setText(value)
-        elif isinstance(widget, QtGui.QComboBox):
-            lineEdit = widget.lineEdit()
-            if lineEdit: #Only editable combo boxes have a line edit
-                lineEdit.setText(value)
-        elif isinstance(widget, QtGui.QSpinBox):
-            widget.setValue(int(value))
-        elif isinstance(widget, QtGui.QCheckBox):
-            widget.setChecked(value)
-    return dialog
-
-
-def getFromForm(dialog):
-    data = {}
-    for widget in dialog.children():
-        value = None
-        if isinstance(widget, QtGui.QLineEdit):
-            value = widget.text()
-        elif isinstance(widget, QtGui.QPlainTextEdit):
-            value = widget.toPlainText()
-        elif isinstance(widget, QtGui.QComboBox):
-            lineEdit = widget.lineEdit()
-            if lineEdit: #Only editable combo boxes have a line edit
-                value = lineEdit.text()
-        elif isinstance(widget, QtGui.QSpinBox):
-            value = widget.value()
-        elif isinstance(widget, QtGui.QCheckBox):
-            value = bool(widget.isChecked())
-        if value is not None:
-            data[widget.objectName()] = value
-    return data
+#        if isinstance(widget, QtGui.QLineEdit):
+#            value = widget.text()
+#        elif isinstance(widget, QtGui.QPlainTextEdit):
+#            value = widget.toPlainText()
+#        elif isinstance(widget, QtGui.QComboBox):
+#            lineEdit = widget.lineEdit()
+#            if lineEdit: #Only editable combo boxes have a line edit
+#                value = lineEdit.text()
+#        elif isinstance(widget, QtGui.QSpinBox):
+#            value = widget.value()
+#        elif isinstance(widget, QtGui.QCheckBox):
+#            value = bool(widget.isChecked())
+#        if value is not None:
+#            data[widget.objectName()] = value
+#    return data
 

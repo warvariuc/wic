@@ -140,7 +140,7 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.clicked.connect(self.showPopupCalendar)
         self.textChanged.connect(self.onTextChanged)
 
-        #self._showSelector = True
+        self.setShowSelector(True)
         self.setDate(None)
 
     def resizeEvent(self, event):
