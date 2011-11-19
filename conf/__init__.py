@@ -26,6 +26,7 @@ def on_systemStarted(): # предопределенная процедура з
     w.printMessage(db.getLastQuery())
 
     openCatalogItemForm(book)
+    openCatalogItemForm(Books(db))
     
     wic.mainWindow.windowRestoreAll()
 

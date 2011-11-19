@@ -562,6 +562,8 @@ class SqliteAdapter(GenericAdapter):
         return 'INTEGER'
 
     def encodeDATETIME(self, value, **kwargs):
+        if isinstance(value, str):
+            value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         if isinstance(value, DateTime):
             return int(time.mktime(value.timetuple()) * 1000000) + value.microsecond # in microseconds since the UNIX epoch  
         raise SyntaxError('Expected datetime.datetime.')

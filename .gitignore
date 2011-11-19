@@ -2,7 +2,7 @@
 .*
 
 # sqlite databases
-*.sqlite
+#*.sqlite
 
 # compiled python scripts
 *.pyc

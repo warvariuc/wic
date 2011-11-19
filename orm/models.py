@@ -135,11 +135,11 @@ class Model(metaclass= ModelMeta):
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
     _ordering = [] # default order for select when not specified
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, db, *args, **kwargs):
         '''Create a model instance - a record.
         Pass arguments: tuples (Field, value) 
         and keyword arguments: fieldName= value.'''
-        self._db = kwargs.pop('db')
+        self._db = db #kwargs.pop('db')
         
         table = None
         for item in args:
@@ -187,7 +187,7 @@ class Model(metaclass= ModelMeta):
         if not rows: # not found
             raise orm.RecordNotFound
         if len(rows) == 1:
-            return cls(*zip(fields, rows[0]), db= db)
+            return cls(db, *zip(fields, rows[0]))
         raise orm.TooManyRecords
         
         
