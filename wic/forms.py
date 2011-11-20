@@ -145,6 +145,16 @@ class CatalogForm(WForm):
             if widget:
                 setValue(widget, fieldValue)
         
+#    def fillItemFromForm(self):
+#        'Automatically fill the form fields using values from the catalog item fields.'
+#        catalogItem = self.catalogItem
+#        for field in catalogItem.__class__:
+#            fieldName = field.name
+#            fieldValue = catalogItem[field]
+#            widget = getattr(self, fieldName, None)
+#            if widget:
+#                setValue(widget, fieldValue)
+        
             
     def save(self):
         ''
@@ -159,7 +169,9 @@ class CatalogForm(WForm):
                     fieldValue = None
                 setattr(catalogItem, fieldName, fieldValue)
         catalogItem.save()
-        self.fillFormFromItem() # new id (?)
+        idWidget = getattr(self, '_id', None)
+        if idWidget:
+            setValue(idWidget, catalogItem._id)
 
 
         
@@ -171,15 +183,20 @@ def createWidgetFromField(field):
     elif isinstance(field, (orm.IntegerField, orm.IdField, orm.RecordIdField)):
         widget = QtGui.QLineEdit()
         widget.setValidator(QtGui.QIntValidator())
+    elif isinstance(field, orm.DateTimeField):
+        widget = QtGui.QLineEdit()
+        widget.setInputMask('9999-99-99 99:99:99.999999;0')
     elif isinstance(field, orm.DecimalField):
         widget = WDecimalEdit()
         widget.setMaxDigits(field.column.props['maxDigits'])
         widget.setFractionDigits(field.column.props['fractionDigits'])
     elif isinstance(field, orm.DateField):
         widget = WDateEdit()
+    elif isinstance(field, orm.BooleanField):
+        widget = QtGui.QCheckBox(field.name)
     else: # any other - treat as text
-        widget = QtGui.QLineEdit()
-#        raise Exception('Could not find a widget for field %s' % field)
+#        widget = QtGui.QLineEdit()
+        raise Exception('Could not find a widget for field %s' % field)
     return widget
 
 
@@ -189,7 +206,7 @@ def setValue(widget, value):
         widget.setPlainText(str(value))
     elif isinstance(widget, QtGui.QCheckBox): 
         #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
-        widget.setChecked(value)
+        widget.setChecked(bool(value))
         #widget.blockSignals(False) 
     elif isinstance(widget, WDateEdit):
         widget.setDate(value)

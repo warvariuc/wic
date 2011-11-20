@@ -1,6 +1,7 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
 
 import inspect
+from datetime import datetime as DateTime
 import orm
 from orm import signals
 
@@ -71,11 +72,6 @@ class ModelMeta(type):
         except NameError: # if Model is not defined: __new__ is called for Model itself
             return newClass # return wihout any processing
         
-#        orm._tablesCount += 1
-#        if not hasattr(newClass, '_tableId'):
-#            newClass._tableId = orm._tablesCount  
-#            #raise Exception('Table ID not set in {}!'.format(newClass))
-            
         newClass._indexes = list(newClass._indexes) # assure each class has its own attribute
         for index in newClass._indexes :
             assert isinstance(index, Index), 'Found a non Index in the _indexes.'
@@ -88,11 +84,8 @@ class ModelMeta(type):
         fields.sort(key= lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
         
         for fieldName, field in fields:
-            if not fieldName.islower() or fieldName.startswith('_'):
-                raise Exception('Field `{}` in Table `{}`: field names must be lowercase and must not start with `_`.'.format(fieldName, name))
-            #field_ = field.__class__() # recreate the field - to handle correctly inheritance of Tables
-            #field_.name = fieldName
-            #field_.table = newClass
+            if not fieldName.islower() or fieldName.startswith('_') and fieldName not in ('_id', '_timestamp'):
+                raise Exception('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
             field_ = field.__class__(name= fieldName, table= newClass) # recreate the field - to handle correctly inheritance of Tables
             field_._init(*field._initArgs, **field._initKwargs) # and initialize it
             setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
@@ -131,8 +124,10 @@ class ModelMeta(type):
 class Model(metaclass= ModelMeta):
     '''Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields.'''
-    id = orm.fields.IdField() # this field is present in all tables
-    #timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record  
+    
+    _id = orm.fields.IdField() # this field is present in all tables
+    _timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
+      
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
     _ordering = [] # default order for select when not specified
 
@@ -177,9 +172,9 @@ class Model(metaclass= ModelMeta):
         '''Delete this record.'''
         db = self._db
         table = self.__class__
-        db.delete(table, where= (table.id == self.id))
+        db.delete(table, where= (table._id == self._id))
         db.commit()
-        self.id = None
+        self._id = None
         
     @classmethod
     def getOne(cls, db, where):
@@ -193,9 +188,9 @@ class Model(metaclass= ModelMeta):
         
         
     @classmethod
-    def getOneById(cls, db, id):
+    def getOneById(cls, db, _id):
         '''Get one record by id.'''
-        return cls.getOne(db, cls.id == id)
+        return cls.getOne(db, cls._id == _id)
 
     @classmethod
     def get(cls, db, where, orderBy= False, limit= False):
@@ -203,22 +198,23 @@ class Model(metaclass= ModelMeta):
         orderBy = orderBy or cls._ordering # use default table ordering if no ordering passed
         fields, rows = db.select(cls, where= where, orderBy= orderBy, limit= limit)
         for row in rows:
-            yield cls(*zip(fields, row), db= db)
+            yield cls(db, *zip(fields, row))
 
     def save(self):
         db = self._db
         table = self.__class__
         values = [] # list of tuples (Field, value)
+        self._timestamp = DateTime.now()
         for field in table:
             value = self[field]
             values.append((field, value))
-        if self.id: # existing record
-            db.update(*values, where= (table.id == self.id))
+        if self._id: # existing record
+            db.update(*values, where= (table._id == self._id))
             db.commit()
         else: # new record
             db.insert(*values)
             db.commit()
-            self.id = db.lastInsertId()
+            self._id = db.lastInsertId()
         
         signals.post_delete.send(sender= self)
 

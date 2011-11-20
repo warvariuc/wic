@@ -28,9 +28,9 @@ class Books(orm.Model):
     name = orm.StringField(maxLength= 100, defaultValue= 'a very good book!!!')
     price = orm.fields.DecimalField(maxDigits= 10, fractionDigits= 2, defaultValue= '0.00', index= True)
     author_id = orm.RecordIdField(Authors, index= True)
-    publication_date = orm.fields.DateField(defaultValue= None)
-    timestamp = orm.fields.DateTimeField(defaultValue= None)
+    publication_date = orm.DateField()
+    is_favorite = orm.BooleanField()
 
     def save(self):
-        self.timestamp = DateTime.now()
+        self._timestamp = None
         super().save()

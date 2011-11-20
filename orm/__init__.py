@@ -12,7 +12,6 @@ import logging, inspect
 logger = logging.getLogger('wic.orm')
 
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
-_tablesCount = 0 
 
 def getObjectByPath(path, defaultModule):
     '''Given the path in form 'some.module.object' return the object. 
@@ -52,7 +51,7 @@ class metamethod():
 
 from .exceptions import *
 from .fields import Expression, Field, IdField, IntegerField, StringField, DecimalField, DateField, DateTimeField, \
-                    RecordIdField, AnyRecordField, COUNT, MAX, MIN, UPPER, LOWER
+                    BooleanField, RecordIdField, AnyRecordField, COUNT, MAX, MIN, UPPER, LOWER
 from .models import Model, Index, Join, LeftJoin
 from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter
 

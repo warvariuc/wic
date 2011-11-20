@@ -125,17 +125,17 @@ class IntegerField(Field):
 
 
 class DecimalField(Field):
-    def _init(self, maxDigits, fractionDigits, defaultValue, index= ''):
+    def _init(self, maxDigits, fractionDigits, defaultValue= None, index= ''):
         super()._init(orm.adapters.Column('DECIMAL', self, maxDigits= maxDigits, fractionDigits= fractionDigits), defaultValue, index)
     
 
 class DateField(Field):
-    def _init(self, defaultValue, index= ''):
+    def _init(self, defaultValue= None, index= ''):
         super()._init(orm.adapters.Column('DATE', self), defaultValue, index)
 
 
 class DateTimeField(Field):
-    def _init(self, defaultValue, index= ''):
+    def _init(self, defaultValue= None, index= ''):
         super()._init(orm.adapters.Column('DATETIME', self), defaultValue, index)
 
     
@@ -144,6 +144,11 @@ class IdField(Field):
     '''Primary integer autoincrement key. ID - implicitly present in each table.'''
     def _init(self):
         super()._init(orm.adapters.Column('INT', self, maxDigits= 19, autoincrement= True), None, 'primary')
+
+
+class BooleanField(Field):
+    def _init(self, defaultValue= None, index= ''):
+        super()._init(orm.adapters.Column('INT', self, maxDigits= 1), defaultValue, index)
         
 
 class RecordIdField(Field):
