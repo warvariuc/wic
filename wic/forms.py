@@ -123,7 +123,7 @@ class CatalogForm(WForm):
         buttonBox = getattr(self, 'buttonBox', None)
         if buttonBox: # if button box is present - listen to its signals
             saveButton = buttonBox.button(buttonBox.Save)
-            if saveButton:
+            if saveButton: # change Save button's role
                 buttonBox.addButton(saveButton, buttonBox.ApplyRole)
                 saveButton.clicked.connect(self.save)
                 saveShortCut = QtGui.QShortcut(QtGui.QKeySequence('F2'), self)
@@ -155,8 +155,11 @@ class CatalogForm(WForm):
             widget = getattr(self, fieldName, None)
             if widget:
                 fieldValue = getValue(widget)
+                if isinstance(field, (orm.IdField, orm.RecordIdField)) and not fieldValue:
+                    fieldValue = None
                 setattr(catalogItem, fieldName, fieldValue)
         catalogItem.save()
+        self.fillFormFromItem() # new id (?)
 
 
         
@@ -192,8 +195,8 @@ def setValue(widget, value):
         widget.setDate(value)
     elif isinstance(widget, (WDecimalEdit, QtGui.QSpinBox)):
         widget.setValue(value)
-    elif isinstance(widget, QtGui.QLineEdit): 
-        widget.setText(str(value))
+    elif isinstance(widget, QtGui.QLineEdit):
+        widget.setText('' if value is None else str(value))
         widget.home(False)
     elif isinstance(widget, QtGui.QPushButton): 
         widget.setText(str(value))
