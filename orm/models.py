@@ -2,6 +2,7 @@
 
 import inspect
 import orm
+from orm import signals
 
 
 class Index():
@@ -218,6 +219,8 @@ class Model(metaclass= ModelMeta):
             db.insert(*values)
             db.commit()
             self.id = db.lastInsertId()
+        
+        signals.post_delete.send(sender= self)
 
     def __str__(self):
         '''How the record is presented.'''

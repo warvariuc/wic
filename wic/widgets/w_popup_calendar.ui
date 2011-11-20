@@ -6,17 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>266</width>
+    <width>191</width>
     <height>173</height>
    </rect>
   </property>
-  <property name="contextMenuPolicy">
-   <enum>Qt::NoContextMenu</enum>
-  </property>
   <property name="windowTitle">
-   <string>Календарь</string>
+   <string>Calendar</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" columnstretch="5,0,0,0,0">
+  <layout class="QGridLayout" name="gridLayout" columnstretch="5,1,1,1,1">
    <property name="margin">
     <number>0</number>
    </property>
@@ -191,15 +188,6 @@
    </item>
    <item row="1" column="0" colspan="5">
     <widget class="QCalendarWidget" name="calendarWidget">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>1</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
      <property name="minimumDate">
       <date>
        <year>1900</year>
@@ -217,20 +205,14 @@
      <property name="firstDayOfWeek">
       <enum>Qt::Monday</enum>
      </property>
-     <property name="gridVisible">
-      <bool>false</bool>
-     </property>
      <property name="horizontalHeaderFormat">
-      <enum>QCalendarWidget::ShortDayNames</enum>
+      <enum>QCalendarWidget::SingleLetterDayNames</enum>
      </property>
      <property name="verticalHeaderFormat">
       <enum>QCalendarWidget::NoVerticalHeader</enum>
      </property>
      <property name="navigationBarVisible">
       <bool>false</bool>
-     </property>
-     <property name="dateEditEnabled">
-      <bool>true</bool>
      </property>
     </widget>
    </item>
