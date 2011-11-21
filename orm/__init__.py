@@ -50,8 +50,8 @@ class metamethod():
 
 
 from .exceptions import *
-from .fields import Expression, Field, IdField, IntegerField, StringField, DecimalField, DateField, DateTimeField, \
-                    BooleanField, RecordIdField, AnyRecordField, COUNT, MAX, MIN, UPPER, LOWER
+from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, DateTimeField, \
+                    BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
 from .models import Model, Index, Join, LeftJoin
 from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter
 

@@ -7,12 +7,8 @@ from wic.forms import CatalogForm
 
 class Form(CatalogForm):
     ''''''
-    uiFilePath = '' # auto generated form
+    #uiFilePath = '' # auto generated form
 
-    @QtCore.pyqtSlot()
-    def on_pushButton_clicked(self):
-        print('!!!')
-        
     #def on_open(self):
         #self.setWindowIcon(QtGui.QIcon(self.iconPath))
         #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
@@ -25,10 +21,11 @@ from conf.catalogs.authors import Authors
 
 
 class Books(orm.Model):
-    name = orm.StringField(maxLength= 100, defaultValue= 'a very good book!!!')
+    name = orm.CharField(maxLength= 100, defaultValue= 'a very good book!!!')
     price = orm.fields.DecimalField(maxDigits= 10, fractionDigits= 2, defaultValue= '0.00', index= True)
     author_id = orm.RecordIdField(Authors, index= True)
     publication_date = orm.DateField()
+    description = orm.TextField()
     is_favorite = orm.BooleanField()
 
     def save(self):

@@ -22,5 +22,5 @@ class Form(CatalogForm):
 import orm
 
 class Authors(orm.Model):
-    first_name = orm.StringField(maxLength= 100)
-    last_name = orm.StringField(maxLength= 100)
+    first_name = orm.CharField(maxLength= 100)
+    last_name = orm.CharField(maxLength= 100)

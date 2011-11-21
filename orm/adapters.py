@@ -7,7 +7,6 @@ import os, sys, base64
 import time, re, math
 from datetime import date as Date, datetime as DateTime, timedelta as TimeDelta
 from decimal import Decimal
-import time
 
 import orm
 
@@ -27,15 +26,6 @@ except ImportError:
     orm.logger.debug('no pymysql driver')
 
 
-
-class Column():
-    '''Abstract DB column, supported natively by the DB.'''
-    def __init__(self, type, field, name= '', **kwargs):
-        self.type = type
-        self.field = field
-        self.name = name or field.name
-        self.props = kwargs # properties 
-        
 
 class GenericAdapter():
     '''Generic DB adapter.'''
@@ -168,10 +158,10 @@ class GenericAdapter():
     def _render(self, value, column):
         if value is None:
             return self._NULL()
-        if isinstance(column, Column):
+        if isinstance(column, orm.fields.Column):
             encodeFunc = getattr(self, 'encode' + column.type.upper(), None)
             if hasattr(encodeFunc, '__call__'): 
-                return str(encodeFunc(value, **column.props))
+                return str(encodeFunc(value, column.field))
         return "'%s'" % str(value).replace("'", "''") # escaping single quotes  
 
     def IntegrityError(self): 
@@ -186,7 +176,7 @@ class GenericAdapter():
             column = field.column
             if column is not None:
                 colFunc = getattr(self, '_' + column.type.upper())
-                columnType = colFunc(**column.props)
+                columnType = colFunc(column.field)
                 columns.append('%s %s' % (column.name, columnType))
         return columns
     
@@ -235,9 +225,9 @@ class GenericAdapter():
     def _RANDOM(self):
         return 'RANDOM()'
 
-    def _INT(self, maxDigits= 9, autoincrement=False, **kwargs):
+    def _INT(self, field):
         '''INT column type.'''
-        maxInt = int('9' * maxDigits)
+        maxInt = int('9' * field.maxDigits)
         bitsCount = len(bin(maxInt)) - 2
         bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
 
@@ -246,30 +236,27 @@ class GenericAdapter():
         
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
-                if autoincrement:
+                if field.autoincrement:
                     _columnType += ' AUTO_INCREMENT'
                 return _columnType
         raise Exception('Too many digits specified.')
     
-    def _CHAR(self, maxLength, lengthFixed=False, **kwargs):
+    def encodeINT(self, value, field):
+        return str(int(value))
+
+    def _CHAR(self, field):
         '''CHAR, VARCHAR'''
-        if lengthFixed:
-            return 'CHAR (%i)' % maxLength
-        else:
-            return 'VARCHAR (%i)' % maxLength
+        return 'VARCHAR (%i)' % field.maxLength
             
-    def _DECIMAL(self, maxDigits, fractionDigits, **kwargs):
+    def _DECIMAL(self, field):
         '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
         It has a range of 0 to 30 and must be no larger than M.'''
-        return 'DECIMAL (%s, %s)' % (maxDigits, fractionDigits)
+        return 'DECIMAL (%s, %s)' % (field.maxDigits, field.fractionDigits)
     
-    def encodeINT(self, value, **kwargs):
-        return str(int(value))
-
-    def encodeBLOB(self, value, **kwargs):
+    def encodeBLOB(self, value, field):
         return "'%s'" % base64.b64encode(value)
 
     def getExpressionTables(self, expression):
@@ -418,7 +405,7 @@ class GenericAdapter():
                 
         if limit:
             if not orderBy and tables:
-                sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
+                sql_o += ' ORDER BY %s' % ', '.join(map(str, (table._id for table in tables)))
                 
         return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
 
@@ -451,10 +438,10 @@ class GenericAdapter():
                 value = row[j]
                 if value is not None and isinstance(field, orm.Field):
                     column = field.column
-                    if isinstance(column, Column):
+                    if isinstance(column, orm.fields.Column):
                         decodeFunc = getattr(self, 'decode' + column.type.upper(), None)
                         if hasattr(decodeFunc, '__call__'): 
-                            value = decodeFunc(value, **column.props)
+                            value = decodeFunc(value, column.field)
                 newRow.append(value)
             rows[i] = newRow
     
@@ -532,12 +519,12 @@ class SqliteAdapter(GenericAdapter):
             
         return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''
 
-    def _CHAR(self, **kwargs):
+    def _CHAR(self, field):
         return 'TEXT'
 
-    def _INT(self, maxDigits= 9, **kwargs):
+    def _INT(self, field):
         '''INTEGER column type for Sqlite.'''
-        maxInt = int('9' * maxDigits)
+        maxInt = int('9' * field.maxDigits)
         bitsCount = len(bin(maxInt)) - 2
         bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
 
@@ -545,40 +532,40 @@ class SqliteAdapter(GenericAdapter):
             raise Exception('Too many digits specified.')
         return 'INTEGER'
 
-    def _DATE(self, **kwargs):
+    def _DATE(self, field):
         return 'INTEGER'
 
-    def encodeDATE(self, value, **kwargs):
+    def encodeDATE(self, value, field):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d').date()
         if isinstance(value, Date):
             return (value - self.epoch).days
         raise SyntaxError('Expected "YYYY-MM-DD" or datetime.date.')
 
-    def decodeDATE(self, value, **kwargs):
+    def decodeDATE(self, value, field):
         return self.epoch + TimeDelta(days= value)
 
-    def _DATETIME(self, **kwargs):
+    def _DATETIME(self, field):
         return 'INTEGER'
 
-    def encodeDATETIME(self, value, **kwargs):
+    def encodeDATETIME(self, value, field):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         if isinstance(value, DateTime):
             return int(time.mktime(value.timetuple()) * 1000000) + value.microsecond # in microseconds since the UNIX epoch  
         raise SyntaxError('Expected datetime.datetime.')
     
-    def decodeDATETIME(self, value, **kwargs):
+    def decodeDATETIME(self, value, field):
         return DateTime.fromtimestamp(value / 1000000)
     
-    def _DECIMAL(self, **kwargs):
+    def _DECIMAL(self, field):
         return 'INTEGER'
 
-    def encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
-        return Decimal(value) * (10 ** fractionDigits)
+    def encodeDECIMAL(self, value, field):
+        return Decimal(value) * (10 ** field.fractionDigits)
 
-    def decodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
-        return Decimal(value) / (10 ** fractionDigits)
+    def decodeDECIMAL(self, value, field):
+        return Decimal(value) / (10 ** field.fractionDigits)
 
 # alternative store format - using strings
 #    def _DATE(self, **kwargs):

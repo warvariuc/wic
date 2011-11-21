@@ -10,15 +10,15 @@ class Authors(orm.Model):
     '''Authors catalog'''
     _tableId = 1
     # id field is already present 
-    first_name = orm.StringField(maxLength= 100)
-    last_name = orm.StringField(maxLength= 100)
+    first_name = orm.CharField(maxLength= 100)
+    last_name = orm.CharField(maxLength= 100)
 
 
 class Books(orm.Model):
     '''Books catalog'''
     _tableId = 2
     # id field is already present 
-    name = orm.StringField(maxLength= 100, defaultValue= 'a very good book!!!')
+    name = orm.CharField(maxLength= 100, defaultValue= 'a very good book!!!')
     price = orm.fields.DecimalField(maxDigits= 10, fractionDigits= 2, defaultValue= '0.00', index= True) # 2 decimal places
     author_id = orm.RecordIdField('Authors', index= True)
     publication_date = orm.fields.DateField(defaultValue= None)
@@ -70,13 +70,13 @@ for data in authorsData:
 
 print('\nInserting books:')
 booksData = (dict(name= '''Free as in Freedom: Richard Stallman's Crusade for Free Software''', 
-                  author_id= authors[1].id, price= '9.55', publication_date= '2002-03-08'),
+                  author_id= authors[1]._id, price= '9.55', publication_date= '2002-03-08'),
              dict(name= '''Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition''', 
-                  author_id= authors[2].id, price= '14.95', publication_date= '2010-03-27'),
+                  author_id= authors[2]._id, price= '14.95', publication_date= '2010-03-27'),
              dict(name= '''In The Plex: How Google Thinks, Works, and Shapes Our Lives''', 
-                  author_id= authors[2].id, price= '13.98', publication_date= '2011-04-12'),
+                  author_id= authors[2]._id, price= '13.98', publication_date= '2011-04-12'),
              dict(name= '''Just for Fun.''', 
-                  author_id= authors[0].id, price= '11.20', publication_date= '2002-12-01'),
+                  author_id= authors[0]._id, price= '11.20', publication_date= '2002-12-01'),
 )
 for data in booksData:
     data['db'] = db
@@ -87,7 +87,7 @@ for data in booksData:
 
 
 print('\nSELECT query:')
-print(db._select(Books.id, where= (Books.price > '14.00'), limit= (0, 10)))
+print(db._select(Books._id, where= (Books.price > '14.00'), limit= (0, 10)))
 pprint(db.select(Books, where= (Books.price > '14'), limit= (0, 10)))
 book = Books.getOne(db, where= (Books.price > 14))
 print(book)

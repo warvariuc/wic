@@ -1,11 +1,19 @@
 '''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
 
-from decimal import Decimal
 import orm
 
 
 class Nil(): 
     '''Custom None'''
+
+
+class Column():
+    '''Abstract DB column, supported natively by the DB.'''
+    def __init__(self, type, field, name= ''):
+        self.type = type
+        self.field = field
+        self.name = name or field.name
+
     
 
 class Expression():
@@ -105,57 +113,62 @@ class Field(Expression):
         
 
 
-class StringField(Field):
-    maxLength = 0
-    
+class CharField(Field):
     def _init(self, maxLength, defaultValue= None, index= ''):
-        super()._init(orm.adapters.Column('CHAR', self, maxLength= maxLength), 
-                      defaultValue, index)
         self.maxLength = maxLength
+        super()._init(Column('CHAR', self), defaultValue, index)
+    
+
+class TextField(Field):
+    def _init(self, defaultValue= None):
+        super()._init(Column('TEXT', self), defaultValue, None)
     
 
 class IntegerField(Field):
-    maxDigits = 19
-    
     def _init(self, maxDigits, defaultValue= None, autoincrement= False, index=''):
-        super()._init(orm.adapters.Column('INT', self, maxDigits= maxDigits, 
-                                          autoincrement= autoincrement), defaultValue, index)
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
+        super()._init(Column('INT', self), defaultValue, index)
 
 
 class DecimalField(Field):
     def _init(self, maxDigits, fractionDigits, defaultValue= None, index= ''):
-        super()._init(orm.adapters.Column('DECIMAL', self, maxDigits= maxDigits, fractionDigits= fractionDigits), defaultValue, index)
+        self.maxDigits = maxDigits
+        self.fractionDigits = fractionDigits
+        super()._init(Column('DECIMAL', self), defaultValue, index)
     
 
 class DateField(Field):
     def _init(self, defaultValue= None, index= ''):
-        super()._init(orm.adapters.Column('DATE', self), defaultValue, index)
+        super()._init(Column('DATE', self), defaultValue, index)
 
 
 class DateTimeField(Field):
     def _init(self, defaultValue= None, index= ''):
-        super()._init(orm.adapters.Column('DATETIME', self), defaultValue, index)
+        super()._init(Column('DATETIME', self), defaultValue, index)
 
     
 
 class IdField(Field):
     '''Primary integer autoincrement key. ID - implicitly present in each table.'''
     def _init(self):
-        super()._init(orm.adapters.Column('INT', self, maxDigits= 19, autoincrement= True), None, 'primary')
+        self.maxDigits = 19
+        self.autoincrement = True
+        super()._init(Column('INT', self), None, 'primary')
 
 
 class BooleanField(Field):
     def _init(self, defaultValue= None, index= ''):
-        super()._init(orm.adapters.Column('INT', self, maxDigits= 1), defaultValue, index)
+        self.maxDigits = 1
+        super()._init(Column('INT', self), defaultValue, index)
         
 
 class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index= ''):
-        super()._init(orm.adapters.Column('INT', self, maxDigits= 19), None, index)
         self._referTable = referTable # foreign key - referenced type of table
+        self.maxDigits = 19
+        super()._init(Column('INT', self), None, index)
         
     def getReferTable(self):
         if isinstance(self._referTable, orm.Model): 
@@ -175,7 +188,8 @@ class RecordIdField(Field):
 class TableIdField(Field):
     '''This field stores id of a given table in this DB.'''
     def _init(self, index= ''):
-        super()._init(orm.adapters.Column('INT', self, maxDigits= 5), None, index)
+        self.maxDigits = 5
+        super()._init(Column('INT', self), None, index)
         
     def _cast(self, value):
         if isinstance(value, orm.Model) or orm.isModel(value):
@@ -183,29 +197,29 @@ class TableIdField(Field):
         return int(value)
 
 
-class AnyRecordField(Field):
-    '''This field stores id of a row of any table.
-    It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID.'''
-    def _init(self, index= ''):
-        super()._init(None, None) # no column, but later we create two fields
-            
-        tableIdField = TableIdField(name= self.name + '_table', table= self.table)
-        tableIdField._init()
-        setattr(self.table, tableIdField.name, tableIdField)
-        
-        recordIdField = RecordIdField(name= self.name + '_record', table= self.table)
-        recordIdField._init(None) # no refered table
-        setattr(self.table, recordIdField.name, recordIdField)
-        
-        self.table._indexes.append(orm.Index([tableIdField, recordIdField], index))
-        
-        self._fields = dict(tableId= tableIdField, itemId= recordIdField) # real fields
-
-    def __eq__(self, other): 
-        assert isinstance(other, orm.Model)
-        return Expression('AND', 
-                  Expression('EQ', self._fields['tableId'], other._tableId), 
-                  Expression('EQ', self._fields['itemId'], other.id))
+#class AnyRecordField(Field):
+#    '''This field stores id of a row of any table.
+#    It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID.'''
+#    def _init(self, index= ''):
+#        super()._init(None, None) # no column, but later we create two fields
+#            
+#        tableIdField = TableIdField(name= self.name + '_table', table= self.table)
+#        tableIdField._init()
+#        setattr(self.table, tableIdField.name, tableIdField)
+#        
+#        recordIdField = RecordIdField(name= self.name + '_record', table= self.table)
+#        recordIdField._init(None) # no refered table
+#        setattr(self.table, recordIdField.name, recordIdField)
+#        
+#        self.table._indexes.append(orm.Index([tableIdField, recordIdField], index))
+#        
+#        self._fields = dict(tableId= tableIdField, itemId= recordIdField) # real fields
+#
+#    def __eq__(self, other): 
+#        assert isinstance(other, orm.Model)
+#        return Expression('AND', 
+#                  Expression('EQ', self._fields['tableId'], other._tableId), 
+#                  Expression('EQ', self._fields['itemId'], other.id))
 
 
 def COUNT(expression, distinct= False):
