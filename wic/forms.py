@@ -28,7 +28,7 @@ class WForm(QtGui.QDialog):
         self.setupUi()
         
         try:
-            self.on_open()
+            self.onOpen()
         except Exception:
             wic.mainWindow.messagesWindow.printMessage(''.join(traceback.format_exc()))
         
@@ -45,15 +45,15 @@ class WForm(QtGui.QDialog):
         self.close()
 
     def closeEvent(self, event):
-        if self.on_close() == False: # вызов предопределенной процедуры
+        if self.onClose() == False: # вызов предопределенной процедуры
             event.ignore()
             return
         self.closed.emit()
 
-    def on_close(self):
+    def onClose(self):
         return
 
-    def on_open(self):
+    def onOpen(self):
         return
     
 
@@ -96,48 +96,58 @@ class CatalogForm(WForm):
         '''Initial setting up of the form.
         Dynamically create form fields, if no ui file is supplied. 
         Fill form fields with data from DB.'''
-        catalogItem = self.catalogItem
-        self.formTitle = '%s item' % catalogItem.__class__ 
+        self.formTitle = '%s item' % self.catalogItem.__class__ 
         super().setupUi()
         if not self.uiFilePath: # automatically generated form
-            self.formLayout = QtGui.QFormLayout(self)
-            formLayout = self.formLayout
-            formLayout.setMargin(2)
-            formLayout.setObjectName('formLayout')
-            for field in catalogItem.__class__:
-                fieldName = field.name
-                assert not hasattr(self, fieldName), 'Form already has attribute with name ""%s' % fieldName
-                labelName = 'label_' + fieldName
-                label = QtGui.QLabel(fieldName)
-                label.setObjectName(labelName)
-                widget = createWidgetFromField(field)
-                #widget.setObjectName(fieldName)
-                setattr(self, fieldName, widget)
-                label.setBuddy(widget)
-                formLayout.addRow(label, widget)
-            
-            self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Reset 
-                            | QtGui.QDialogButtonBox.Save | QtGui.QDialogButtonBox.Cancel)
-            formLayout.addRow(self.buttonBox)
-            
+            self.autoCreateWidgets()
+        self.setupWidgets()            
+        self.fillFormFromItem(self.catalogItem)
+
+    def autoCreateWidgets(self):
+        '''Automatically carete on the form widgets and labels for each catalog model field.'''
+        self.formLayout = QtGui.QFormLayout(self)
+        formLayout = self.formLayout
+        formLayout.setMargin(2)
+        formLayout.setObjectName('formLayout')
+        for field in self.catalogItem.__class__:
+            fieldName = field.name
+            assert not hasattr(self, fieldName), 'Form already has attribute with name ""%s' % fieldName
+            labelName = 'label_' + fieldName
+            label = QtGui.QLabel(fieldName)
+            label.setObjectName(labelName)
+            widget = self.createWidgetForField(field)
+            #widget.setObjectName(fieldName)
+            setattr(self, fieldName, widget)
+            label.setBuddy(widget)
+            formLayout.addRow(label, widget)
+        
+        self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Reset 
+                        | QtGui.QDialogButtonBox.Save | QtGui.QDialogButtonBox.Cancel)
+        formLayout.addRow(self.buttonBox)
+    
+    def setupWidgets(self):
+        '''Set up widgets which are mapped to catalog model fields. 
+        Connect button box signals to the corresponding handlers.'''
+        for field in self.catalogItem.__class__:
+            widget = getattr(self, field.name, None)
+            if widget:
+                self.setupWidgetForField(widget, field)
+
         buttonBox = getattr(self, 'buttonBox', None)
         if buttonBox: # if button box is present - listen to its signals
             saveButton = buttonBox.button(buttonBox.Save)
             if saveButton: # change Save button's role
                 buttonBox.addButton(saveButton, buttonBox.ApplyRole)
-                saveButton.clicked.connect(self.save)
+                saveButton.clicked.connect(self.onSave)
                 saveShortCut = QtGui.QShortcut(QtGui.QKeySequence('F2'), self)
                 saveShortCut.activated.connect(saveButton.animateClick)
             resetButton = buttonBox.button(buttonBox.Reset)
             if resetButton:
                 resetButton.clicked.connect(self.fillFormFromItem)
             buttonBox.rejected.connect(self.reject)
-            
-        self.fillFormFromItem()
 
-    def fillFormFromItem(self):
+    def fillFormFromItem(self, catalogItem):
         'Automatically fill the form fields using values from the catalog item fields.'
-        catalogItem = self.catalogItem
         for field in catalogItem.__class__:
             fieldName = field.name
             fieldValue = catalogItem[field]
@@ -145,21 +155,8 @@ class CatalogForm(WForm):
             if widget:
                 setValue(widget, fieldValue)
         
-#    def fillItemFromForm(self):
-#        'Automatically fill the form fields using values from the catalog item fields.'
-#        catalogItem = self.catalogItem
-#        for field in catalogItem.__class__:
-#            fieldName = field.name
-#            fieldValue = catalogItem[field]
-#            widget = getattr(self, fieldName, None)
-#            if widget:
-#                setValue(widget, fieldValue)
-        
-            
-    def save(self):
-        ''
-        wic.w.printMessage('save!')
-        catalogItem = self.catalogItem
+    def fillItemFromForm(self, catalogItem):
+        'Automatically fill the item field values from the corresponding form widgets.'
         for field in catalogItem.__class__:
             fieldName = field.name
             widget = getattr(self, fieldName, None)
@@ -168,42 +165,64 @@ class CatalogForm(WForm):
                 if isinstance(field, (orm.IdField, orm.RecordIdField)) and not fieldValue:
                     fieldValue = None
                 setattr(catalogItem, fieldName, fieldValue)
+            
+    def onSave(self):
+        ''
+        wic.w.printMessage('save!')
+        catalogItem = self.catalogItem
+        self.fillItemFromForm(catalogItem)
         catalogItem.save()
+        
+        # update item id and timestamp on the form
         idWidget = getattr(self, '_id', None)
         if idWidget:
             setValue(idWidget, catalogItem._id)
+        timestampWidget = getattr(self, '_timestamp', None)
+        if timestampWidget:
+            setValue(timestampWidget, catalogItem._timestamp)
 
 
-        
-def createWidgetFromField(field):
-    assert isinstance(field, orm.Field), 'Pass a Field instance.'
-    if isinstance(field, orm.StringField):
-        widget = QtGui.QLineEdit()
-        widget.setMaxLength(field.maxLength)
-    elif isinstance(field, (orm.IntegerField, orm.IdField, orm.RecordIdField)):
-        widget = QtGui.QLineEdit()
-        widget.setValidator(QtGui.QIntValidator())
-    elif isinstance(field, orm.DateTimeField):
-        widget = QtGui.QLineEdit()
-        widget.setInputMask('9999-99-99 99:99:99.999999;0')
-    elif isinstance(field, orm.DecimalField):
-        widget = WDecimalEdit()
-        widget.setMaxDigits(field.column.props['maxDigits'])
-        widget.setFractionDigits(field.column.props['fractionDigits'])
-    elif isinstance(field, orm.DateField):
-        widget = WDateEdit()
-    elif isinstance(field, orm.BooleanField):
-        widget = QtGui.QCheckBox(field.name)
-    else: # any other - treat as text
-#        widget = QtGui.QLineEdit()
-        raise Exception('Could not find a widget for field %s' % field)
-    return widget
+    @staticmethod    
+    def createWidgetForField(field):
+        assert isinstance(field, orm.Field)
+        if isinstance(field, (orm.CharField, orm.IntegerField, orm.IdField, orm.RecordIdField, orm.DateTimeField)):
+            return QtGui.QLineEdit()
+        elif isinstance(field, orm.DecimalField):
+            return WDecimalEdit()
+        elif isinstance(field, orm.DateField):
+            return WDateEdit()
+        elif isinstance(field, orm.BooleanField):
+            return QtGui.QCheckBox(field.name)
+        elif isinstance(field, orm.TextField):
+            return QtGui.QPlainTextEdit()
+        raise Exception('Could not create a widget for field %s' % field)
+
+    @staticmethod
+    def setupWidgetForField(widget, field):
+        '''Set up a widget which corresponds to an model field - only the details related to data entering to appearance.
+        The widget might be autocreated or one from a *.ui file.'''
+        assert isinstance(field, orm.Field) and isinstance(widget, QtGui.QWidget)
+        if isinstance(field, orm.CharField):
+            if isinstance(widget, QtGui.QLineEdit):
+                widget.setMaxLength(field.maxLength)
+        elif isinstance(field, (orm.IdField, orm.RecordIdField)):
+            if isinstance(widget, QtGui.QLineEdit):
+                widget.setValidator(QtGui.QIntValidator())
+        elif isinstance(field, orm.DateTimeField):
+            if isinstance(widget, QtGui.QLineEdit):
+                widget.setInputMask('9999-99-99 99:99:99.999999;0')
+        elif isinstance(field, orm.DecimalField):
+            if isinstance(widget, WDecimalEdit):
+                widget.setMaxDigits(field.maxDigits)
+                widget.setFractionDigits(field.fractionDigits)
 
 
 def setValue(widget, value):
     '''Automatically set a widget's value depending on its type.'''        
-    if isinstance(widget, (QtGui.QTextEdit, QtGui.QPlainTextEdit)): 
-        widget.setPlainText(str(value))
+    if isinstance(widget, QtGui.QPlainTextEdit): 
+        widget.setPlainText('' if value is None else str(value))
+    elif isinstance(widget, QtGui.QTextEdit): 
+        widget.setHtml('' if value is None else str(value))
     elif isinstance(widget, QtGui.QCheckBox): 
         #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
         widget.setChecked(bool(value))
@@ -230,20 +249,20 @@ def setValue(widget, value):
 
 def getValue(widget):
     '''Automatically extract a widget's value depending on its type.'''
-    if isinstance(widget, QtGui.QTextEdit): 
-        return widget.plainText()
+    if isinstance(widget, QtGui.QPlainTextEdit): 
+        return widget.toPlainText()
+    elif isinstance(widget, QtGui.QTextEdit): 
+        return widget.toHtml()
     elif isinstance(widget, QtGui.QCheckBox): 
         return widget.isChecked()
     elif isinstance(widget, WDecimalEdit): 
-        return widget.value
+        return widget.getValue()
     elif isinstance(widget, WDateEdit): 
-        return widget.date
+        return widget.getDate()
     elif isinstance(widget, QtGui.QSpinBox): 
         return widget.value()
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
         return widget.text()
-    elif isinstance(widget, QtGui.QPlainTextEdit):
-        return widget.toPlainText()
     elif isinstance(widget, QtGui.QComboBox):
         lineEdit = widget.lineEdit()
         if lineEdit: #Only editable combo boxes have a line edit

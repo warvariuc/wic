@@ -2,16 +2,19 @@ import os, sys
 from PyQt4 import QtCore, QtGui
 
 from wic.w import printMessage
-from wic.forms import CatalogForm
+from wic.forms import CatalogForm, setValue, getValue
 
 
 class Form(CatalogForm):
     ''''''
     #uiFilePath = '' # auto generated form
 
-    #def on_open(self):
+#    def onOpen(self):
         #self.setWindowIcon(QtGui.QIcon(self.iconPath))
-        #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
+        #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))
+    
+    def on_descriptionSource_textChanged(self):
+        setValue(self.description, getValue(self.descriptionSource))
 
 
 
@@ -28,6 +31,6 @@ class Books(orm.Model):
     description = orm.TextField()
     is_favorite = orm.BooleanField()
 
-    def save(self):
-        self._timestamp = None
-        super().save()
+#    def save(self):
+#        self._timestamp = None
+#        super().save()

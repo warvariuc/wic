@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>373</width>
-    <height>278</height>
+    <width>455</width>
+    <height>354</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -46,7 +46,17 @@
    <item row="3" column="0" colspan="2">
     <widget class="QTextEdit" name="description"/>
    </item>
-   <item row="4" column="1">
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>html</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2">
+    <widget class="QPlainTextEdit" name="descriptionSource"/>
+   </item>
+   <item row="6" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>

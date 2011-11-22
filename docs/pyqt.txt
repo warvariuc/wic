@@ -1,4 +1,4 @@
-sudo apt-get install qt4-dev-tools qt4-doc
+sudo apt-get install qt4-dev-tools python-qt4-doc
 qt4-dev-tools - linguist-qt4, assistant-qt4
 
 /usr/share/doc/python-qt4-doc/examples/demos/qtdemo
