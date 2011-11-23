@@ -131,13 +131,19 @@ class WDateEdit(QtGui.QLineEdit):
         self.setAlignment(QtCore.Qt.AlignRight)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
+        self.menu = QtGui.QMenu(self) # context menu
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/calendar-blue.png'), 'Calendar', self.popupCalendar, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Copy', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.clear)
+
         self.selector = QtGui.QToolButton(self)
         self.selector.setIcon(QtGui.QIcon(':/icons/fugue/calendar-blue.png'))
-        self.selector.setCursor(QtCore.Qt.ArrowCursor)
+        self.selector.setCursor(QtCore.Qt.PointingHandCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
 
-        self.selector.clicked.connect(self.showPopupCalendar)
+        self.selector.clicked.connect(self.popupCalendar)
         self.textChanged.connect(self.onTextChanged)
 
         self.setSelectorVisible(True) # cause style recalculation
@@ -193,7 +199,7 @@ class WDateEdit(QtGui.QLineEdit):
         key = keyEvent.key()
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
             if key == QtCore.Qt.Key_Insert:
-                self.showPopupCalendar()
+                self.popupCalendar()
                 return
             elif key == QtCore.Qt.Key_Down:
                 self.addDays(-1)
@@ -236,7 +242,7 @@ class WDateEdit(QtGui.QLineEdit):
                 self.setText((date + RelDelta(years= number)).strftime('%d.%m.%Y'))
                 self.setSelection(6, 4)
             
-    def showPopupCalendar(self):
+    def popupCalendar(self):
         self.selectAll()
         WCalendarPopup(self).show()
 
@@ -277,6 +283,11 @@ class WDateEdit(QtGui.QLineEdit):
 #                    self.setStyleSheet('QLineEdit { background-color: yellow }')
 #                    return
 #        self.setStyleSheet('QLineEdit { background-color: white }')
+
+    def contextMenuEvent(self, qContextMenuEvent):
+        self.selectAll()
+        self.menu.popup(qContextMenuEvent.globalPos())
+
             
 
 

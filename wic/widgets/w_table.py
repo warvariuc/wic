@@ -68,12 +68,12 @@ class WTableItemProperties(): # data and flags for visual representation of an I
 
 
 class WTableColumnProperties():
-    def __init__(self, table, identifier, editedHandler, rowItem):
+    def __init__(self, table, identifier, onEdited, rowItem):
         self.table = table
         self.identifier = identifier
         self.headerItem = WTableItemProperties(alignment= QtCore.Qt.AlignCenter)
         self.rowItem = rowItem
-        self.editedHandler = editedHandler
+        self.onEdited = onEdited
     
     def index(self):
         return self.table._columns.index(self)
@@ -120,12 +120,12 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
             self.__setitem__(name, value)
             return
         except KeyError: pass
-        raise AttributeError('Неверное имя колонки')
+        raise AttributeError('Неверное имя колонки: %s' % name)
 
     def __getattr__(self, name):
         try: return self._values[self._table._columnsOrder[name]]
         except KeyError: pass
-        raise AttributeError('Неверное имя колонки')
+        raise AttributeError('Неверное имя колонки: %s' % name)
 
     def index(self):
         return self._table._rows.index(self)
@@ -163,7 +163,9 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
         return super().createEditor(parent, option, index)
 
     def setModelData(self, editor, model, index):
-        if isinstance(editor, (WDateEdit, WDecimalEdit)):
+        if isinstance(editor, WDateEdit):
+            model.setData(index, editor.date)
+        elif isinstance(editor, WDecimalEdit):
             model.setData(index, editor.value)
         else:
             super().setModelData(editor, model, index)
@@ -221,7 +223,7 @@ class WTable(): # ТаблицаЗначений
         self._notifyTableView(True)
         return row
     
-    def newColumn(self, identifier, index= None, label= '', width= 100, visible= True, editedHandler= None, **kwargs):
+    def newColumn(self, identifier, index= None, label= '', width= 100, visible= True, onEdited= None, **kwargs):
         if not identifier or (identifier in self._columnsOrder):
             raise AttributeError('Колонка с таким именем уже существует или не задано имя колонки: ' + identifier)
         if isinstance(index, str):
@@ -230,7 +232,7 @@ class WTable(): # ТаблицаЗначений
         elif not isinstance(index, int):
             index = self.columnCount()
         
-        column = WTableColumnProperties(self, identifier, editedHandler, WTableItemProperties(**kwargs))
+        column = WTableColumnProperties(self, identifier, onEdited, WTableItemProperties(**kwargs))
 
         self._notifyTableView()
         self._columns.append(column)
@@ -308,8 +310,8 @@ class WTableModel(QtCore.QAbstractTableModel):
                 row[index.column()] = value
                 self.dataChanged.emit(index, index)
                 column = self.wTable.column(index.column())
-                if column.editedHandler: 
-                    try: column.editedHandler(row, column, value)
+                if column.onEdited: 
+                    try: column.onEdited(row, column, value)
                     except Exception as err: print(str(err))
                 return True
         return False

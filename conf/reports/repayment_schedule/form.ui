@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>575</width>
-    <height>460</height>
+    <width>530</width>
+    <height>387</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -317,7 +317,7 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="3" colspan="2">
+   <item row="7" column="2" colspan="3">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Close</set>

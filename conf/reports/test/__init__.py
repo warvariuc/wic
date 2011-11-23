@@ -13,7 +13,7 @@ class Form(WForm):
     iconPath = ':/icons/fugue/leaf-wormhole.png'
     formTitle = 'Тестовые модуль и форма'
 
-    def on_open(self): # called by the system after it loads the Form
+    def onOpen(self): # called by the system after it loads the Form
         w.printMessage('Форма загружена.')
 
         self._.dteShowSelector = self.dateEdit.isSelectorVisible()
@@ -21,7 +21,7 @@ class Form(WForm):
         self._.decimalEdit = '20000000.1251'
         self.updateInfoAboutDecimalEdit()
 
-    def on_close(self): # Form is asked to be closed
+    def onClose(self): # Form is asked to be closed
 #        if QtGui.QMessageBox.question(self, 'Подтверждение', 'Вы действительно хотите закрыть форму?',
 #                        QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) != QtGui.QMessageBox.Yes:
 #            return False

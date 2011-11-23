@@ -155,7 +155,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.setAlignment(QtCore.Qt.AlignRight)
         self.selector = QtGui.QToolButton(self)
         self.selector.setIcon(QtGui.QIcon(':/icons/calculator.png'))
-        self.selector.setCursor(QtCore.Qt.ArrowCursor)
+        self.selector.setCursor(QtCore.Qt.PointingHandCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
         
@@ -163,10 +163,10 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.textChanged.connect(self.onTextChanged)
         
         self.menu = QtGui.QMenu(self) # context menu
-        self.menu.addAction(QtGui.QIcon(':/icons/calculator.png'), 'Калькулятор', self.popupCalculator, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
-        self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Копировать', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
-        self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Вставить', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
-        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Очистить', self.clear)
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/calculator-scientific.png'), 'Calculator', self.popupCalculator, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Copy', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.clear)
 
         self.setSelectorVisible(True) # cause style recalculation
         self._totalDigits = 15 # total number of digits
