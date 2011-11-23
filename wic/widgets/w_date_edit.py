@@ -140,7 +140,7 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.clicked.connect(self.showPopupCalendar)
         self.textChanged.connect(self.onTextChanged)
 
-        self.setShowSelector(True)
+        self.setSelectorVisible(True) # cause style recalculation
         self.setDate(None)
 
     def resizeEvent(self, event):
@@ -149,9 +149,9 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height()) / 2)
                       
-    def getShowSelector(self):
+    def isSelectorVisible(self):
         return not self.selector.isHidden() # notice that isVisible() is not used (because widget can be non visible but not hidden)        
-    def setShowSelector(self, value):
+    def setSelectorVisible(self, value):
         self.selector.setVisible(value)
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
         paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0)
@@ -159,7 +159,7 @@ class WDateEdit(QtGui.QLineEdit):
         fm = QtGui.QFontMetrics(self.font()) # font metrics
         self.setMinimumSize(fm.width('99.99.9999') + self.selector.sizeHint().height() + borderWidth * 2,
                 max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
-    showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
+    selectorVisible = QtCore.pyqtProperty(bool, isSelectorVisible, setSelectorVisible)
 
     def onTextChanged(self, txt):
         txt = list(str(txt))

@@ -16,9 +16,9 @@ class Form(WForm):
     def on_open(self): # called by the system after it loads the Form
         w.printMessage('Форма загружена.')
 
-        self.dteShowSelector.setChecked(self.dateEdit.getShowSelector())
-        setValue(self.dateEdit, Date.today())
-        setValue(self.decimalEdit, '20000000.1251')
+        self._.dteShowSelector = self.dateEdit.isSelectorVisible()
+        self._.dateEdit = Date.today()
+        self._.decimalEdit = '20000000.1251'
         self.updateInfoAboutDecimalEdit()
 
     def on_close(self): # Form is asked to be closed
@@ -28,23 +28,23 @@ class Form(WForm):
         w.printMessage('Форма закрывается.')
 
     def on_dceShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
-        self.decimalEdit.showSelector = state
+        self.decimalEdit.selectorVisible = state
         self.decimalEdit.setFocus()
 
     def on_dceNonNegative_stateChanged(self, state): # widget 'checkBox' emited signal
         self.decimalEdit.nonNegative = state
 
     def on_dceSeparateThousands_stateChanged(self, state): # widget 'checkBox' emited signal
-        self.decimalEdit.separateThousands = state
+        self.decimalEdit.thousandsSeparated = state
 
     def on_decimalEdit_edited(self):
-        w.printMessage('WDecimalEdit отредактирован. Новое значение: %s' % self.decimalEdit.value)
+        w.printMessage('WDecimalEdit отредактирован. Новое значение: %s' % self._.decimalEdit)
 
     def on_dteShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
-        self.dateEdit.showSelector = state
+        self.dateEdit.selectorVisible = state
 
     def on_dateEdit_edited(self):
-        w.printMessage('WDateEdit отредактирован. Новое значение: %s' % self.dateEdit.date)
+        w.printMessage('WDateEdit отредактирован. Новое значение: %s' % self._.dateEdit)
 
     @QtCore.pyqtSlot()
     def on_testGm_clicked(self):
@@ -59,8 +59,8 @@ class Form(WForm):
         self.updateInfoAboutDecimalEdit()
 
     def updateInfoAboutDecimalEdit(self):
-        setValue(self.dceShowSelector, self.decimalEdit.showSelector)
-        setValue(self.dceTotalDigits, self.decimalEdit.maxDigits)
-        setValue(self.dceFractionDigits, self.decimalEdit.fractionDigits)
-        setValue(self.dceNonNegative, self.decimalEdit.nonNegative)
-        setValue(self.dceSeparateThousands, self.decimalEdit.separateThousands)
+        self._.dceShowSelector = self.decimalEdit.selectorVisible
+        self._.dceTotalDigits = self.decimalEdit.maxDigits
+        self._.dceFractionDigits = self.decimalEdit.fractionDigits
+        self._.dceNonNegative = self.decimalEdit.nonNegative
+        self._.dceSeparateThousands = self.decimalEdit.thousandsSeparated

@@ -60,35 +60,6 @@
     <string>WDateEdit</string>
    </property>
   </widget>
-  <widget class="WDecimalEdit" name="decimalEdit">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>30</y>
-     <width>171</width>
-     <height>27</height>
-    </rect>
-   </property>
-   <property name="minimumSize">
-    <size>
-     <width>129</width>
-     <height>27</height>
-    </size>
-   </property>
-  </widget>
-  <widget class="WDateEdit" name="dateEdit">
-   <property name="geometry">
-    <rect>
-     <x>200</x>
-     <y>30</y>
-     <width>152</width>
-     <height>27</height>
-    </rect>
-   </property>
-   <property name="showSelector">
-    <bool>true</bool>
-   </property>
-  </widget>
   <widget class="QCheckBox" name="dteShowSelector">
    <property name="geometry">
     <rect>
@@ -248,6 +219,26 @@
    </property>
    <property name="maximum">
     <number>28</number>
+   </property>
+  </widget>
+  <widget class="WDateEdit" name="dateEdit">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>30</y>
+     <width>152</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="WDecimalEdit" name="decimalEdit">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>30</y>
+     <width>152</width>
+     <height>27</height>
+    </rect>
    </property>
   </widget>
  </widget>

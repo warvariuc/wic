@@ -21,6 +21,9 @@ def on_systemStarted(): # предопределенная процедура з
     from conf.reports.test import Form
     openForm(Form)
     
+#    from conf.reports.repayment_schedule import Form
+#    openForm(Form)
+    
     from conf.catalogs.books import Books
     book = Books.getOne(db, where= (Books.price > 14))
     w.printMessage(db.getLastQuery())

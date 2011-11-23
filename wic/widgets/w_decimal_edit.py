@@ -168,7 +168,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Вставить', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Очистить', self.clear)
 
-        self.setShowSelector(True)
+        self.setSelectorVisible(True) # cause style recalculation
         self._totalDigits = 15 # total number of digits
         self._fractionDigits = 2 # number of digits in fractional part
         self._nonNegative = False
@@ -182,7 +182,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         assert isinstance(value, int), 'Pass an integer'
         self._totalDigits = max(value, 1)
         self._fractionDigits = min(self._fractionDigits, self._totalDigits)
-        self.onTextChanged(self.text()) #to reflect changes
+        self.onTextChanged(self.text()) # to reflect changes
     maxDigits = QtCore.pyqtProperty(int, getMaxDigits, setMaxDigits) 
 
     def getFractionDigits(self): 
@@ -193,19 +193,19 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.onTextChanged(self.text())
     fractionDigits = QtCore.pyqtProperty(int, getFractionDigits, setFractionDigits)
 
-    def getNonNegative(self): 
+    def isNonNegative(self): 
         return self._nonNegative
     def setSetNonegative(self, value): 
         self._nonNegative = bool(value)
         self.onTextChanged(self.text())
-    nonNegative = QtCore.pyqtProperty(bool, getNonNegative, setSetNonegative)
+    nonNegative = QtCore.pyqtProperty(bool, isNonNegative, setSetNonegative)
     
-    def getSeparateThousands(self): 
+    def isThousandsSeparated(self): 
         return self._separateThousands
-    def setSeparateThousands(self, value): 
+    def setThousandsSeparated(self, value): 
         self._separateThousands = bool(value)
         self.onTextChanged(self.text())
-    separateThousands = QtCore.pyqtProperty(bool, getSeparateThousands, setSeparateThousands)
+    thousandsSeparated = QtCore.pyqtProperty(bool, isThousandsSeparated, setThousandsSeparated)
 
     def getValue(self): 
         return self._value
@@ -226,9 +226,9 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.selector.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height()) / 2)
     
-    def getShowSelector(self): 
+    def isSelectorVisible(self): 
         return not self.selector.isHidden()
-    def setShowSelector(self, value):
+    def setSelectorVisible(self, value):
         self.selector.setVisible(value)
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
         paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0) 
@@ -236,7 +236,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         fm = QtGui.QFontMetrics(self.font()) # font metrics
         self.setMinimumSize(fm.width(str('0.00')) + self.selector.sizeHint().height() + borderWidth * 2,
                    max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
-    showSelector = QtCore.pyqtProperty(bool, getShowSelector, setShowSelector)
+    selectorVisible = QtCore.pyqtProperty(bool, isSelectorVisible, setSelectorVisible)
 
     def mouseDoubleClickEvent(self, mouseEvent):
         if mouseEvent.button() == QtCore.Qt.LeftButton:

@@ -1,6 +1,6 @@
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
-from wic.widgets.w_date import Date
+from datetime import date as Date
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
 
@@ -23,12 +23,12 @@ class WTableItemProperties(): # data and flags for visual representation of an I
         self.flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         self.editable = editable
         
-    def getEditable(self):
+    def isEditable(self):
         return bool(~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable) & self.flags)
     def setEditable(self, value):
         if value: self.flags |= QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable
         else: self.flags &= ~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable)
-    editable = property(getEditable, setEditable)
+    editable = property(isEditable, setEditable)
         
 #        self.editFormat = ''
 
@@ -93,13 +93,13 @@ class WTableColumnProperties():
             self.table._tableView.setColumnWidth(self.index(), width)
     width = property(getWidth, setWidth)
 
-    def getVisible(self): 
+    def isVisible(self): 
         if self.table._tableView:
             self.table._tableView.isColumnHidden(self.index)
     def setVisible(self, visibility):
         if self.table._tableView:
             self.table._tableView.setColumnHidden(self.index(), not visibility)
-    visible = property(getVisible, setVisible)
+    visible = property(isVisible, setVisible)
 
 
 
@@ -152,12 +152,12 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
         data = index.data(QtCore.Qt.EditRole)
         if isinstance(data, Date):
             editor = WDateEdit(parent)
-            editor.value = data
+            editor.setDate(data)
             editor.edited.connect(self.commitAndCloseEditor)
             return editor
         if isinstance(data, Dec):
             editor = WDecimalEdit(parent)
-            editor.value = data
+            editor.setValue(data)
             editor.edited.connect(self.commitAndCloseEditor)
             return editor
         return super().createEditor(parent, option, index)
@@ -178,14 +178,16 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
 
 class WTable(): # ТаблицаЗначений
     __slots__ = ['_columns', '_columnsOrder', '_rows', '_tableView']
-    wItemDelegate = WItemDelegate() # static
+    
+    wItemDelegate = WItemDelegate() # class attribute
+    
     def __init__(self, tableView= None):
         self._columns = [] 
         self._rows = []
         self._columnsOrder = {} # column names and positions
-        self.attachTableWidget(tableView)
+        self.attachTableView(tableView)
     
-    def attachTableWidget(self, tableView):
+    def attachTableView(self, tableView):
         if isinstance(tableView, QtGui.QTableView):
             self._tableView = tableView
             tableView.setModel(WTableModel(self))
@@ -338,9 +340,9 @@ if __name__ == '__main__': # some tests
     tableView = QtGui.QTableView(None)
     
     table = WTable(tableView)
-    table.newColumn("column1", label= 'int', defaultValue= 0, width= 50)
-    table.newColumn("column2", label= 'Decimal', editable= True, alignment= QtCore.Qt.AlignRight, defaultValue= Dec())
-    table.newColumn("column3", label= 'Date', editable= True, defaultValue= Date())
+    table.newColumn('column1', label= 'int', defaultValue= 0, width= 50)
+    table.newColumn('column2', label= 'Decimal', editable= True, alignment= QtCore.Qt.AlignRight, defaultValue= Dec())
+    table.newColumn('column3', label= 'Date', editable= True, defaultValue= Date())
     for rowIndex in range(10):
         row = table.newRow()
         row.column1 = rowIndex + 1

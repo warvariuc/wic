@@ -6,6 +6,88 @@ import orm
 import wic
 
 
+
+def setValue(widget, value):
+    '''Automatically set a widget's value depending on its type.'''        
+    if isinstance(widget, QtGui.QPlainTextEdit): 
+        widget.setPlainText('' if value is None else str(value))
+    elif isinstance(widget, QtGui.QTextEdit): 
+        widget.setHtml('' if value is None else str(value))
+    elif isinstance(widget, QtGui.QCheckBox): 
+        #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
+        widget.setChecked(bool(value))
+        #widget.blockSignals(False) 
+    elif isinstance(widget, WDateEdit):
+        widget.setDate(value)
+    elif isinstance(widget, (WDecimalEdit, QtGui.QSpinBox)):
+        widget.setValue(value)
+    elif isinstance(widget, QtGui.QLineEdit):
+        widget.setText('' if value is None else str(value))
+        widget.home(False)
+    elif isinstance(widget, QtGui.QPushButton): 
+        widget.setText(str(value))
+    elif isinstance(widget, QtGui.QLabel):
+        widget.setText(value)
+    elif isinstance(widget, QtGui.QComboBox):
+        lineEdit = widget.lineEdit()
+        if lineEdit: #Only editable combo boxes have a line edit
+            lineEdit.setText(value)
+    elif isinstance(widget, QtGui.QSpinBox):
+        widget.setValue(int(value))
+    elif isinstance(widget, QtGui.QCheckBox):
+        widget.setChecked(value)
+
+def getValue(widget):
+    '''Automatically extract a widget's value depending on its type.'''
+    if isinstance(widget, QtGui.QPlainTextEdit): 
+        return widget.toPlainText()
+    elif isinstance(widget, QtGui.QTextEdit): 
+        return widget.toHtml()
+    elif isinstance(widget, QtGui.QCheckBox): 
+        return widget.isChecked()
+    elif isinstance(widget, WDecimalEdit): 
+        return widget.getValue()
+    elif isinstance(widget, WDateEdit): 
+        return widget.getDate()
+    elif isinstance(widget, QtGui.QSpinBox): 
+        return widget.value()
+    elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
+        return widget.text()
+    elif isinstance(widget, QtGui.QComboBox):
+        lineEdit = widget.lineEdit()
+        if lineEdit: #Only editable combo boxes have a line edit
+            return lineEdit.text()
+    elif isinstance(widget, QtGui.QSpinBox):
+        return widget.value()
+    elif isinstance(widget, QtGui.QCheckBox):
+        return bool(widget.isChecked())
+
+
+class WFormWidgetsProxy():
+    '''Перехватчик виджетов формы. При попытке обращения к стандартным виджетам, класс возвращает/устанавливает значение, а не ссылку.
+    Т.е. вместо form.checkBox.setChecked(True), можно писать widgets.checkBox = True или widgets['checkBox'] = True.
+    Таким же образом, вместо txt = form.lineEdit.text(), можно писать txt = widgets.lineEdit или txt = widgets['lineEdit'].
+    Если же требуется работа именно с виджетом, а не с его значением, используйте form.'''
+    def __init__(self, form):
+        assert isinstance(form, QtGui.QWidget)
+        super().__setattr__('_form', form) # to bypass overriden __setattr__
+        
+    def __setattr__(self, name, value):
+        widget = getattr(self._form, name)
+        setValue(widget, value)
+
+    def __getattr__(self, name):
+        widget = getattr(self._form, name)
+        return getValue(widget)
+
+    def __getitem__(self, name):
+        return self.__getattr__(name)
+
+    def __setitem__(self, name, value):
+        self.__setattr__(name, value)
+
+
+
 class WForm(QtGui.QDialog):
     '''Base for user forms.'''
     
@@ -26,6 +108,8 @@ class WForm(QtGui.QDialog):
                 self.uiFilePath = os.path.join(moduleDir, self.uiFilePath)
         
         self.setupUi()
+        
+        self._ = WFormWidgetsProxy(self)
         
         try:
             self.onOpen()
@@ -216,58 +300,3 @@ class CatalogForm(WForm):
                 widget.setMaxDigits(field.maxDigits)
                 widget.setFractionDigits(field.fractionDigits)
 
-
-def setValue(widget, value):
-    '''Automatically set a widget's value depending on its type.'''        
-    if isinstance(widget, QtGui.QPlainTextEdit): 
-        widget.setPlainText('' if value is None else str(value))
-    elif isinstance(widget, QtGui.QTextEdit): 
-        widget.setHtml('' if value is None else str(value))
-    elif isinstance(widget, QtGui.QCheckBox): 
-        #widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
-        widget.setChecked(bool(value))
-        #widget.blockSignals(False) 
-    elif isinstance(widget, WDateEdit):
-        widget.setDate(value)
-    elif isinstance(widget, (WDecimalEdit, QtGui.QSpinBox)):
-        widget.setValue(value)
-    elif isinstance(widget, QtGui.QLineEdit):
-        widget.setText('' if value is None else str(value))
-        widget.home(False)
-    elif isinstance(widget, QtGui.QPushButton): 
-        widget.setText(str(value))
-    elif isinstance(widget, QtGui.QLabel):
-        widget.setText(value)
-    elif isinstance(widget, QtGui.QComboBox):
-        lineEdit = widget.lineEdit()
-        if lineEdit: #Only editable combo boxes have a line edit
-            lineEdit.setText(value)
-    elif isinstance(widget, QtGui.QSpinBox):
-        widget.setValue(int(value))
-    elif isinstance(widget, QtGui.QCheckBox):
-        widget.setChecked(value)
-
-def getValue(widget):
-    '''Automatically extract a widget's value depending on its type.'''
-    if isinstance(widget, QtGui.QPlainTextEdit): 
-        return widget.toPlainText()
-    elif isinstance(widget, QtGui.QTextEdit): 
-        return widget.toHtml()
-    elif isinstance(widget, QtGui.QCheckBox): 
-        return widget.isChecked()
-    elif isinstance(widget, WDecimalEdit): 
-        return widget.getValue()
-    elif isinstance(widget, WDateEdit): 
-        return widget.getDate()
-    elif isinstance(widget, QtGui.QSpinBox): 
-        return widget.value()
-    elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
-        return widget.text()
-    elif isinstance(widget, QtGui.QComboBox):
-        lineEdit = widget.lineEdit()
-        if lineEdit: #Only editable combo boxes have a line edit
-            return lineEdit.text()
-    elif isinstance(widget, QtGui.QSpinBox):
-        return widget.value()
-    elif isinstance(widget, QtGui.QCheckBox):
-        return bool(widget.isChecked())
