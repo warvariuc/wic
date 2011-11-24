@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>530</width>
-    <height>387</height>
+    <width>512</width>
+    <height>382</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -45,7 +45,7 @@
    <item row="0" column="1">
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Repayments count</string>
+      <string>Repayments</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>

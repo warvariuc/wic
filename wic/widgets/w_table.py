@@ -178,41 +178,66 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
 
 
 
-class WTable(): # ТаблицаЗначений
+class WTable(QtCore.QObject): # ТаблицаЗначений
     __slots__ = ['_columns', '_columnsOrder', '_rows', '_tableView']
     
     wItemDelegate = WItemDelegate() # class attribute
     
     def __init__(self, tableView= None):
+        super().__init__()
         self._columns = [] 
         self._rows = []
         self._columnsOrder = {} # column names and positions
+        self._tableView = None
         self.attachTableView(tableView)
     
     def attachTableView(self, tableView):
-        if isinstance(tableView, QtGui.QTableView):
-            self._tableView = tableView
+        if not tableView:
+            if self._tableView:
+                self._tableView.removeEventFilter(self)
+            self._tableView = None
+        else:
             tableView.setModel(WTableModel(self))
             tableView.setItemDelegate(self.wItemDelegate)
-        else:
-            self._tableView = None
+            tableView.installEventFilter(self) # for hooking Enter key
+            self._tableView = tableView
     
-    def tableView(self): return self._tableView
+    def eventFilter(self, target, event): # target - tableView
+        if event.type() == QtCore.QEvent.KeyPress:
+            key = event.key()
+            if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+                if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
+                    if target.state() != target.EditingState:
+                        index = target.currentIndex()
+                        if target.model().flags(index) & QtCore.Qt.ItemIsEditable:
+                            target.edit(index)
+                            return True
+        return super().eventFilter(target, event) # standard event processing        
 
-    def rows(self): return iter(self._rows)
-    def columns(self):  return iter(self._columns)
+    def tableView(self): 
+        return self._tableView
 
-    def rowCount(self): return len(self._rows)
-    def columnCount(self): return len(self._columnsOrder)
+    def rows(self): 
+        return iter(self._rows)
+    def columns(self):  
+        return iter(self._columns)
 
-    def row(self, index): return self._rows[index]
+    def rowCount(self): 
+        return len(self._rows)
+    def columnCount(self): 
+        return len(self._columnsOrder)
+
+    def row(self, index): 
+        return self._rows[index]
     def column(self, key): 
         return self._columns[self._columnsOrder[key] if isinstance(key, str) else key]
 
     def _notifyTableView(self, end= False):
         if self._tableView: # notify about changes
-            if end: self._tableView.model().layoutChanged.emit()
-            else: self._tableView.model().layoutAboutToBeChanged.emit()
+            if end: 
+                self._tableView.model().layoutChanged.emit()
+            else: 
+                self._tableView.model().layoutAboutToBeChanged.emit()
 
     def newRow(self, index= None):
         if not isinstance(index, int):
@@ -224,11 +249,13 @@ class WTable(): # ТаблицаЗначений
         return row
     
     def newColumn(self, identifier, index= None, label= '', width= 100, visible= True, onEdited= None, **kwargs):
-        if not identifier or (identifier in self._columnsOrder):
-            raise AttributeError('Колонка с таким именем уже существует или не задано имя колонки: ' + identifier)
+        if identifier in self._columnsOrder:
+            raise AttributeError('Колонка с именем `%` уже существует.' % identifier)
         if isinstance(index, str):
-            try: index = self._columnsOrder[index]
-            except KeyError: raise AttributeError('Колонка с таким именем не существует: ' + index)
+            try: 
+                index = self._columnsOrder[index]
+            except KeyError: 
+                raise AttributeError('Колонка с именем `%s` не существует.' % index)
         elif not isinstance(index, int):
             index = self.columnCount()
         
@@ -237,14 +264,16 @@ class WTable(): # ТаблицаЗначений
         self._notifyTableView()
         self._columns.append(column)
         l = [''] * len(self._columnsOrder) # transform dict to list, insert new column and transform back
-        for k, v in self._columnsOrder.items(): l[v] = k
+        for k, v in self._columnsOrder.items(): 
+            l[v] = k
         l.insert(index, identifier)
-        for i, v in enumerate(l): self._columnsOrder[v] = i
+        for i, v in enumerate(l): 
+            self._columnsOrder[v] = i
         
         for row in self._rows:
             row._values.insert(index, None)
 
-        column.label = label if label else identifier # column header label
+        column.label = label or identifier # column header label
         column.visible = visible
         column.width = width
         self._notifyTableView(True)
@@ -300,7 +329,7 @@ class WTableModel(QtCore.QAbstractTableModel):
         value = self.wTable.getValue(index.row(), index.column())
         return self.wTable.column(index.column()).rowItem.data(role, value)
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole): # editable model - data may be edited through an item delegate editor (WDateEdit, WDecimalEdit, QLineEdit, etc.)
+    def setData(self, index, value, role= QtCore.Qt.EditRole): # editable model - data may be edited through an item delegate editor (WDateEdit, WDecimalEdit, QLineEdit, etc.)
         if index.isValid():
             if role == QtCore.Qt.CheckStateRole:
                 value = True if value == QtCore.Qt.Checked else False
@@ -328,9 +357,9 @@ class WTableModel(QtCore.QAbstractTableModel):
         return None
 
     def flags(self, index):
-        if not index.isValid(): 
-            return QtCore.Qt.ItemIsEnabled
-        return self.wTable.column(index.column()).rowItem.flags
+        if index.isValid(): 
+            return self.wTable.column(index.column()).rowItem.flags
+        return QtCore.Qt.ItemIsEnabled
             
 
 

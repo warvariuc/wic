@@ -244,7 +244,7 @@ class WDecimalEdit(QtGui.QLineEdit):
             
     def keyPressEvent(self, keyEvent):
         key = keyEvent.key()
-        if keyEvent.modifiers() == QtCore.Qt.NoModifier:
+        if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
             if key == QtCore.Qt.Key_Insert:
                 self.popupCalculator()
                 return
@@ -261,14 +261,13 @@ class WDecimalEdit(QtGui.QLineEdit):
                     charDel = txt[posDel] 
                     if (charDel == '.' and self._fractionDigits > 0) or charDel == ',': # the char to be deleted is a dot or thousands separator
                         self.setCursorPosition(posMove) # jump over the char
-        
-        if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
-            if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
+            elif key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
                 self.applyCurrentValue(force= True)
-            if self.cursorPosition() == 0:
-                if self.text().startswith('0'):
-                    if keyEvent.text().isdigit() or keyEvent.text() == '.':
-                        self.setCursorPosition(1)
+                return
+        if self.cursorPosition() == 0:
+            if self.text().startswith('0'):
+                if keyEvent.text().isdigit() or keyEvent.text() == '.':
+                    self.setCursorPosition(1)
         super().keyPressEvent(keyEvent)
 
     def focusOutEvent(self, focusEvent):

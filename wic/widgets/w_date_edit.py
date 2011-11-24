@@ -213,6 +213,7 @@ class WDateEdit(QtGui.QLineEdit):
             elif key == QtCore.Qt.Key_Left:
                 if self.hasSelectedText():
                     self.setCursorPosition(self.selectionStart()) # переместим курсор на начало выделения - чтобы было удобнее
+                    return
         super().keyPressEvent(keyEvent)
 
     def focusOutEvent(self, focusEvent):
@@ -222,11 +223,10 @@ class WDateEdit(QtGui.QLineEdit):
         super().focusOutEvent(focusEvent)
     
     def wheelEvent(self, wheelEvent):
-        if not self.hasFocus(): 
-            return # only on focused widget
-        self.setCursorPosition(self.cursorPositionAt(wheelEvent.pos()))
-        self.addDays(int(wheelEvent.delta() / 120))
-        wheelEvent.ignore()
+        if self.hasFocus(): # only on focused widget 
+            self.setCursorPosition(self.cursorPositionAt(wheelEvent.pos()))
+            self.addDays(int(wheelEvent.delta() / 120))
+            wheelEvent.accept()
 
     def addDays(self, number): # target - lineEdit
         curPos = self.cursorPosition()

@@ -63,7 +63,7 @@ def getValue(widget):
         return bool(widget.isChecked())
 
 
-class WFormWidgetsProxy():
+class WFormWidgetHooker():
     '''Перехватчик виджетов формы. 
     Т.е. вместо form.checkBox.setChecked(True), можно писать form._.checkBox = True или form._['checkBox'] = True.'''
     def __init__(self, form):
@@ -107,7 +107,7 @@ class WForm(QtGui.QDialog):
         
         self.setupUi()
         
-        self._ = WFormWidgetsProxy(self)
+        self._ = WFormWidgetHooker(self)
         
         try:
             self.onOpen()
