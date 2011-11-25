@@ -32,7 +32,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         
         if isinstance(parent, WDateEdit):
             parent.setFocus()
-            self.selectDate(parent.currentDate())
+            self.selectDate(parent.date())
         else:
             self.selectDate()
             
@@ -84,7 +84,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
             return
         if isinstance(self.parent(), WDateEdit):
             qDate = self.calendarWidget.selectedDate()
-            self.parent().setDate(Date(qDate.year(), qDate.month(), qDate.day()), emitEdited= True)
+            self.parent().setDate(Date(qDate.year(), qDate.month(), qDate.day()), emit= True)
         self.close()
     
     def eventFilter(self, target, event): # target - calendarWidget or any of its children
@@ -144,9 +144,10 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
 
         self.selector.clicked.connect(self.popupCalendar)
-        self.textChanged.connect(self.onTextChanged)
+        self.textEdited.connect(self.onTextEdited)
 
         self.setSelectorVisible(True) # cause style recalculation
+        self._prevText = None # is used to track editing
         self.setDate(None)
 
     def resizeEvent(self, event):
@@ -167,30 +168,72 @@ class WDateEdit(QtGui.QLineEdit):
                 max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     selectorVisible = QtCore.pyqtProperty(bool, isSelectorVisible, setSelectorVisible)
 
-    def onTextChanged(self, txt):
+    def date(self):
+        '''Return the date entered in the field. If it is empty or invalid - `None` is returned.''' 
+        try:
+            return DateTime.strptime(self.text(), '%d.%m.%Y').date()
+        except ValueError:
+            return None
+    
+    def setDate(self, value, emit= False):
+        '''Set field text for the given date. `None` - empty date. 
+        value: the date to set
+        emit: whether to emit `edited` signal (like when the date is entered interactively)'''
+        if value is None:
+            strValue = '  .  .    '
+        elif isinstance(value, Date):
+            strValue = value.strftime('%d.%m.%Y')
+        else:
+            raise Exception('Value must a `datetime.date` or `None`.')
+        self._date = value
+        self.setText(strValue)
+        self.setCursorPosition(0)
+        if emit:
+            self.edited.emit()
+    
+    #setMinimumDate
+    #setMaximumDate
+
+    def clear(self):
+        self.textEdited.emit('')
+    
+    def onTextEdited(self, txt): 
+        '''Called whenever the text is edited interactively (not programmatically like via setText()).
+        Filters non digits or space entered symbols.'''
         txt = list(str(txt))
         curPos = self.cursorPosition()
         i = 0
-        while i < len(txt):
-            char = txt[i]
-            if not (char.isdigit() or char == ' '): 
-                del txt[i]
-                if i < curPos: 
-                    curPos -= 1 # курсор должен находится все после той же цифры
-            else: 
+        while i < len(txt): # remove invalid symbols
+            if txt[i] in ' 0123456789': 
                 i += 1
+            else: 
+                del txt[i]
+                curPos -= int(i < curPos) # курсор должен находится все после той же цифры
+                    
         len_ = 8 # standard length '__.__.____'
         fstPart = txt[:min(curPos, len_)]
-        lstPart = txt[max(len(fstPart), len(txt) - len_ + len(fstPart)): len(txt)]
-        midPart = [' ' for i in range(len_ - len(fstPart) - len(lstPart))]
+        lstPart = txt[max(len(fstPart), len(txt) - len_ + len(fstPart)):]
+        midPart = [' '] * (len_ - len(fstPart) - len(lstPart))
         a = ''.join(fstPart + midPart + lstPart)
         self.setText(a[0:2] + '.' + a[2:4] + '.' + a[4:])
-        if curPos > 4:
+        if curPos >= 4:
             curPos += 2 # поправка курсора из-за вставленной точки
-        elif curPos > 2:
+        elif curPos >= 2:
             curPos += 1
         self.setCursorPosition(curPos)
+        if self._prevText is None: # start of editing
+            self._prevText = self.text()
 
+    def focusOutEvent(self, focusEvent):
+        'Check for changes when leaving the widget'
+        if focusEvent.reason() != QtCore.Qt.PopupFocusReason: # контекстное меню (или еще что) выскочило 
+            if self._prevText is not None: # while the widget was focused - the text was changed
+#                if self.date() is None: # invalid date
+#                    self.setDate(None)
+                self.edited.emit()
+                self._prevText = None # reset the tracking
+        super().focusOutEvent(focusEvent)
+    
     def mouseDoubleClickEvent(self, mouseEvent):
         if mouseEvent.button() == QtCore.Qt.LeftButton:
             self.selectAll () # select all on double click, otherwise only group of digits will be selected
@@ -207,21 +250,28 @@ class WDateEdit(QtGui.QLineEdit):
             elif key == QtCore.Qt.Key_Up:
                 self.addDays(1)
                 return
-            elif key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
-                self.applyCurrentDate(force= True)
+            elif key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return): 
+                self.edited.emit() # forcibly emit edited signal
                 return
             elif key == QtCore.Qt.Key_Left:
                 if self.hasSelectedText():
                     self.setCursorPosition(self.selectionStart()) # переместим курсор на начало выделения - чтобы было удобнее
                     return
+            elif key in (QtCore.Qt.Key_Backspace, QtCore.Qt.Key_Delete) and not self.hasSelectedText():
+                txt = self.text()
+                curPos = self.cursorPosition()
+                if key == QtCore.Qt.Key_Backspace:
+                    posDel = curPos - 1 # position to check for character
+                    posMove = curPos - 1 # position to move to
+                elif key == QtCore.Qt.Key_Delete:
+                    posDel = curPos
+                    posMove = curPos + 1
+                if 0 <= posDel < len(txt):
+                    charDel = txt[posDel] 
+                    if charDel == '.': # the char to be deleted is a dot
+                        self.setCursorPosition(posMove) # jump over the char
         super().keyPressEvent(keyEvent)
 
-    def focusOutEvent(self, focusEvent):
-        'Check for changes when leaving the widget'
-        if focusEvent.reason() != QtCore.Qt.PopupFocusReason: # контекстное меню выскочило или еще что
-            self.applyCurrentDate()
-        super().focusOutEvent(focusEvent)
-    
     def wheelEvent(self, wheelEvent):
         if self.hasFocus(): # only on focused widget 
             self.setCursorPosition(self.cursorPositionAt(wheelEvent.pos()))
@@ -230,65 +280,30 @@ class WDateEdit(QtGui.QLineEdit):
 
     def addDays(self, number): # target - lineEdit
         curPos = self.cursorPosition()
-        date = self.currentDate()
+        date = self.date()
         if date: # empty or malformed date
             if curPos <= 2: # day was 'wheeled'
-                self.setText((date + RelDelta(days= number)).strftime('%d.%m.%Y'))
-                self.setSelection(0, 2)
+                newDate = date + RelDelta(days= number)
+                selection = (0, 2)
             elif curPos <= 5: # month was 'wheeled'
-                self.setText((date + RelDelta(months= number)).strftime('%d.%m.%Y'))
-                self.setSelection(3, 2)
+                newDate = date + RelDelta(months= number)
+                selection = (3, 2)
             else: # year was 'wheeled'
-                self.setText((date + RelDelta(years= number)).strftime('%d.%m.%Y'))
-                self.setSelection(6, 4)
+                newDate = date + RelDelta(years= number)
+                selection = (6, 4)
+            newText = newDate.strftime('%d.%m.%Y')
+            self.setText(newText)
+            self.textEdited.emit(newText) # kind of interactive edit
+            self.setSelection(*selection)
             
-    def popupCalendar(self):
-        self.selectAll()
-        WCalendarPopup(self).show()
-
-    def getDate(self): 
-        return self._date
-    def setDate(self, value, emitEdited= False):
-        if value is None:
-            strValue = '  .  .    '
-        elif isinstance(value, Date):
-            strValue = value.strftime('%d.%m.%Y')
-        else:
-            raise Exception('Value must a datetime.date or None.')
-        self._date = value
-        self.setText(strValue)
-        self.setCursorPosition(0)
-        if emitEdited:
-            self.edited.emit()
-    date = QtCore.pyqtProperty(Date, getDate, setDate)
-    
-    #setMinimumDate
-    #setMaximumDate
-
-    def currentDate(self, text= ''): # interpret entered string as date
-        text = text or self.text()
-        try:
-            datetime = DateTime.strptime(text, '%d.%m.%Y')
-        except ValueError:
-            return None
-        return datetime.date()
-
-    def applyCurrentDate(self, force= False):
-        curDate = self.currentDate()
-        if self._date != curDate or force:
-            self.setDate(curDate, emitEdited= True)
-#        if not currentValue:
-#            for char in self.text():
-#                if char.isdigit():
-#                    self.setStyleSheet('QLineEdit { background-color: yellow }')
-#                    return
-#        self.setStyleSheet('QLineEdit { background-color: white }')
-
     def contextMenuEvent(self, qContextMenuEvent):
         self.selectAll()
         self.menu.popup(qContextMenuEvent.globalPos())
 
-            
+    def popupCalendar(self):
+        self.selectAll()
+        WCalendarPopup(self).show()
+
 
 
 if __name__ == '__main__': # some tests

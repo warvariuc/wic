@@ -46,9 +46,9 @@ def getValue(widget):
     elif isinstance(widget, QtGui.QCheckBox): 
         return widget.isChecked()
     elif isinstance(widget, WDecimalEdit): 
-        return widget.getValue()
+        return widget.value()
     elif isinstance(widget, WDateEdit): 
-        return widget.getDate()
+        return widget.date()
     elif isinstance(widget, QtGui.QSpinBox): 
         return widget.value()
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)): 
@@ -63,7 +63,7 @@ def getValue(widget):
         return bool(widget.isChecked())
 
 
-class WFormWidgetHooker():
+class WFormWidgetsProxy():
     '''Перехватчик виджетов формы. 
     Т.е. вместо form.checkBox.setChecked(True), можно писать form._.checkBox = True или form._['checkBox'] = True.'''
     def __init__(self, form):
@@ -107,7 +107,7 @@ class WForm(QtGui.QDialog):
         
         self.setupUi()
         
-        self._ = WFormWidgetHooker(self)
+        self._ = WFormWidgetsProxy(self)
         
         try:
             self.onOpen()
