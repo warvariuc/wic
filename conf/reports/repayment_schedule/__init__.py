@@ -21,8 +21,8 @@ class Form(WForm):
         self._.firstInstallmDate = self._.disbursDate + RelDelta(months= 1)
         self._.loanAmount = 10000
         self._.numInstallments = 12
-        self._.flatInterest = False
         self._.annInterestRate = 16
+        self._.flatInterest = False
         self.loanAmount.setFocus()
 
         for i in range(4):
@@ -114,82 +114,79 @@ class Form(WForm):
         self.CalculateAmounts()
         
     def CalculateDates(self):
-        if not (self._.disbursDate and self._.numInstallments
-            and self._.firstInstallmDate): return
-        self.table.delRows()
-        for RepaymentNo in range(int(self._.numInstallments)):
-            row = self.table.newRow()
-            row.RepaymentNo = RepaymentNo + 1
-            row.RepaymentDate = self._.firstInstallmDate + RelDelta(months= RepaymentNo)
-    
-            for i in range(6):
-                if self._['weekDay%d' % row.RepaymentDate.weekday()]:
-                    break
-                row.RepaymentDate += RelDelta(days= 1)
+        if self._.disbursDate and self._.numInstallments and self._.firstInstallmDate: 
+            self.table.delRows()
+            for RepaymentNo in range(int(self._.numInstallments)):
+                row = self.table.newRow()
+                row.RepaymentNo = RepaymentNo + 1
+                row.RepaymentDate = self._.firstInstallmDate + RelDelta(months= RepaymentNo)
+        
+                for i in range(6):
+                    if self._['weekDay%d' % row.RepaymentDate.weekday()]:
+                        break
+                    row.RepaymentDate += RelDelta(days= 1)
                 
     def CalculateAmounts(self):
-        if not (self._.disbursDate and self._.loanAmount and self._.numInstallments
-                and self._.annInterestRate and self.table.rowCount()):
-            return
-        if not self._.firstInstallmDate:
-            self._.firstInstallmDate = self._.disbursDate + RelDelta(months= 1)
-    #    Состояние ( "Идет расчет..." );
-        dailyInterestRate = self._.annInterestRate / 100 / daysInYear
-        tbl = self.table.copy() # предполагается, что даты уже рассчитаны
-        countAuto = self.table.rowCount()
-        amountAuto = self._.loanAmount
-        prevDate = self._.disbursDate
-    
-        for row in tbl.rows():
-            row.DaysCount = (row.RepaymentDate - prevDate).days # количество дней между выплатами
-            prevDate = row.RepaymentDate
-            if row.Flag:
-                countAuto -= 1 # количество и...
-                amountAuto -= row.Principal #...сумма отведенная на автоматически рассчитываемые выплаты
-    
-        if not countAuto: return
-    
-        if self._.equalInstallments:
-            minEqual = Dec(0)
-            maxEqual = self._.loanAmount * 2
-            threshold = self._.numInstallments / 200
-            while True:
-                PrincipalBalance = self._.loanAmount
-                equal = round((minEqual + maxEqual) / 2, 2) # метод деления пополам
-                for row in tbl.rows():
-                    row.Interest = round((self._.loanAmount if self._.flatInterest else PrincipalBalance) * dailyInterestRate * row.DaysCount, 2)
-                    if not row.Flag:
-                        row.Principal = equal - row.Interest
-    #                           //Если Табл.Principal<0 Тогда
-    #                            //    Предупреждение("При заданных параметрах не удается рассчитать равные выплаты. 
-    #                           //        |Попытайтесь уменьшить количество выплат или другие параметры.");
-    #                   //    Возврат;
-                    PrincipalBalance -= row.Principal
-                    row.Balance = PrincipalBalance
-    #                    Сообщить("minEqual = " + minEqual + "; maxEqual = " + maxEqual + "; equal = " + equal + "; Balance = " + PrincipalBalance);
-                if PrincipalBalance < 0:
-                    maxEqual = equal
+        if self._.disbursDate and self._.loanAmount and self._.numInstallments \
+                and self._.annInterestRate and self.table.rowCount():
+            if not self._.firstInstallmDate:
+                self._.firstInstallmDate = self._.disbursDate + RelDelta(months= 1)
+        #    Состояние ( "Идет расчет..." );
+            dailyInterestRate = self._.annInterestRate / 100 / daysInYear
+            tbl = self.table.copy() # предполагается, что даты уже рассчитаны
+            countAuto = self.table.rowCount()
+            amountAuto = self._.loanAmount
+            prevDate = self._.disbursDate
+        
+            for row in tbl.rows():
+                row.DaysCount = (row.RepaymentDate - prevDate).days # количество дней между выплатами
+                prevDate = row.RepaymentDate
+                if row.Flag:
+                    countAuto -= 1 # количество и...
+                    amountAuto -= row.Principal #...сумма отведенная на автоматически рассчитываемые выплаты
+        
+            if countAuto:
+                if self._.equalInstallments:
+                    minEqual = Dec(0)
+                    maxEqual = self._.loanAmount * 2
+                    threshold = self._.numInstallments / 200
+                    while True:
+                        PrincipalBalance = self._.loanAmount
+                        equal = round((minEqual + maxEqual) / 2, 2) # метод деления пополам
+                        for row in tbl.rows():
+                            row.Interest = round((self._.loanAmount if self._.flatInterest else PrincipalBalance) * dailyInterestRate * row.DaysCount, 2)
+                            if not row.Flag:
+                                row.Principal = equal - row.Interest
+            #                           //Если Табл.Principal<0 Тогда
+            #                            //    Предупреждение("При заданных параметрах не удается рассчитать равные выплаты. 
+            #                           //        |Попытайтесь уменьшить количество выплат или другие параметры.");
+            #                   //    Возврат;
+                            PrincipalBalance -= row.Principal
+                            row.Balance = PrincipalBalance
+            #                    Сообщить("minEqual = " + minEqual + "; maxEqual = " + maxEqual + "; equal = " + equal + "; Balance = " + PrincipalBalance);
+                        if PrincipalBalance < 0:
+                            maxEqual = equal
+                        else:
+                            minEqual = equal
+                        if abs(PrincipalBalance) <= threshold or maxEqual - minEqual <= Dec('0.01'): break
                 else:
-                    minEqual = equal
-                if abs(PrincipalBalance) <= threshold or maxEqual - minEqual <= Dec('0.01'): break
-        else:
-            equal = round(amountAuto / countAuto, 2)
-    
-        PrincipalBalance = self._.loanAmount
-        for rowIndex in range(self.table.rowCount()):
-            row = self.table.row(rowIndex)
-            row1 = tbl.row(rowIndex)
-            row.DaysCount = row1.DaysCount
-            row.Balance = PrincipalBalance
-    #        Если Вручную = 0 Тогда 
-            row.Interest = round(dailyInterestRate * row.DaysCount * (self._.loanAmount if self._.flatInterest else row.Balance), 2)
-            if not row.Flag:
-                row.Principal = amountAuto if countAuto == 1 else (equal - row1.Interest if self._.equalInstallments else equal)
-                amountAuto -= row.Principal
-                countAuto -= 1
-    #        КонецЕсли;
-            PrincipalBalance -= row.Principal
-        self.RefreshTotals()
+                    equal = round(amountAuto / countAuto, 2)
+            
+                PrincipalBalance = self._.loanAmount
+                for rowIndex in range(self.table.rowCount()):
+                    row = self.table.row(rowIndex)
+                    row1 = tbl.row(rowIndex)
+                    row.DaysCount = row1.DaysCount
+                    row.Balance = PrincipalBalance
+            #        Если Вручную = 0 Тогда 
+                    row.Interest = round(dailyInterestRate * row.DaysCount * (self._.loanAmount if self._.flatInterest else row.Balance), 2)
+                    if not row.Flag:
+                        row.Principal = amountAuto if countAuto == 1 else (equal - row1.Interest if self._.equalInstallments else equal)
+                        amountAuto -= row.Principal
+                        countAuto -= 1
+            #        КонецЕсли;
+                    PrincipalBalance -= row.Principal
+                self.RefreshTotals()
 
     @QtCore.pyqtSlot()
     def on_printButton_clicked(self):

@@ -8,6 +8,9 @@ Most of the good tech companies, major web companies, etc. have gotten their sta
 http://developers.slashdot.org/story/10/12/06/0124241/I-Just-Need-a-Programmer
 
 
+Do not specify initial values for a form in the .ui file. This sometimes doesn't work as expected (f.e., setting a string of '12' on a WDecimalWidget with maxDigits=3 and fractionDigits=0 chops the text to '1' on opening the form, because... )
+
+
 Q. Why be slots are called twice?
 A. Specify a slot signature:
 
@@ -19,3 +22,4 @@ Q. Designer does not see custom widgets written in PyQt.
 A. 1. Check the paths (PYQTDESIGNERPATH environment variable).
    2. Be sure you have designer for Python 3. Your linux package manager may overwrite it with a version
    for Python 2.
+   

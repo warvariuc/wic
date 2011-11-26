@@ -164,9 +164,9 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         if isinstance(editor, WDateEdit):
-            model.setData(index, editor.date)
+            model.setData(index, editor.date())
         elif isinstance(editor, WDecimalEdit):
-            model.setData(index, editor.value)
+            model.setData(index, editor.value())
         else:
             super().setModelData(editor, model, index)
 

@@ -4,10 +4,16 @@ import re, decimal
 Dec = decimal.Decimal
 
 
+def regularNotation(value):
+    '''Sometimes str(decimal) makes scientific notation. This function makes the regular notation.'''
+    v = '{:.14f}'.format(value).rpartition('.') # 14 цифр после запятой
+    return v[0] + (v[1] + v[2]).rstrip('.0') # убираем последние нули в дробной части
+
+
 class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator):
-    '''Popup calculator'''
+    '''Calculator window'''
     
-    operators = '+-*/' # static member
+    operators = '+-*/' # class attribute
     
     keysBindings = {
         QtCore.Qt.Key_Enter: 'okButton', QtCore.Qt.Key_Return: 'okButton',
@@ -36,7 +42,8 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
         
         self.positionPopup()
         self.okButton.setDisabled(persistent)
-        self.display.setText(str(self.value))
+        self.display.setText(regularNotation(self.value))
+        self._replace = True # whether next entered number should replace the one shown
 
         bindings = {'0': self.digitButton_0, '1': self.digitButton_1,
                     '2': self.digitButton_2, '3': self.digitButton_3,
@@ -57,28 +64,25 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
             
  
     def on_buttonClicked(self, code):
-        expr = str(self.display.text())
+        expr = self.display.text()
         if expr == 'NaN': 
             expr = '0'
         if code == 'b': # backspace
             self.display.setText(expr[:-1]  if len(expr) != 1 else '0')
         elif code == 'c': # clear
-            self.calculateResult('')
+            self.calculateResult('0')
         elif code == '+/-':
             self.calculateResult('-(%s)' % expr)
         elif code == 'sqrt':
             self.calculateResult('(%s).sqrt()' % expr)
         elif code == 'x**2':
             self.calculateResult('(%s)**2' % expr)
-        elif code == '.':
-            if expr[-1:] != '%':
-                parts = re.split('([' + re.escape(self.operators) + '])', expr)
-                if '.' not in parts[-1]: #проверим, если последнее введенное число уже содержит точку
-                    self.display.setText(expr + '.')
         elif code == '1/x':
             self.calculateResult('1/(%s)' % expr)
         elif code == '=':
             self.calculateResult(expr)
+            self._replace = True
+            return
         elif code in self.operators: 
             if expr [-1:] in self.operators + '.':
                 self.display.setText(expr [:-1] + code) # overwrite last operator
@@ -88,22 +92,36 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
             parts = re.split('([' + re.escape(self.operators) + '])', expr)
             if code not in parts[-1] and parts[-1] not in self.operators:
                 self.display.setText(expr + code)
-        elif code.isdigit():
-            if expr == '0': #replace leading 0                
-                self.display.setText(code)
-            elif expr[-1:] != '%':
-                self.display.setText(expr + code)
+        else: # 
+            if self._replace:
+                expr = '0'
+            if code == '.':
+                if expr[-1:] != '%':
+                    parts = re.split('([' + re.escape(self.operators) + '])', expr)
+                    if '.' not in parts[-1]: # if the last entered number already contains `.`
+                        self.display.setText(expr + '.')
+            elif code.isdigit():
+                if expr == '0': #replace leading 0                
+                    self.display.setText(code)
+                elif expr[-1:] != '%':
+                    self.display.setText(expr + code)
+        self._replace = False 
 
     def calculateResult(self, expr):
-        if not expr:
-            result = Dec('0')
+        if expr == 'NaN':
+            result = Dec()
         else:
             if expr[-1:] in self.operators + '.':
                 expr = expr[:-1] # обрезаем оператор в конце строки, когда после него не был введен операнд
             expr = re.sub(r'(\d*\.?\d+)', r'Dec(str("\1"))', expr)
             expr = re.sub(r'%', r'*Dec("0.01")', expr) # можно было и поделить на 100, но, мне кажется, умножение быстрее
-            result = eval(expr)
-        self.display.setText(str(result))
+            try:
+                result = eval(expr)
+            except Exception as exc:
+                self.display.setText('NaN')
+                print(exc)
+                return
+        self.display.setText(regularNotation(result))
 
     @QtCore.pyqtSlot()
     def on_okButton_clicked(self):
@@ -120,8 +138,7 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
                     self.close()
                     return
             buttonName = self.keysBindings.get(key) # check a non-text pressed key
-        if not buttonName: # check a text pressed key
-            buttonName = self.keysBindings.get(keyEvent.text())
+        buttonName = buttonName or self.keysBindings.get(keyEvent.text()) # check a text pressed key
         if buttonName:
             getattr(self, buttonName).animateClick() # call the slot
         else:
@@ -166,45 +183,47 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/calculator-scientific.png'), 'Calculator', self.popupCalculator, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Copy', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
-        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.clear)
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.interactiveClear)
 
         self.setSelectorVisible(True) # cause style recalculation
-        self._totalDigits = 15 # total number of digits
-        self._fractionDigits = 2 # number of digits in fractional part
+        self._maxDigits = 15 # total number of digits
+        self._fractionDigits = -1 # number of digits in fractional part. Initial value is -1 - to avoid chopping the text when setFactionDigits is called after setText by uic 
         self._nonNegative = False
         self._separateThousands = True
-        self._prevText = None # is used to track editing
-        self.setValue('0') # will cause text update
+        self._newText = None # is used to track editing
+        self.setValue(0) # will cause text update
 
     def getMaxDigits(self): 
-        return self._totalDigits
+        return self._maxDigits
     def setMaxDigits(self, value):
         assert isinstance(value, int), 'Pass an integer'
-        self._totalDigits = max(value, 1)
-        self._fractionDigits = min(self._fractionDigits, self._totalDigits)
-        self.onTextEdited(self.text()) # to reflect changes
+        self._maxDigits = max(value, 1)
+        self._fractionDigits = min(self._fractionDigits, self._maxDigits)
+        self._format() # to reflect changes
     maxDigits = QtCore.pyqtProperty(int, getMaxDigits, setMaxDigits) 
 
     def getFractionDigits(self): 
         return self._fractionDigits
     def setFractionDigits(self, value):
+        '''How many digits after decimal point to show. If is 0 - no fraction digits - an integer.
+        If -1 - any number of digits in fractional part.'''
         self._fractionDigits = max(value, -1)
-        self._totalDigits = max(self._totalDigits, self._fractionDigits)
-        self.onTextEdited(self.text())
+        self._maxDigits = max(self._maxDigits, self._fractionDigits)
+        self._format()
     fractionDigits = QtCore.pyqtProperty(int, getFractionDigits, setFractionDigits)
 
     def isNonNegative(self): 
         return self._nonNegative
     def setSetNonegative(self, value): 
         self._nonNegative = bool(value)
-        self.onTextEdited(self.text())
+        self._format()
     nonNegative = QtCore.pyqtProperty(bool, isNonNegative, setSetNonegative)
     
     def isThousandsSeparated(self): 
         return self._separateThousands
     def setThousandsSeparated(self, value): 
         self._separateThousands = bool(value)
-        self.onTextEdited(self.text())
+        self._format()
     thousandsSeparated = QtCore.pyqtProperty(bool, isThousandsSeparated, setThousandsSeparated)
 
     def resizeEvent(self, event):
@@ -251,19 +270,19 @@ class WDecimalEdit(QtGui.QLineEdit):
             elif key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
                 self.edited.emit() # forcibly emit edited signal
                 return
-        if self.cursorPosition() == 0:
-            if self.text().startswith('0'):
-                if keyEvent.text().isdigit() or keyEvent.text() == '.':
-                    self.setCursorPosition(1)
         super().keyPressEvent(keyEvent)
 
+    def interactiveClear(self):
+        self.clear()
+        self.onTextEdited('')
+    
     def clear(self):
-        self.textEdited.emit('')
+        self.setValue(0)
 
-    def onTextEdited(self, txt):
-        '''Called whenever the text is edited interactively (not programmatically like via setText()).
+    def _format(self):
+        '''Format the value according to the view properties (maxDigits, fractionDigits, thousandsSeparator)).
         Filters invalid entered symbols.'''
-        print('onTextEdited')
+        txt = self.text()
         if self._fractionDigits > 0: 
             txt += '.' + '0' * self._fractionDigits
         txt = list(txt)
@@ -293,11 +312,9 @@ class WDecimalEdit(QtGui.QLineEdit):
             elif not char.isdigit(): #минус и точку проверили, все остальные не-цифры удаляем
                 del_ = True # non-digit
             elif dotPos == -1: # это цифра. точка еще не была
-                if i >= self._totalDigits - max(self._fractionDigits, 0): #  отсекаем лишние цифры целой части
-                    del_ = True
+                del_ = i >= self._maxDigits - max(self._fractionDigits, 0) #  отсекаем лишние цифры целой части
             else: # это цифра. точка уже была найдена
-                if i - dotPos > self._fractionDigits >= 0 :#or not self._fractionDigits: # отсекаем лишние цифры дробной части
-                    del_ = True # digits number before dot limit reached
+                del_ = i - dotPos > self._fractionDigits >= 0 # or not self._fractionDigits: # отсекаем лишние цифры дробной части # digits number before dot limit reached
             
             if del_: # delete current symbol
                 del txt[i]
@@ -312,39 +329,44 @@ class WDecimalEdit(QtGui.QLineEdit):
                 txt.insert(i, ',')
                 curPos += int(i < curPos)
         if not txt:
-            txt = '0'
-            if curPos: 
-                curPos = 1
+            txt = ['0']
+            curPos = 1
         if negative and not self.nonNegative:# and self.value() != Dec(0):
             txt.insert(0, '-')
             curPos += 1
         self.setText(''.join(txt))
         self.setCursorPosition(curPos)
-        if self._prevText is None: # start of editing
-            self._prevText = self.text()
+
+    
+    def onTextEdited(self, txt):
+        '''Called whenever the text is edited interactively (not programmatically like via setText()).
+        Filters invalid entered symbols.'''
+        self._format()
+        if self._newText is None: # start of editing
+            self._newText = self.text()
 
     def focusOutEvent(self, focusEvent):
         'Check for changes when leaving the widget'
         if focusEvent.reason() != QtCore.Qt.PopupFocusReason: # контекстное меню (или еще что) выскочило 
-            if self._prevText is not None: # while the widget was focused - the text was changed
-                print('self.edited.emit()', self._prevText)
+            if self._newText is not None: # while the widget was focused - the text was changed
                 self.edited.emit()
-                self._prevText = None # reset the tracking
+                self._newText = None # reset the tracking
         super().focusOutEvent(focusEvent)
-        
+
     def value(self): 
-        '''Return the decimal entered in the field.''' 
+        '''Return the decimal entered in the field.'''
         return Dec(self.text().replace(',', '') or 0)
     
     def setValue(self, value, emit= False):
         '''Set field text for the given decimal value. 
         value: the decimal value to set
         emit: whether to emit `edited` signal (like when the date is entered interactively)'''
-        value = Dec(str(value))
+        value = Dec(value)
         if self._fractionDigits != -1:
             value = round(value, self._fractionDigits)
-        self.onTextEdited(str(value))
-        self.setCursorPosition(0)
+        self.setText(regularNotation(value))
+        self._format()
+        #self.setCursorPosition(0)
         if emit:
             self.edited.emit()
     
@@ -353,9 +375,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         WPopupCalculator(self).show()
         
     def strValue(self):
-        value = self.value()
-        v = '{:.14f}'.format(value).rpartition('.') # 14 цифр после запятой
-        return v if not v[1] else v[0] + (v[1] + v[2]).rstrip('.0') # убираем последние нули в дробной части
+        return regularNotation(self.value()) 
         
     def contextMenuEvent(self, qContextMenuEvent):
         self.selectAll()

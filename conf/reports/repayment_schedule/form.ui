@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>512</width>
+    <width>513</width>
     <height>382</height>
    </rect>
   </property>
@@ -112,6 +112,9 @@
        <property name="text">
         <string/>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item>
@@ -121,6 +124,9 @@
        </property>
        <property name="text">
         <string/>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -132,6 +138,9 @@
        <property name="text">
         <string/>
        </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item>
@@ -141,6 +150,9 @@
        </property>
        <property name="text">
         <string/>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -259,6 +271,9 @@
      <property name="text">
       <string>Equal repayments</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item row="0" column="3" colspan="2">
@@ -283,6 +298,9 @@
    </item>
    <item row="1" column="0">
     <widget class="WDecimalEdit" name="loanAmount">
+     <property name="text">
+      <string>50000</string>
+     </property>
      <property name="fractionDigits">
       <number>0</number>
      </property>
@@ -296,6 +314,9 @@
    </item>
    <item row="1" column="1">
     <widget class="WDecimalEdit" name="numInstallments">
+     <property name="text">
+      <string>12</string>
+     </property>
      <property name="maxDigits">
       <number>3</number>
      </property>
@@ -309,8 +330,14 @@
    </item>
    <item row="1" column="2">
     <widget class="WDecimalEdit" name="annInterestRate">
+     <property name="text">
+      <string>16</string>
+     </property>
      <property name="maxDigits">
       <number>4</number>
+     </property>
+     <property name="fractionDigits">
+      <number>2</number>
      </property>
      <property name="nonNegative" stdset="0">
       <bool>true</bool>

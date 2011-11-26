@@ -135,7 +135,7 @@ class WDateEdit(QtGui.QLineEdit):
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/calendar-blue.png'), 'Calendar', self.popupCalendar, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Copy', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
-        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.clear)
+        self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.interactiveClear)
 
         self.selector = QtGui.QToolButton(self)
         self.selector.setIcon(QtGui.QIcon(':/icons/fugue/calendar-blue.png'))
@@ -184,8 +184,7 @@ class WDateEdit(QtGui.QLineEdit):
         elif isinstance(value, Date):
             strValue = value.strftime('%d.%m.%Y')
         else:
-            raise Exception('Value must a `datetime.date` or `None`.')
-        self._date = value
+            raise TypeError('Value must a `datetime.date` or `None`.')
         self.setText(strValue)
         self.setCursorPosition(0)
         if emit:
@@ -194,13 +193,17 @@ class WDateEdit(QtGui.QLineEdit):
     #setMinimumDate
     #setMaximumDate
 
+    def interactiveClear(self):
+        self.clear()
+        self.onTextEdited('')
+    
     def clear(self):
-        self.textEdited.emit('')
+        self.setDate(None)
     
     def onTextEdited(self, txt): 
         '''Called whenever the text is edited interactively (not programmatically like via setText()).
         Filters non digits or space entered symbols.'''
-        txt = list(str(txt))
+        txt = list(str(self.text()))
         curPos = self.cursorPosition()
         i = 0
         while i < len(txt): # remove invalid symbols

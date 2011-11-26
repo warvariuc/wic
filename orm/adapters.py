@@ -228,8 +228,9 @@ class GenericAdapter():
     def _INT(self, field):
         '''INT column type.'''
         maxInt = int('9' * field.maxDigits)
-        bitsCount = len(bin(maxInt)) - 2
-        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+#        bitsCount = len(bin(maxInt)) - 2
+#        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
 
         intMap = [(1, 'TINYINT'), (2, 'SMALLINT'),
                  (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]
@@ -525,8 +526,9 @@ class SqliteAdapter(GenericAdapter):
     def _INT(self, field):
         '''INTEGER column type for Sqlite.'''
         maxInt = int('9' * field.maxDigits)
-        bitsCount = len(bin(maxInt)) - 2
-        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+#        bitsCount = len(bin(maxInt)) - 2
+#        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
 
         if bytesCount > 8:
             raise Exception('Too many digits specified.')
