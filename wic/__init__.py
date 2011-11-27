@@ -12,12 +12,14 @@ try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
 except ImportError: 
     pass
 
+from wic import datetime # we have overridden datetime.datetime.__str__ method
+
 appDir = os.path.dirname(os.path.abspath(__file__))
 
 if hasattr(sys, 'argv'): # for qt designer
-    from wic import w_app, w_main_window
-    app = w_app.WApp(sys.argv)
-    mainWindow = w_main_window.WMainWindow()
+    from wic import app, main_window
+    app = app.WApp(sys.argv)
+    mainWindow = main_window.WMainWindow()
     messagesWindow = mainWindow.messagesWindow
 
     def exception_hook(excType, excValue, excTraceback): # Global function to catch unhandled exceptions (mostly in user modules)

@@ -1,10 +1,9 @@
 from PyQt4 import QtCore, QtGui, QtWebKit
 
-from datetime import date as Date
-from dateutil.relativedelta import relativedelta as RelDelta
+from wic.datetime import Date, RelDelta
 from decimal import Decimal as Dec
 from wic.forms import WForm
-from wic.widgets import w_table
+from wic import w_table
 from wic import w
 
 

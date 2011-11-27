@@ -1,12 +1,14 @@
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
-from datetime import date as Date
+from wic.datetime import Date, _format as formatDate
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
 
-class WTableItemProperties(): # data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text
+class WTableItemProperties(): 
+    '''Data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text'''
+
     def __init__(self, format= '', editable= False, 
                 alignment= None, defaultValue= None, roles= {}):
         self.format = format # text format of the value
@@ -37,7 +39,7 @@ class WTableItemProperties(): # data and flags for visual representation of an I
     
         if role == QtCore.Qt.DisplayRole:
             if isinstance(value, Date):
-                return str(value)
+                return formatDate(value)
             if isinstance(value, Dec):
                 format_ = self.format
                 if format_:
@@ -57,10 +59,7 @@ class WTableItemProperties(): # data and flags for visual representation of an I
         elif role == QtCore.Qt.CheckStateRole:# or role == QtCore.Qt.EditRole:
             if isinstance(value, bool): # is boolean
                 return QtCore.Qt.Checked if value else QtCore.Qt.Unchecked
-        else:
-            try: return self.roles[role]
-            except: pass
-        return None
+        return self.roles.get(role)
     
     def flags(self): # http://doc.trolltech.com/latest/qt.html#ItemFlag-enum
         return self._flags
@@ -78,20 +77,20 @@ class WTableColumnProperties():
     def index(self):
         return self.table._columns.index(self)
         
-    def getLabel(self): return self._label
+    def label(self): return self._label
     def setLabel(self, value):
         self._label = value # column header label
         if self.table._tableView:
             self.table._tableView.model().headerDataChanged.emit(QtCore.Qt.Horizontal, self.index(), self.index())
-    label = property(getLabel, setLabel)
+    label = property(label, setLabel)
                 
-    def getWidth(self): 
+    def width(self): 
         if self.table._tableView:
             return self.table._tableView.columnWidth(self.index())
     def setWidth(self, width):
         if self.table._tableView:
             self.table._tableView.setColumnWidth(self.index(), width)
-    width = property(getWidth, setWidth)
+    width = property(width, setWidth)
 
     def isVisible(self): 
         if self.table._tableView:
@@ -114,11 +113,9 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
 
     def __setattr__(self, name, value):
         if name in WTableRow.__slots__:
-            super().__setattr__(name, value)
-            return
+            return super().__setattr__(name, value)
         try:
-            self.__setitem__(name, value)
-            return
+            return self.__setitem__(name, value)
         except KeyError: pass
         raise AttributeError('Неверное имя колонки: %s' % name)
 
@@ -325,9 +322,9 @@ class WTableModel(QtCore.QAbstractTableModel):
         return self.wTable.columnCount()
 
     def data(self, index, role):
-        if not index.isValid():  return None
-        value = self.wTable.getValue(index.row(), index.column())
-        return self.wTable.column(index.column()).rowItem.data(role, value)
+        if index.isValid():  
+            value = self.wTable.getValue(index.row(), index.column())
+            return self.wTable.column(index.column()).rowItem.data(role, value)
 
     def setData(self, index, value, role= QtCore.Qt.EditRole): # editable model - data may be edited through an item delegate editor (WDateEdit, WDecimalEdit, QLineEdit, etc.)
         if index.isValid():
@@ -340,8 +337,10 @@ class WTableModel(QtCore.QAbstractTableModel):
                 self.dataChanged.emit(index, index)
                 column = self.wTable.column(index.column())
                 if column.onEdited: 
-                    try: column.onEdited(row, column, value)
-                    except Exception as err: print(str(err))
+                    try: 
+                        column.onEdited(row, column, value)
+                    except Exception as err: 
+                        print(str(err))
                 return True
         return False
 
