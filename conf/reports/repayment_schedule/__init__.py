@@ -28,15 +28,15 @@ class Form(WForm):
             self._['weekDay%d' % i] = True
 
         table = w_table.WTable(self.tableView)
-        table.newColumn('RepaymentNo', label= '#', defaultValue= 0, width= 30)
+        table.newColumn('RepaymentNo', label= '#', default= 0, width= 30)
         table.newColumn('RepaymentDate', label= 'Date', editable= True, alignment= QtCore.Qt.AlignCenter, width= 80, onEdited= self.onTableValueEdited)
-        table.newColumn('DaysCount', label= 'Days', defaultValue= 0, width= 35)
-        table.newColumn('Balance', format= ',.2f ', defaultValue= Dec(), width= 80) # 
-        col = table.newColumn('Flag', label= '*', defaultValue= False, editable= True, width= 25, onEdited= self.onTableValueEdited)
+        table.newColumn('DaysCount', label= 'Days', default= 0, width= 35)
+        table.newColumn('Balance', format= ',.2f ', default= Dec(), width= 80) # 
+        col = table.newColumn('Flag', label= '*', default= False, editable= True, width= 25, onEdited= self.onTableValueEdited)
         col.headerItem.roles[QtCore.Qt.ToolTipRole] = 'Fixed principal'
-        table.newColumn('Principal', format= ',.2f ', defaultValue= Dec(), editable= True, width= 80, onEdited= self.onTableValueEdited)
-        table.newColumn('Interest', format= ',.2f ', defaultValue= Dec(), width= 80)
-        table.newColumn('Total', format= ',.2f ', defaultValue= Dec(), editable= True, width= 80, onEdited= self.onTableValueEdited) # defaultValue = func - вычисляемое значение
+        table.newColumn('Principal', format= ',.2f ', default= Dec(), editable= True, width= 80, onEdited= self.onTableValueEdited)
+        table.newColumn('Interest', format= ',.2f ', default= Dec(), width= 80)
+        table.newColumn('Total', format= ',.2f ', default= Dec(), editable= True, width= 80, onEdited= self.onTableValueEdited) # default = func - вычисляемое значение
 
         boldFont = QtGui.QFont()
         boldFont.setBold(True)

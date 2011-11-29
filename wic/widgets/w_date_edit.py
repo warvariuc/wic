@@ -160,10 +160,10 @@ class WDateEdit(QtGui.QLineEdit):
     def setSelectorVisible(self, value):
         self.selector.setVisible(value)
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
-        paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0)
-        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % paddingRight)
+        selectorWidth = borderWidth + (self.selector.sizeHint().width() if value else 0)
+        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % selectorWidth)
         fm = QtGui.QFontMetrics(self.font()) # font metrics
-        self.setMinimumSize(fm.width('99.99.9999') + self.selector.sizeHint().height() + borderWidth * 2,
+        self.setMinimumSize(fm.width('99.99.9999 ') + borderWidth * 2 + selectorWidth,
                 max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     selectorVisible = QtCore.pyqtProperty(bool, isSelectorVisible, setSelectorVisible)
 

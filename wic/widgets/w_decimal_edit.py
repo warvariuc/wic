@@ -185,24 +185,24 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.interactiveClear)
 
-        self.setSelectorVisible(True) # cause style recalculation
         self._maxDigits = 15 # total number of digits
         self._fractionDigits = -1 # number of digits in fractional part. Initial value is -1 - to avoid chopping the text when setFactionDigits is called after setText by uic 
         self._nonNegative = False
         self._separateThousands = True
+        self.setSelectorVisible(True) # cause style recalculation
         self._newText = None # is used to track editing
         self.setValue(0) # will cause text update
 
-    def getMaxDigits(self): 
+    def maxDigits(self): 
         return self._maxDigits
     def setMaxDigits(self, value):
         assert isinstance(value, int), 'Pass an integer'
         self._maxDigits = max(value, 1)
         self._fractionDigits = min(self._fractionDigits, self._maxDigits)
         self._format() # to reflect changes
-    maxDigits = QtCore.pyqtProperty(int, getMaxDigits, setMaxDigits) 
+    maxDigits = QtCore.pyqtProperty(int, maxDigits, setMaxDigits) 
 
-    def getFractionDigits(self): 
+    def fractionDigits(self): 
         return self._fractionDigits
     def setFractionDigits(self, value):
         '''How many digits after decimal point to show. If is 0 - no fraction digits - an integer.
@@ -210,7 +210,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self._fractionDigits = max(value, -1)
         self._maxDigits = max(self._maxDigits, self._fractionDigits)
         self._format()
-    fractionDigits = QtCore.pyqtProperty(int, getFractionDigits, setFractionDigits)
+    fractionDigits = QtCore.pyqtProperty(int, fractionDigits, setFractionDigits)
 
     def isNonNegative(self): 
         return self._nonNegative
@@ -231,17 +231,21 @@ class WDecimalEdit(QtGui.QLineEdit):
         frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
         self.selector.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height()) / 2)
+
+    def _updateStyle(self):
+        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
+        selectorWidth = self.selector.sizeHint().width() if self.isSelectorVisible() else 0 
+        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % (selectorWidth + borderWidth))
+        fm = QtGui.QFontMetrics(self.font()) # font metrics
+        maxText = '9' * self._maxDigits + '. '
+        self.setMinimumSize(fm.width(maxText) + selectorWidth + borderWidth * 2,
+                   max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     
     def isSelectorVisible(self): 
         return not self.selector.isHidden()
     def setSelectorVisible(self, value):
         self.selector.setVisible(value)
-        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
-        paddingRight = borderWidth + (self.selector.sizeHint().width() if value else 0) 
-        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % paddingRight)
-        fm = QtGui.QFontMetrics(self.font()) # font metrics
-        self.setMinimumSize(fm.width(str('0.00')) + self.selector.sizeHint().height() + borderWidth * 2,
-                   max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
+        self._updateStyle()
     selectorVisible = QtCore.pyqtProperty(bool, isSelectorVisible, setSelectorVisible)
 
     def mouseDoubleClickEvent(self, mouseEvent):

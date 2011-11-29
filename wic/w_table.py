@@ -1,6 +1,8 @@
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
+import traceback
+
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
 
@@ -10,11 +12,11 @@ class WTableItemProperties():
     '''Data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text'''
 
     def __init__(self, format= '', editable= False, 
-                alignment= None, defaultValue= None, roles= {}):
+                alignment= None, default= None, roles= {}):
         self.format = format # text format of the value
-        self.defaultValue = defaultValue
+        self.default = default
         if alignment is None:
-            if isinstance(defaultValue, (Dec, int)): # by default decimals and integers are left aligned
+            if isinstance(default, (Dec, int)): # by default decimals and integers are left aligned
                 alignment = QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter
             else:
                 alignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
@@ -53,7 +55,7 @@ class WTableItemProperties():
             elif isinstance(value, bool):
                 return None # no text for checkboxes
             else:
-                return value # todo: use self.format depending on value type
+                return value # TODO: use self.format depending on value type
         elif role == QtCore.Qt.EditRole:
             return value
         elif role == QtCore.Qt.CheckStateRole:# or role == QtCore.Qt.EditRole:
@@ -109,7 +111,7 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
         self._table = table
         self._values = []
         for column in self._table.columns():
-            self._values.append(column.rowItem.defaultValue)
+            self._values.append(column.rowItem.default)
 
     def __setattr__(self, name, value):
         if name in WTableRow.__slots__:
@@ -329,7 +331,7 @@ class WTableModel(QtCore.QAbstractTableModel):
     def setData(self, index, value, role= QtCore.Qt.EditRole): # editable model - data may be edited through an item delegate editor (WDateEdit, WDecimalEdit, QLineEdit, etc.)
         if index.isValid():
             if role == QtCore.Qt.CheckStateRole:
-                value = True if value == QtCore.Qt.Checked else False
+                value = bool(value == QtCore.Qt.Checked)
                 role = QtCore.Qt.EditRole # reuse the code
             if role == QtCore.Qt.EditRole:
                 row = self.wTable.row(index.row())
@@ -339,8 +341,8 @@ class WTableModel(QtCore.QAbstractTableModel):
                 if column.onEdited: 
                     try: 
                         column.onEdited(row, column, value)
-                    except Exception as err: 
-                        print(str(err))
+                    except Exception as exc: 
+                        print(str(exc))
                 return True
         return False
 
@@ -370,9 +372,9 @@ if __name__ == '__main__': # some tests
     tableView = QtGui.QTableView(None)
     
     table = WTable(tableView)
-    table.newColumn('column1', label= 'int', defaultValue= 0, width= 50)
-    table.newColumn('column2', label= 'Decimal', editable= True, alignment= QtCore.Qt.AlignRight, defaultValue= Dec())
-    table.newColumn('column3', label= 'Date', editable= True, defaultValue= Date())
+    table.newColumn('column1', label= 'int', default= 0, width= 50)
+    table.newColumn('column2', label= 'Decimal', editable= True, alignment= QtCore.Qt.AlignRight, default= Dec())
+    table.newColumn('column3', label= 'Date', editable= True, default= Date())
     for rowIndex in range(10):
         row = table.newRow()
         row.column1 = rowIndex + 1
