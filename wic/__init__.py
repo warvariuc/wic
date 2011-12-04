@@ -6,17 +6,17 @@ pythonRequiredVersion = '3.2'
 if sys.version < pythonRequiredVersion:
     sys.exit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
+try:
+    from wic.widgets import w_widgets_rc # load resources (icons, etc.)
+except ImportError:
+    sys.exit('Looks like resources are not compiled. Please run `compile_resources.py`.')
+    
 try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
     import cdecimal
     sys.modules['decimal'] = cdecimal 
 except ImportError: 
     pass
 
-try:
-    from wic.widgets import w_widgets_rc # load resources (icons, etc.)
-except ImportError:
-    print('Looks like resources are not compiled. Please run `compile_resources.py`.')
-    
 appDir = os.path.dirname(os.path.abspath(__file__))
 
 if hasattr(sys, 'argv'): # for qt designer
