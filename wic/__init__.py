@@ -12,8 +12,6 @@ try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
 except ImportError: 
     pass
 
-from wic import datetime # we have overridden datetime.datetime.__str__ method
-
 appDir = os.path.dirname(os.path.abspath(__file__))
 
 if hasattr(sys, 'argv'): # for qt designer
