@@ -30,8 +30,10 @@ class WTableItemProperties():
     def isEditable(self):
         return bool(~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable) & self.flags)
     def setEditable(self, value):
-        if value: self.flags |= QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable
-        else: self.flags &= ~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable)
+        if value: 
+            self.flags |= QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable
+        else: 
+            self.flags &= ~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable)
     editable = property(isEditable, setEditable)
         
 #        self.editFormat = ''
@@ -122,7 +124,8 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
         raise AttributeError('Неверное имя колонки: %s' % name)
 
     def __getattr__(self, name):
-        try: return self._values[self._table._columnsOrder[name]]
+        try: 
+            return self._values[self._table._columnsOrder[name]]
         except KeyError: pass
         raise AttributeError('Неверное имя колонки: %s' % name)
 
