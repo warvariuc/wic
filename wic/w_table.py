@@ -1,7 +1,7 @@
 from PyQt4 import QtGui, QtCore
+import traceback
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
-import traceback
 
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
@@ -22,7 +22,7 @@ class WTableItemProperties():
                 alignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
         self.roles = {QtCore.Qt.TextAlignmentRole: alignment} # alignment of the items from this item/column http://doc.trolltech.com/latest/qt.html#AlignmentFlag-enum
         for role, data in roles.items():
-            self.roles[role] = data # todo: if data is a function use its return value as data
+            self.roles[role] = data # TODO: if data is a function use its return value as data
             
         self.flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         self.editable = editable
@@ -81,7 +81,7 @@ class WTableColumnProperties():
         
     def label(self): return self._label
     def setLabel(self, value):
-        self._label = value # column header label
+        self._label = value # column header text
         if self.table._tableView:
             self.table._tableView.model().headerDataChanged.emit(QtCore.Qt.Horizontal, self.index(), self.index())
     label = property(label, setLabel)
