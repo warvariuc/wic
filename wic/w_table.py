@@ -144,7 +144,7 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
             tableModel.dataChanged.emit(index, index)
             
     def values(self):
-        return iter(self._values)
+        return self._values
 
 
 
@@ -209,10 +209,10 @@ class WTable(): # ТаблицаЗначений
         return self._tableView
 
     def rows(self): 
-        return iter(self._rows)
+        return self._rows
     
     def columns(self):  
-        return iter(self._columns)
+        return self._columns
 
     def rowCount(self): 
         return len(self._rows)

@@ -2,10 +2,10 @@ import os, sys
 from PyQt4 import QtCore, QtGui
 
 from wic.w import printMessage
-from wic.forms import CatalogForm
+from wic.forms import CatalogItemForm
 
 
-class Form(CatalogForm):
+class Form(CatalogItemForm):
     ''''''
     uiFilePath = '' # auto generated form
 

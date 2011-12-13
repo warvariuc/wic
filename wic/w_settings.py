@@ -16,7 +16,7 @@ class WSettings():
         if geometry: self.mainWindow.restoreGeometry(geometry)
         windowState = self.settings.value('windowState', None)
         if windowState: self.mainWindow.restoreState(windowState)
-        self.mainWindow.messagesWindow.dockWidget.setVisible(bool(int(self.settings.value('showMessagesWindow', True))))
+        self.mainWindow.messagesWindow.setVisible(bool(int(self.settings.value('showMessagesWindow', True))))
 
         self.recentFiles = self.settings.value('recentFiles', None)
         if self.recentFiles is None: self.recentFiles = []
@@ -27,7 +27,7 @@ class WSettings():
     def saveSettings(self):
         self.settings.setValue('geometry', self.mainWindow.saveGeometry())
         self.settings.setValue('windowState', self.mainWindow.saveState())
-        self.settings.setValue('showMessagesWindow', int(self.mainWindow.messagesWindow.dockWidget.isVisible()))
+        self.settings.setValue('showMessagesWindow', int(self.mainWindow.messagesWindow.isVisible()))
         self.settings.setValue('recentFiles', self.recentFiles)
         self.settings.setValue('lastUsedDirectory', self.lastUsedDirectory)
 

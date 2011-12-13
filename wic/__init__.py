@@ -44,3 +44,14 @@ if hasattr(sys, 'argv'): # for qt designer
         mainWindow.messagesWindow.printMessage(info)
     
     sys.excepthook = exception_hook # set our exception hook
+
+
+    class MessagesOut():
+        '''Our replacement for stdout. It prints messages also the the messages window.'''
+        def write(self, txt):
+            print(txt, end= '', file= sys.__stdout__)
+            messagesWindow.printMessage(txt, end= '')
+        def flush(self):
+            sys.__stdout__.flush()
+    
+    sys.stdout = MessagesOut()  # redirect the real STDOUT

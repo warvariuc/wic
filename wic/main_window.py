@@ -28,7 +28,7 @@ class WMainWindow(QtGui.QMainWindow):
         
         from wic.messages_window import MessagesWindow
         self.messagesWindow = MessagesWindow(self)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow.dockWidget)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow)
 
         #Create menu
         self.fileMenu = self.menuBar().addMenu('Файл')
