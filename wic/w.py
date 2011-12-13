@@ -101,3 +101,14 @@ def loadConf(_confDir):
     QtGui.qApp.confDir = _confDir
     loadGlobalModule(os.path.join(QtGui.qApp.confDir, 'global_module.py'))
 
+
+import errno
+
+def pid_exists(pid):
+    '''Verify if process with given pid is running (on this machine).'''
+    try:
+        os.kill(pid, 0)
+    except OSError as exc:
+        return exc.errno == errno.EPERM
+    else:
+        return True
