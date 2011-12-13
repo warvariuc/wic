@@ -236,7 +236,7 @@
     <rect>
      <x>10</x>
      <y>30</y>
-     <width>152</width>
+     <width>155</width>
      <height>27</height>
     </rect>
    </property>
@@ -254,6 +254,18 @@
    <header>wic.widgets.w_decimal_edit</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>decimalEdit</tabstop>
+  <tabstop>dateEdit</tabstop>
+  <tabstop>dceTotalDigits</tabstop>
+  <tabstop>dceFractionDigits</tabstop>
+  <tabstop>dceShowSelector</tabstop>
+  <tabstop>dceNonNegative</tabstop>
+  <tabstop>dceSeparateThousands</tabstop>
+  <tabstop>dteShowSelector</tabstop>
+  <tabstop>testGm</tabstop>
+  <tabstop>Close</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

@@ -130,7 +130,7 @@
       <string notr="true">QToolButton { background-color: rgb(232, 232, 232); }</string>
      </property>
      <property name="text">
-      <string>‹‹</string>
+      <string>«</string>
      </property>
      <property name="autoRepeat">
       <bool>true</bool>
@@ -170,7 +170,7 @@
       <string notr="true">QToolButton { background-color: rgb(232, 232, 232); }</string>
      </property>
      <property name="text">
-      <string>››</string>
+      <string>»</string>
      </property>
      <property name="autoRepeat">
       <bool>true</bool>

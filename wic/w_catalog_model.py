@@ -1,7 +1,9 @@
 from PyQt4 import QtGui, QtCore
-import traceback
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
+import traceback
+
+import orm
 
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
@@ -22,7 +24,7 @@ class WTableItemProperties():
                 alignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
         self.roles = {QtCore.Qt.TextAlignmentRole: alignment} # alignment of the items from this item/column http://doc.trolltech.com/latest/qt.html#AlignmentFlag-enum
         for role, data in roles.items():
-            self.roles[role] = data # TODO: if data is a function use its return value as data
+            self.roles[role] = data # todo: if data is a function use its return value as data
             
         self.flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         self.editable = editable
@@ -83,7 +85,7 @@ class WTableColumnProperties():
         
     def label(self): return self._label
     def setLabel(self, value):
-        self._label = value # column header text
+        self._label = value # column header label
         if self.table._tableView:
             self.table._tableView.model().headerDataChanged.emit(QtCore.Qt.Horizontal, self.index(), self.index())
     label = property(label, setLabel)
@@ -180,134 +182,12 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
 
 
 
-class WTable(): # ТаблицаЗначений
-    __slots__ = ['_columns', '_columnsOrder', '_rows', '_tableView']
+
+
+
+class WCatalogModel(QtCore.QAbstractTableModel):
+    '''Model for showing list of catalog items.'''
     
-    wItemDelegate = WItemDelegate() # class attribute
-    
-    def __init__(self, tableView= None):
-        assert tableView is None or isinstance(tableView, QtGui.QTableView), 'Pass a QtGui.QTableView'
-        super().__init__()
-        self._columns = [] 
-        self._rows = []
-        self._columnsOrder = {} # column names and positions
-        self._tableView = None
-        self.attachTableView(tableView)
-    
-    def attachTableView(self, tableView):
-        if not tableView:
-            if self._tableView:
-                self._tableView.removeEventFilter(self._tableView.model())
-            self._tableView = None
-        else:
-            tableView.setModel(WTableModel(self))
-            tableView.setItemDelegate(self.wItemDelegate)
-            tableView.installEventFilter(tableView.model()) # for hooking Enter key
-            self._tableView = tableView
-    
-    def tableView(self): 
-        return self._tableView
-
-    def rows(self): 
-        return iter(self._rows)
-    
-    def columns(self):  
-        return iter(self._columns)
-
-    def rowCount(self): 
-        return len(self._rows)
-    
-    def columnCount(self): 
-        return len(self._columnsOrder)
-
-    def row(self, index): 
-        return self._rows[index]
-    
-    def column(self, key): 
-        return self._columns[self._columnsOrder[key] if isinstance(key, str) else key]
-
-    def _notifyTableView(self, end= False):
-        if self._tableView: # notify about changes
-            if end: 
-                self._tableView.model().layoutChanged.emit()
-            else: 
-                self._tableView.model().layoutAboutToBeChanged.emit()
-
-    def newRow(self, index= None):
-        if not isinstance(index, int):
-            index = self.rowCount()
-        row = WTableRow(self)
-        self._notifyTableView()
-        self._rows.append(row)
-        self._notifyTableView(True)
-        return row
-    
-    def newColumn(self, identifier, index= None, label= '', width= 100, visible= True, onEdited= None, **kwargs):
-        if identifier in self._columnsOrder:
-            raise AttributeError('Колонка с именем `%` уже существует.' % identifier)
-        if isinstance(index, str):
-            try: 
-                index = self._columnsOrder[index]
-            except KeyError: 
-                raise AttributeError('Колонка с именем `%s` не существует.' % index)
-        elif not isinstance(index, int):
-            index = self.columnCount()
-        
-        column = WTableColumnProperties(self, identifier, onEdited, WTableItemProperties(**kwargs))
-
-        self._notifyTableView()
-        self._columns.append(column)
-        l = [''] * len(self._columnsOrder) # transform dict to list, insert new column and transform back
-        for k, v in self._columnsOrder.items(): 
-            l[v] = k
-        l.insert(index, identifier)
-        for i, v in enumerate(l): 
-            self._columnsOrder[v] = i
-        
-        for row in self._rows:
-            row._values.insert(index, None)
-
-        column.label = label or identifier # column header label
-        column.visible = visible
-        column.width = width
-        self._notifyTableView(True)
-        
-        return column
-
-    def delRow(self, rowIndex):
-        self._notifyTableView()
-        del self._rows[rowIndex]
-        self._notifyTableView(True)
-        
-    def delColumn(self, columnIndex):
-        self._notifyTableView()
-        for row in self._rows:
-            del row._values[columnIndex]
-        self._notifyTableView(True)
-        
-    def delRows(self):
-        self._notifyTableView()
-        self._rows = []
-        self._notifyTableView(True)
-        
-    def getValue(self, rowIndex, columnIndex):
-        return self._rows[rowIndex][columnIndex]
-        
-    def setValue(self, rowIndex, columnIndex, value):
-        self._rows[rowIndex][columnIndex] = value
-        
-    def copy(self):
-        table = WTable()
-        for column in self._columns: # todo: copy visual properties
-            table.newColumn(column.identifier)
-        for row in self._rows:
-            newRow = table.newRow()
-            newRow._values = row._values[:]
-        return table
-
-
-
-class WTableModel(QtCore.QAbstractTableModel):
     def __init__(self, wTable):
         super().__init__(None) # no parent
         self.wTable = wTable
@@ -356,19 +236,15 @@ class WTableModel(QtCore.QAbstractTableModel):
         if index.isValid(): 
             return self.wTable.column(index.column()).rowItem.flags
         return QtCore.Qt.ItemIsEnabled
+    
+    def _fetch(self):
+        ''''''
+        
+    def setQuery(self, model, fields):
+        ''''''
+        assert isinstance(model, orm.Model), 'Pass an orm.Model instance'
+        assert all(isinstance(field, orm.Field) for field in fields), 'All fields must be instances of orm.Field' 
             
-    def eventFilter(self, tableView, event): # target - tableView
-        if event.type() == QtCore.QEvent.KeyPress:
-            key = event.key()
-            if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
-                if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
-                    if tableView.state() != tableView.EditingState:
-                        index = tableView.currentIndex()
-                        if tableView.model().flags(index) & QtCore.Qt.ItemIsEditable:
-                            tableView.edit(index)
-                            return True
-        return super().eventFilter(tableView, event) # standard event processing        
-
 
 
 
