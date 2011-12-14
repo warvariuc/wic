@@ -4,7 +4,7 @@ from PyQt4 import QtCore, QtGui
 import wic
 from wic import w
 import orm
-from wic.forms import openForm, openCatalogItemForm
+from wic.forms import openForm, openCatalogItemForm, openCatalogForm
 from conf import settings
 
 confDir = os.path.dirname(os.path.abspath(__file__))
@@ -21,17 +21,20 @@ def onSystemStarted(): # предопределенная процедура з�
 #    from conf.reports.test import Form
 #    openForm(Form)
     
-    from conf.reports.repayment_schedule import Form
-    openForm(Form)
+#    from conf.reports.repayment_schedule import Form
+#    openForm(Form)
     
-#    from conf.catalogs.books import Books
-#    book = Books.getOne(db, where= (Books.price > 14))
+    from conf.catalogs.books import Books
+    book = Books.getOne(db, where= (Books.price > 14))
 #    w.printMessage(db.getLastQuery())
 #
-#    openCatalogItemForm(book)
+    openCatalogItemForm(book)
 #    openCatalogItemForm(Books(db))
 #    
 #    wic.mainWindow.windowRestoreAll()
+
+    from conf.catalogs.books import Books
+    openCatalogForm(Books)
 
     
 def onSystemAboutToExit(): # предопределенная процедура запускаемая при завершении работы системы
