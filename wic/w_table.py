@@ -8,8 +8,8 @@ from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
 
-class WTableItemProperties(): 
-    '''Data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text'''
+class WItemStyle(): 
+    '''Data and flags for visual representation of an ItemView item'''
 
     def __init__(self, format= '', editable= False, 
                 alignment= None, default= None, roles= None):
@@ -27,7 +27,7 @@ class WTableItemProperties():
         self.editable = editable
         
     def isEditable(self):
-        return bool(~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable) & self.flags)
+        return bool(~self.flags & QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable)
     def setEditable(self, value):
         if value: 
             self.flags |= QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable
@@ -73,7 +73,7 @@ class WTableColumnProperties():
     def __init__(self, table, identifier, onEdited, rowItem):
         self.table = table
         self.identifier = identifier
-        self.headerItem = WTableItemProperties(alignment= QtCore.Qt.AlignCenter)
+        self.headerItem = WItemStyle(alignment= QtCore.Qt.AlignCenter)
         self.rowItem = rowItem
         self.onEdited = onEdited
     
@@ -252,7 +252,7 @@ class WTable(): # ТаблицаЗначений
         elif not isinstance(index, int):
             index = self.columnCount()
         
-        column = WTableColumnProperties(self, identifier, onEdited, WTableItemProperties(**kwargs))
+        column = WTableColumnProperties(self, identifier, onEdited, WItemStyle(**kwargs))
 
         self._notifyTableView()
         self._columns.append(column)
