@@ -10,24 +10,14 @@ from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
 
-class WTableItemProperties():
-    '''Data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text'''
+class WColumnStyle():
+    'Data and flags for visual representation of a QTableView column.'
 
-    def __init__(self, format = '', editable = False,
-                alignment = None, default = None, roles = {}):
+    def __init__(self, format = '', alignment = None, roles = None):
         self.format = format # text format of the value
-        self.default = default
-        if alignment is None:
-            if isinstance(default, (Dec, int)): # by default decimals and integers are left aligned
-                alignment = QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter
-            else:
-                alignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
-        self.roles = {QtCore.Qt.TextAlignmentRole: alignment} # alignment of the items from this item/column http://doc.trolltech.com/latest/qt.html#AlignmentFlag-enum
-        for role, data in roles.items():
-            self.roles[role] = data # todo: if data is a function use its return value as data
+        self.roles = roles or {}
 
-        self.flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
-        self.editable = editable
+        self.flags = QtCore.Qt.ItemIsSelectable # QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
     def isEditable(self):
         return bool(~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable) & self.flags)
@@ -38,22 +28,19 @@ class WTableItemProperties():
             self.flags &= ~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable)
     editable = property(isEditable, setEditable)
 
-#        self.editFormat = ''
-
 
     def data(self, role, value): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
-
         if role == QtCore.Qt.DisplayRole:
             if isinstance(value, Date):
                 return formatDate(value)
             if isinstance(value, Dec):
-                format_ = self.format
-                if format_:
-                    if format_[-1:] == ' ':
+                _format = self.format
+                if _format:
+                    if _format[-1:] == ' ':
                         if value == 0:
                             return ''
-                        format_ = format_[:-1]
-                    return format(value, format_)
+                        _format = _format[:-1]
+                    return format(value, _format)
                 else:
                     return str(value)
             elif isinstance(value, bool):
@@ -109,136 +96,104 @@ class WTableColumnProperties():
 
 
 
-class WTableRow(): # maybe subclass list instead of wrapping it?
-    __slots__ = ['_table', '_values']
-    def __init__(self, table):
-        self._table = table
-        self._values = []
-        for column in self._table.columns():
-            self._values.append(column.rowItem.default)
+class Cache():
+    '''Cache for keeping query results from DB'''
+    def __init__(self, db, catalogModel):
+        self.catalogModel = catalogModel
+        self.db = db
+        self.expireTime = 3 # in seconds
+        self._rowsCount = None
+        self.countStart = 0
+        self.countEnd = 0
+        
+    def getRowsCount(self):
+        ''
+        if self._rowsCount is None:
+            self._rowsCount = self.catalogModel.count(self.db)
+        return self._rowsCount
+    
+    rowsCount = property(getRowsCount)
+    
 
-    def __setattr__(self, name, value):
-        if name in WTableRow.__slots__:
-            return super().__setattr__(name, value)
-        try:
-            return self.__setitem__(name, value)
-        except KeyError: pass
-        raise AttributeError('Неверное имя колонки: %s' % name)
-
-    def __getattr__(self, name):
-        try:
-            return self._values[self._table._columnsOrder[name]]
-        except KeyError: pass
-        raise AttributeError('Неверное имя колонки: %s' % name)
-
-    def index(self):
-        return self._table._rows.index(self)
-
-    def __getitem__(self, key):
-        return self._values[self._table._columnsOrder[key] if isinstance(key, str) else key]
-
-    def __setitem__(self, key, value):
-        columnIndex = self._table._columnsOrder[key] if isinstance(key, str) else key
-        self._values[columnIndex] = value
-        if self._table._tableView:
-            tableModel = self._table._tableView.model()
-            index = tableModel.index(self.index(), columnIndex)
-            tableModel.dataChanged.emit(index, index)
-
-    def values(self):
-        return iter(self._values)
+    def fetch(self):
+        'Fetch chunk of results of the query'
+        
+    def expire(self):
+        'Set the cache as expired'
 
 
-
-
-class WItemDelegate(QtGui.QStyledItemDelegate):
-    def createEditor(self, parent, option, index):
-        data = index.data(QtCore.Qt.EditRole)
-        if isinstance(data, Date):
-            editor = WDateEdit(parent)
-            editor.setDate(data)
-            editor.edited.connect(self.commitAndCloseEditor)
-            return editor
-        if isinstance(data, Dec):
-            editor = WDecimalEdit(parent)
-            editor.setValue(data)
-            editor.edited.connect(self.commitAndCloseEditor)
-            return editor
-        return super().createEditor(parent, option, index)
-
-    def setModelData(self, editor, model, index):
-        if isinstance(editor, WDateEdit):
-            model.setData(index, editor.date())
-        elif isinstance(editor, WDecimalEdit):
-            model.setData(index, editor.value())
-        else:
-            super().setModelData(editor, model, index)
-
-    def commitAndCloseEditor(self):
-        editor = self.sender()
-        self.commitData.emit(editor)
-        self.closeEditor.emit(editor, QtGui.QAbstractItemDelegate.NoHint)
-
-
-
-
+def createStyleForField(field):
+    assert isinstance(field, orm.Field)
+    if isinstance(field, orm.DecimalField):
+        # align decimals and integers to right
+        return WColumnStyle(format= ',.%if ' % field.fractionDigits, 
+                            roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight})
+    else:
+        return WColumnStyle(roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft})
+        
+#
+#    
+#    if isinstance(field, (orm.CharField, orm.IntegerField, orm.IdField, orm.RecordIdField, orm.DateTimeField)):
+#        return QtGui.QLineEdit()
+#    elif isinstance(field, orm.DecimalField):
+#        return WDecimalEdit()
+#    elif isinstance(field, orm.DateField):
+#        return WDateEdit()
+#    elif isinstance(field, orm.BooleanField):
+#        return QtGui.QCheckBox(field.name)
+#    elif isinstance(field, orm.TextField):
+#        return QtGui.QPlainTextEdit()
+#    raise Exception('Could not create a widget for field %s' % field)
 
 
 
 class WCatalogModel(QtCore.QAbstractTableModel):
     '''Model for showing list of catalog items.'''
 
-    def __init__(self, catalogModel, db):
+    def __init__(self, db, catalogModel, where= None):
         assert orm.isModel(catalogModel)
         super().__init__(None) # no parent
         self.catalogModel = catalogModel
         self.db = db
+        self._cache = Cache(db, catalogModel)
+        self._columnNames = []
+        self._columnStyles = []
+        for field in catalogModel:
+            self._columnNames.append(field.name)
+            self._columnStyles.append(createStyleForField(field))
+
 
     def rowCount(self, parent):
-        return self.catalogModel.count(self.db)
+        return self._cache.rowsCount
 
     def columnCount(self, parent):
-        return len(self.catalogModel)
+        return len(self._columnNames)
 
     def data(self, index, role):
         if index.isValid():
-            return 'a'
-            value = self.wTable.getValue(index.row(), index.column())
-            return self.wTable.column(index.column()).rowItem.data(role, value)
-
-    def setData(self, index, value, role = QtCore.Qt.EditRole): # editable model - data may be edited through an item delegate editor (WDateEdit, WDecimalEdit, QLineEdit, etc.)
-        if index.isValid():
-            if role == QtCore.Qt.CheckStateRole:
-                value = bool(value == QtCore.Qt.Checked)
-                role = QtCore.Qt.EditRole # reuse the code
-            if role == QtCore.Qt.EditRole:
-                row = self.wTable.row(index.row())
-                row[index.column()] = value
-                self.dataChanged.emit(index, index)
-                column = self.wTable.column(index.column())
-                if column.onEdited:
-                    try:
-                        column.onEdited(row, column, value)
-                    except Exception as exc:
-                        print(str(exc))
-                return True
-        return False
+            value = Dec('12.135') # self.wTable.getValue(index.row(), index.column())
+            return self._columnStyles[index.column()].data(role, value)
 
     def headerData(self, section, orientation, role):
         if orientation == QtCore.Qt.Horizontal:
             if role == QtCore.Qt.DisplayRole:
-                return 'asdf' #self.wTable.column(section).label
-            else:
-                return None #self.wTable.column(section).headerItem.data(role, None)
+                return self._columnNames[section] #self.wTable.column(section).label
         elif orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
                 return str(section) # for rows display row number
         return None
 
-    def flags(self, index):
-#        if index.isValid():
-#            return self.wTable.column(index.column()).rowItem.flags
-        return QtCore.Qt.ItemIsEnabled
+    def eventFilter(self, tableView, event): # target - tableView
+        if event.type() == QtCore.QEvent.KeyPress:
+            key = event.key()
+            if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+                if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
+                    if tableView.state() != tableView.EditingState:
+                        index = tableView.currentIndex()
+                        if tableView.model().flags(index) & QtCore.Qt.ItemIsEditable:
+                            tableView.edit(index)
+                            return True
+        return super().eventFilter(tableView, event) # standard event processing        
 
     def _fetch(self):
         ''''''

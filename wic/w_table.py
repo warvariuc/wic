@@ -12,7 +12,7 @@ class WTableItemProperties():
     '''Data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text'''
 
     def __init__(self, format= '', editable= False, 
-                alignment= None, default= None, roles= {}):
+                alignment= None, default= None, roles= None):
         self.format = format # text format of the value
         self.default = default
         if alignment is None:
@@ -20,9 +20,8 @@ class WTableItemProperties():
                 alignment = QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter
             else:
                 alignment = QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
-        self.roles = {QtCore.Qt.TextAlignmentRole: alignment} # alignment of the items from this item/column http://doc.trolltech.com/latest/qt.html#AlignmentFlag-enum
-        for role, data in roles.items():
-            self.roles[role] = data # TODO: if data is a function use its return value as data
+        self.roles = {QtCore.Qt.TextAlignmentRole: alignment} # alignment of the items from this item/column: http://doc.trolltech.com/latest/qt.html#AlignmentFlag-enum
+        self.roles.update(roles or {})
             
         self.flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         self.editable = editable
@@ -337,7 +336,7 @@ class WTableModel(QtCore.QAbstractTableModel):
                     try: 
                         column.onEdited(row, column, value)
                     except Exception as exc: 
-                        print(str(exc))
+                        print(exc)
                 return True
         return False
 

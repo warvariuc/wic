@@ -182,12 +182,12 @@ class CatalogItemForm(WForm):
         Fill form fields with data from DB.'''
         self.formTitle = '%s item' % self.catalogItem.__class__ 
         if not self.uiFilePath: # automatically generated form
-            self.autoCreateWidgets()
+            self.createWidgets()
         self.setupWidgets()            
         super().setupUi()
         self.fillFormFromItem(self.catalogItem)
 
-    def autoCreateWidgets(self):
+    def createWidgets(self):
         '''Automatically create on the form widgets and labels for each catalog model field.'''
         formLayout = QtGui.QFormLayout(self)
         formLayout.setMargin(2)
@@ -327,22 +327,30 @@ class CatalogForm(WForm):
         Fill form fields with data from DB.'''
         self.formTitle = '%s catalog' % self.catalogModel 
         if not self.uiFilePath: # automatically generated form
-            self.autoCreateWidgets()
+            self.createWidgets()
         super().setupUi()
-        self.tableView.setModel(WCatalogModel(self.catalogModel, self.db))
+        self.tableView.setModel(WCatalogModel(self.db, self.catalogModel))
 
-    def autoCreateWidgets(self):
+    def createWidgets(self):
         '''Automatically create on the form widgets and labels for each catalog model field.'''
         layout = QtGui.QVBoxLayout(self)
         layout.setMargin(2)
         
-        self.tableView = QtGui.QTableView()
+        self.tableView = self.createTableView()
         layout.addWidget(self.tableView)
         
         self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Close)
         layout.addWidget(self.buttonBox) # add standard button box at the bottom
         self.layout = layout
     
+    def createTableView(self):
+        tableView = QtGui.QTableView()
+        #self.tableView.verticalHeader().hide()
+        tableView.setSelectionBehavior(tableView.SelectRows)
+        tableView.setSelectionMode(tableView.SingleSelection)
+        tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+        #tableView.verticalHeader().setDefaultSectionSize(...)
+        return tableView
 
 def openCatalogForm(catalogModel, db, FormClass= None):
     assert orm.isModel(catalogModel), 'Pass a model class.'
