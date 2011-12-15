@@ -115,6 +115,9 @@ class ModelMeta(type):
         for field in fields:
             yield field
 
+    def __len__(self):
+        return len(list(self.__iter__()))
+    
     def __str__(self):
         return getattr(self, '_name', '') or self.__name__.lower() 
 
@@ -228,3 +231,7 @@ class Model(metaclass= ModelMeta):
             ', '.join('%s= %r' % (field.name, getattr(self, field.name))
                        for field in self.__class__)) 
 
+    @classmethod
+    def count(cls, db, where= None):
+        '''Request number of records in this table.'''
+        return db.select(orm.COUNT(where or cls))[1][0][0]

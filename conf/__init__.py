@@ -34,7 +34,7 @@ def onSystemStarted(): # предопределенная процедура з�
 #    wic.mainWindow.windowRestoreAll()
 
     from conf.catalogs.books import Books
-    openCatalogForm(Books)
+    openCatalogForm(Books, db)
 
     
 def onSystemAboutToExit(): # предопределенная процедура запускаемая при завершении работы системы

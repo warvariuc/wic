@@ -10,11 +10,11 @@ from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
 
-class WTableItemProperties(): 
+class WTableItemProperties():
     '''Data and flags for visual representation of an ItemView item/column; a kind of HTML style, that can be applied to any portion of text'''
 
-    def __init__(self, format= '', editable= False, 
-                alignment= None, default= None, roles= {}):
+    def __init__(self, format = '', editable = False,
+                alignment = None, default = None, roles = {}):
         self.format = format # text format of the value
         self.default = default
         if alignment is None:
@@ -25,24 +25,24 @@ class WTableItemProperties():
         self.roles = {QtCore.Qt.TextAlignmentRole: alignment} # alignment of the items from this item/column http://doc.trolltech.com/latest/qt.html#AlignmentFlag-enum
         for role, data in roles.items():
             self.roles[role] = data # todo: if data is a function use its return value as data
-            
+
         self.flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         self.editable = editable
-        
+
     def isEditable(self):
         return bool(~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable) & self.flags)
     def setEditable(self, value):
-        if value: 
+        if value:
             self.flags |= QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable
-        else: 
+        else:
             self.flags &= ~(QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsUserCheckable)
     editable = property(isEditable, setEditable)
-        
+
 #        self.editFormat = ''
 
 
     def data(self, role, value): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
-    
+
         if role == QtCore.Qt.DisplayRole:
             if isinstance(value, Date):
                 return formatDate(value)
@@ -66,31 +66,31 @@ class WTableItemProperties():
             if isinstance(value, bool): # is boolean
                 return QtCore.Qt.Checked if value else QtCore.Qt.Unchecked
         return self.roles.get(role)
-    
+
     def flags(self): # http://doc.trolltech.com/latest/qt.html#ItemFlag-enum
         return self._flags
-    
+
 
 
 class WTableColumnProperties():
     def __init__(self, table, identifier, onEdited, rowItem):
         self.table = table
         self.identifier = identifier
-        self.headerItem = WTableItemProperties(alignment= QtCore.Qt.AlignCenter)
+        self.headerItem = WTableItemProperties(alignment = QtCore.Qt.AlignCenter)
         self.rowItem = rowItem
         self.onEdited = onEdited
-    
+
     def index(self):
         return self.table._columns.index(self)
-        
+
     def label(self): return self._label
     def setLabel(self, value):
         self._label = value # column header label
         if self.table._tableView:
             self.table._tableView.model().headerDataChanged.emit(QtCore.Qt.Horizontal, self.index(), self.index())
     label = property(label, setLabel)
-                
-    def width(self): 
+
+    def width(self):
         if self.table._tableView:
             return self.table._tableView.columnWidth(self.index())
     def setWidth(self, width):
@@ -98,7 +98,7 @@ class WTableColumnProperties():
             self.table._tableView.setColumnWidth(self.index(), width)
     width = property(width, setWidth)
 
-    def isVisible(self): 
+    def isVisible(self):
         if self.table._tableView:
             self.table._tableView.isColumnHidden(self.index)
     def setVisible(self, visibility):
@@ -126,25 +126,25 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
         raise AttributeError('Неверное имя колонки: %s' % name)
 
     def __getattr__(self, name):
-        try: 
+        try:
             return self._values[self._table._columnsOrder[name]]
         except KeyError: pass
         raise AttributeError('Неверное имя колонки: %s' % name)
 
     def index(self):
         return self._table._rows.index(self)
-        
+
     def __getitem__(self, key):
         return self._values[self._table._columnsOrder[key] if isinstance(key, str) else key]
 
     def __setitem__(self, key, value):
-        columnIndex = self._table._columnsOrder[key] if isinstance(key, str) else key 
+        columnIndex = self._table._columnsOrder[key] if isinstance(key, str) else key
         self._values[columnIndex] = value
         if self._table._tableView:
             tableModel = self._table._tableView.model()
             index = tableModel.index(self.index(), columnIndex)
             tableModel.dataChanged.emit(index, index)
-            
+
     def values(self):
         return iter(self._values)
 
@@ -187,23 +187,26 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
 
 class WCatalogModel(QtCore.QAbstractTableModel):
     '''Model for showing list of catalog items.'''
-    
-    def __init__(self, wTable):
+
+    def __init__(self, catalogModel, db):
+        assert orm.isModel(catalogModel)
         super().__init__(None) # no parent
-        self.wTable = wTable
+        self.catalogModel = catalogModel
+        self.db = db
 
     def rowCount(self, parent):
-        return self.wTable.rowCount()
+        return self.catalogModel.count(self.db)
 
     def columnCount(self, parent):
-        return self.wTable.columnCount()
+        return len(self.catalogModel)
 
     def data(self, index, role):
-        if index.isValid():  
+        if index.isValid():
+            return 'a'
             value = self.wTable.getValue(index.row(), index.column())
             return self.wTable.column(index.column()).rowItem.data(role, value)
 
-    def setData(self, index, value, role= QtCore.Qt.EditRole): # editable model - data may be edited through an item delegate editor (WDateEdit, WDecimalEdit, QLineEdit, etc.)
+    def setData(self, index, value, role = QtCore.Qt.EditRole): # editable model - data may be edited through an item delegate editor (WDateEdit, WDecimalEdit, QLineEdit, etc.)
         if index.isValid():
             if role == QtCore.Qt.CheckStateRole:
                 value = bool(value == QtCore.Qt.Checked)
@@ -213,10 +216,10 @@ class WCatalogModel(QtCore.QAbstractTableModel):
                 row[index.column()] = value
                 self.dataChanged.emit(index, index)
                 column = self.wTable.column(index.column())
-                if column.onEdited: 
-                    try: 
+                if column.onEdited:
+                    try:
                         column.onEdited(row, column, value)
-                    except Exception as exc: 
+                    except Exception as exc:
                         print(str(exc))
                 return True
         return False
@@ -224,44 +227,44 @@ class WCatalogModel(QtCore.QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if orientation == QtCore.Qt.Horizontal:
             if role == QtCore.Qt.DisplayRole:
-                return self.wTable.column(section).label
+                return 'asdf' #self.wTable.column(section).label
             else:
-                return self.wTable.column(section).headerItem.data(role, None)
+                return None #self.wTable.column(section).headerItem.data(role, None)
         elif orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
                 return str(section) # for rows display row number
         return None
 
     def flags(self, index):
-        if index.isValid(): 
-            return self.wTable.column(index.column()).rowItem.flags
+#        if index.isValid():
+#            return self.wTable.column(index.column()).rowItem.flags
         return QtCore.Qt.ItemIsEnabled
-    
+
     def _fetch(self):
         ''''''
-        
+
     def setQuery(self, model, fields):
         ''''''
         assert isinstance(model, orm.Model), 'Pass an orm.Model instance'
-        assert all(isinstance(field, orm.Field) for field in fields), 'All fields must be instances of orm.Field' 
-            
+        assert all(isinstance(field, orm.Field) for field in fields), 'All fields must be instances of orm.Field'
+
 
 
 
 
 if __name__ == '__main__': # some tests
     app = QtGui.QApplication([])
-    
+
     tableView = QtGui.QTableView(None)
-    
+
     table = WTable(tableView)
-    table.newColumn('column1', label= 'int', default= 0, width= 50)
-    table.newColumn('column2', label= 'Decimal', editable= True, alignment= QtCore.Qt.AlignRight, default= Dec())
-    table.newColumn('column3', label= 'Date', editable= True, default= Date())
+    table.newColumn('column1', label = 'int', default = 0, width = 50)
+    table.newColumn('column2', label = 'Decimal', editable = True, alignment = QtCore.Qt.AlignRight, default = Dec())
+    table.newColumn('column3', label = 'Date', editable = True, default = Date())
     for rowIndex in range(10):
         row = table.newRow()
         row.column1 = rowIndex + 1
         row.column2 = Dec(rowIndex)
-    
+
     tableView.show()
     app.exec()

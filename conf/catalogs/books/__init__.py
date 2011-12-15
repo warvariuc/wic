@@ -5,17 +5,16 @@ from wic.w import printMessage
 from wic.forms import CatalogItemForm, setValue, getValue
 
 
-class Form(CatalogItemForm):
-    ''''''
-    #uiFilePath = '' # auto generated form
-
-#    def onOpen(self):
-        #self.setWindowIcon(QtGui.QIcon(self.iconPath))
-        #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))
-    
-    def on_descriptionSource_textChanged(self):
-        setValue(self.description, getValue(self.descriptionSource))
-
+#class Form(CatalogItemForm):
+#    ''''''
+#    #uiFilePath = '' # auto generated form
+#
+##    def onOpen(self):
+#        #self.setWindowIcon(QtGui.QIcon(self.iconPath))
+#        #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))
+#    
+#    def on_descriptionSource_textChanged(self):
+#        setValue(self.description, getValue(self.descriptionSource))
 
 
 import orm
