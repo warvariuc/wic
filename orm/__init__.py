@@ -15,7 +15,7 @@ _fieldsCount = 0 # will be used to track the original definition order of the fi
 
 def getObjectByPath(path, defaultModule):
     '''Given the path in form 'some.module.object' return the object. 
-    If '.' is not present in path return object from defaultModule with that name.'''
+    If `.` is not present in path return object from defaultModule with that name.'''
     moduleName, sep, className = str(path).rpartition('.')
     if sep: # '.' is present 
         module = __import__(moduleName, fromlist= [className])
@@ -27,9 +27,9 @@ def isModel(obj):
 
 def listify(obj):
     '''Assure that obj is an iterable.'''
-    if not hasattr(obj, '__iter__'):
-        obj = [obj]
-    return list(obj)
+    if hasattr(obj, '__iter__'):
+        return list(obj)
+    return [obj]
 
 class metamethod():
     '''A descriptor you can use to decorate a method. 

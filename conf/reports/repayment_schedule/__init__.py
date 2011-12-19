@@ -1,3 +1,5 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 from PyQt4 import QtCore, QtGui, QtWebKit
 
 from wic.datetime import Date, RelDelta

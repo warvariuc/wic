@@ -1,3 +1,5 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 from PyQt4 import QtGui, QtCore
 import traceback
 from decimal import Decimal as Dec

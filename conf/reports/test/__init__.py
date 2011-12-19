@@ -1,3 +1,5 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 import os, sys
 from PyQt4 import QtCore, QtGui
 

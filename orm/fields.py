@@ -152,7 +152,7 @@ class DateTimeField(Field):
 class IdField(Field):
     '''Primary integer autoincrement key. ID - implicitly present in each table.'''
     def _init(self):
-        self.maxDigits = 19
+        self.maxDigits = 9 # int32 - should be enough
         self.autoincrement = True
         super()._init(Column('INT', self), None, 'primary')
 
@@ -167,7 +167,7 @@ class RecordIdField(Field):
     '''Foreign key - stores id of a row in another table.'''
     def _init(self, referTable, index= ''):
         self._referTable = referTable # foreign key - referenced type of table
-        self.maxDigits = 19
+        self.maxDigits = 9 # int32 - should be enough
         super()._init(Column('INT', self), None, index)
         
     def getReferTable(self):

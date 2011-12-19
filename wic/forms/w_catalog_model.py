@@ -1,3 +1,5 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
@@ -154,7 +156,7 @@ def createStyleForField(field):
 
 class WCatalogModel(QtCore.QAbstractTableModel):
     '''Model for showing list of catalog items.'''
-
+    
     def __init__(self, db, catalogModel, where=None):
         assert orm.isModel(catalogModel)
         super().__init__(None) # no parent
@@ -191,17 +193,6 @@ class WCatalogModel(QtCore.QAbstractTableModel):
             return self._hHeaderStyle.data(role, section)
         return None
 
-    def eventFilter(self, tableView, event): # target - tableView
-        if event.type() == QtCore.QEvent.KeyPress:
-            key = event.key()
-            if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
-                if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
-                    if tableView.state() != tableView.EditingState:
-                        index = tableView.currentIndex()
-                        if tableView.model().flags(index) & QtCore.Qt.ItemIsEditable:
-                            tableView.edit(index)
-                            return True
-        return super().eventFilter(tableView, event) # standard event processing        
 
 #    def setQuery(self, model, fields):
 #        ''''''

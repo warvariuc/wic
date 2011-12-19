@@ -1,3 +1,5 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 import os, sys
 import math, random
 from PyQt4 import QtCore, QtGui

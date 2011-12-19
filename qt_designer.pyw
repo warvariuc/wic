@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 import os, sys, subprocess
 
 curDir = os.path.dirname(os.path.abspath(__file__))

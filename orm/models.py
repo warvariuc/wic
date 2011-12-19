@@ -142,7 +142,7 @@ class Model(metaclass= ModelMeta):
         '''Create a model instance - a record.
         Pass arguments: tuples (Field, value) 
         and keyword arguments: fieldName= value.'''
-        self._db = db #kwargs.pop('db')
+        self._db = db
         
         table = None
         for item in args:

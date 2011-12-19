@@ -1,3 +1,5 @@
+'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+
 from pprint import pprint
 from decimal import Decimal
 import tempfile, os
