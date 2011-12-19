@@ -1,7 +1,6 @@
 import os, sys
 from PyQt4 import QtCore, QtGui
 
-from wic.w import printMessage
 from wic.forms import WForm, getValue
 
 

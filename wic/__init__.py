@@ -19,6 +19,13 @@ except ImportError:
 
 appDir = os.path.dirname(os.path.abspath(__file__))
 
+
+
+class Bunch(): # Alex Martelli's recipe
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
 if hasattr(sys, 'argv'): # for qt designer
     from wic import app, main_window
     app = app.WApp(sys.argv)
