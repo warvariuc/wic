@@ -149,7 +149,7 @@ def openCatalogItemForm(catalogItem, FormClass= None):
 
 
 
-from wic.forms.w_catalog_model import WCatalogModel
+from .w_catalog_model import WCatalogModel
 
 
 class CatalogForm(WForm):
