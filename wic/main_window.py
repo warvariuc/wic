@@ -34,7 +34,7 @@ class WMainWindow(QtGui.QMainWindow):
         self.messagesWindow = MessagesWindow(self)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow)
 
-        self.menus = main_menu.createMenus(self)
+        self.menu = main_menu.createMenu(self)
 
         self.setWindowTitle('wic')
 
@@ -86,7 +86,7 @@ class WMainWindow(QtGui.QMainWindow):
             recentFiles.insert(0, filePath)
             del recentFiles[10:] # keep only 10 of recently used files
         else:
-            menu = self.menus.recentFiles
+            menu = self.menu.recentFiles
             menu.clear()
             for file in recentFiles:
                 menu.addAction(QtGui.QIcon(':/icons/fugue/blue-folder-open-document-text.png'),
@@ -123,7 +123,7 @@ class WMainWindow(QtGui.QMainWindow):
         QtGui.QMessageBox.warning(self, 'Not implemented', 'This feature is not yet implemented')
 
     def showMessagesWindow(self):
-        self.messagesWindow.setVisible(self.menus.actions.messagesWindow.isChecked())
+        self.messagesWindow.setVisible(self.menu.messagesWindow.isChecked())
 
     def windowRestoreAll(self):
         for window in self.mdiArea.subWindowList():
@@ -134,11 +134,11 @@ class WMainWindow(QtGui.QMainWindow):
             window.widget().showMinimized()
 
     def updateWindowMenu(self):
-        self.menus.actions.messagesWindow.setChecked(self.messagesWindow.isVisible()) #set checked here instead of catching visibilitychanged event
+        self.menu.messagesWindow.setChecked(self.messagesWindow.isVisible()) #set checked here instead of catching visibilitychanged event
         #Creates a window menu with actions to jump to any open subwindow.
-        menu = self.menus.windows
+        menu = self.menu.windows
         menu.clear()
-        main_menu.addItemsToMenu(self.menus.windows, self.menus.actions.windowsStandard)
+        main_menu.addItemsToMenu(self.menu.windows, self.menu.windowsStandard)
         windows = self.mdiArea.subWindowList()
         if windows:
             menu.addSeparator()

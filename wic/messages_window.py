@@ -1,12 +1,16 @@
 from PyQt4 import QtCore, QtGui
+from wic.datetime import DateTime
+from wic.main_menu import createAction, addItemsToMenu
+
+
 
 class MessagesWindow(QtGui.QDockWidget):
-    def __init__(self,  mainWindow):
+    def __init__(self, mainWindow):
         super().__init__('Messages', mainWindow)
 
         self.setObjectName('messagesWindowDock')
         self.setFocusPolicy(QtCore.Qt.NoFocus)
-        
+
         self.textEdit = QtGui.QTextEdit(self)
         self.textEdit.setAcceptRichText(False)
         self.textEdit.setLineWrapMode(QtGui.QTextEdit.NoWrap)
@@ -19,19 +23,25 @@ class MessagesWindow(QtGui.QDockWidget):
     def showContextMenu(self, coord):
         if not hasattr(self, 'menu'): # create the context menu for Message Window
             self.menu = QtGui.QMenu(self.textEdit)
-            self.menu.addAction('Clear', self.textEdit.clear)
-            self.menu.addAction('Copy', self.textEdit.copy, QtGui.QKeySequence.Copy)
-            self.menu.addAction('Select all', self.textEdit.selectAll, QtGui.QKeySequence.SelectAll)
-
+            addItemsToMenu(self.menu, (
+                createAction(self.textEdit, 'Clear', self.textEdit.clear, icon = ':/icons/fugue/eraser.png'),
+                createAction(self.textEdit, 'Copy', self.textEdit.copy, QtGui.QKeySequence.Copy, ':/icons/fugue/document-copy.png'),
+                createAction(self.textEdit, 'Select all', self.textEdit.selectAll, QtGui.QKeySequence.SelectAll),
+            ))
         self.menu.popup(self.textEdit.mapToGlobal(coord))
 
-    def printMessage(self, txt, showDateTime= False, autoPopup= True, end= '\n'):
+    def printMessage(self, txt, showDateTime = False, autoPopup = True, end = '\n'):
+        if txt == ' ':
+            txt = '&nbsp;'
+        else:
+            txt = ('%s%s' % (txt, end)).replace('\n', '<br>')
+            if showDateTime:
+                txt = '%s %s' % (DateTime.now().strftime('%Y-%m-%d %H:%M:%S'), txt)
         tc = self.textEdit.textCursor()
         tc.movePosition(QtGui.QTextCursor.End)
         self.textEdit.setTextCursor(tc)
-        if showDateTime: 
-            txt = QtCore.QDateTime.currentDateTime().toString('yyyy/MM/dd hh:mm:ss ') + txt
-        self.textEdit.insertHtml(('%s%s' % (txt, end)).replace('\n', '<br>'))
+        self.textEdit.insertHtml(txt)
         self.textEdit.ensureCursorVisible() # scroll to the new message
-        if autoPopup: 
-            self.show()
+#        if autoPopup:
+#            self.show()
+        self.setVisible(autoPopup)
