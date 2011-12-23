@@ -1,4 +1,4 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 from pprint import pprint
 from decimal import Decimal
@@ -9,7 +9,7 @@ from datetime import datetime as DateTime
 
 
 class Authors(orm.Model):
-    '''Authors catalog'''
+    """Authors catalog"""
     _tableId = 1
     # id field is already present 
     first_name = orm.CharField(maxLength= 100)
@@ -17,7 +17,7 @@ class Authors(orm.Model):
 
 
 class Books(orm.Model):
-    '''Books catalog'''
+    """Books catalog"""
     _tableId = 2
     # id field is already present 
     name = orm.CharField(maxLength= 100, defaultValue= 'a very good book!!!')
@@ -71,13 +71,13 @@ for data in authorsData:
     authors.append(author)
 
 print('\nInserting books:')
-booksData = (dict(name= '''Free as in Freedom: Richard Stallman's Crusade for Free Software''', 
+booksData = (dict(name= """Free as in Freedom: Richard Stallman's Crusade for Free Software""", 
                   author_id= authors[1]._id, price= '9.55', publication_date= '2002-03-08'),
-             dict(name= '''Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition''', 
+             dict(name= """Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition""", 
                   author_id= authors[2]._id, price= '14.95', publication_date= '2010-03-27'),
-             dict(name= '''In The Plex: How Google Thinks, Works, and Shapes Our Lives''', 
+             dict(name= """In The Plex: How Google Thinks, Works, and Shapes Our Lives""", 
                   author_id= authors[2]._id, price= '13.98', publication_date= '2011-04-12'),
-             dict(name= '''Just for Fun.''', 
+             dict(name= """Just for Fun.""", 
                   author_id= authors[0]._id, price= '11.20', publication_date= '2002-12-01'),
 )
 for data in booksData:

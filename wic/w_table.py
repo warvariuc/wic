@@ -1,4 +1,4 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 from PyQt4 import QtGui, QtCore
 import traceback
@@ -11,7 +11,7 @@ from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
 class WItemStyle(): 
-    '''Data and flags for visual representation of an ItemView item'''
+    """Data and flags for visual representation of an ItemView item"""
 
     def __init__(self, format= '', editable= False, 
                 alignment= None, default= None, roles= None):
@@ -157,6 +157,7 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
             editor = WDateEdit(parent)
             editor.setDate(data)
             editor.edited.connect(self.commitAndCloseEditor)
+            # FIXME: editor.edited.connect(lambda e=editor: self.commitAndCloseEditor(e))
             return editor
         if isinstance(data, Dec):
             editor = WDecimalEdit(parent)

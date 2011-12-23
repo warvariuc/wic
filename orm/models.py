@@ -1,4 +1,4 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import inspect
 from datetime import datetime as DateTime
@@ -7,10 +7,10 @@ from orm import signals
 
 
 class Index():
-    '''Defines a DB table index.
+    """Defines a DB table index.
     type: index, unique, fulltext, spatial
     sort: asc, desc
-    method: btree, hash, gist, and gin'''
+    method: btree, hash, gist, and gin"""
     def __init__(self, fields, type= 'index', name= '', sortOrders= None, prefixLengths= None, method='', **kwargs):
         assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
         assert fields, 'You did not indicate which fields to index.'
@@ -45,7 +45,7 @@ class Index():
                             ', '.join(map(str, self.fields)), self.method)
 
 class Join():
-    '''Object holding parameters for a join.'''
+    """Object holding parameters for a join."""
     def __init__(self, model, on, type= ''):
         assert orm.isModel(model), 'Pass a model class.'
         assert isinstance(on, orm.fields.Expression), 'WHERE should be an Expression.'
@@ -55,14 +55,14 @@ class Join():
 
 
 class LeftJoin(Join):
-    '''Left join parameters.'''
+    """Left join parameters."""
     def __init__(self, table, on):
         super().__init__(table, on, 'left')
         
 
 
 class ModelMeta(type):
-    '''Metaclass for all tables (models).'''
+    """Metaclass for all tables (models)."""
     
     def __new__(cls, name, bases, attrs):
         newClass = type.__new__(cls, name, bases, attrs)
@@ -97,14 +97,14 @@ class ModelMeta(type):
         return newClass
 
     def __getitem__(self, key):
-        '''Get a Table Field by name - Table['field_name'].'''
+        """Get a Table Field by name - Table['field_name']."""
         attr = getattr(self, key, None)
         if isinstance(attr, orm.fields.Field):
             return attr
         raise KeyError('Could not find field %s in table %s' % (key, self.__name__))
 
     def __iter__(self):
-        '''Get Table fields.'''
+        """Get Table fields."""
         fields = []
         for attrName in self.__dict__:
             try:
@@ -122,15 +122,15 @@ class ModelMeta(type):
         return getattr(self, '_name', '') or self.__name__.lower() 
 
     def delete(self, db, where):
-        '''Delete records from this table which fall under the given condition.'''
+        """Delete records from this table which fall under the given condition."""
         db.delete(self, where= where)
         db.commit()
 
 
 
 class Model(metaclass= ModelMeta):
-    '''Base class for all tables. Class attributes - the fields. 
-    Instance attributes - the values for the corresponding table fields.'''
+    """Base class for all tables. Class attributes - the fields. 
+    Instance attributes - the values for the corresponding table fields."""
     
     _id = orm.fields.IdField() # this field is present in all tables
     _timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
@@ -139,9 +139,9 @@ class Model(metaclass= ModelMeta):
     _ordering = [] # default order for select when not specified
 
     def __init__(self, db, *args, **kwargs):
-        '''Create a model instance - a record.
+        """Create a model instance - a record.
         Pass arguments: tuples (Field, value) 
-        and keyword arguments: fieldName= value.'''
+        and keyword arguments: fieldName= value."""
         self._db = db
         
         table = None
@@ -161,8 +161,8 @@ class Model(metaclass= ModelMeta):
             raise NameError('Got unknown field names: %s' % ', '.join(kwargs))
 
     def __getitem__(self, field):
-        '''Get a Record Field value by key.
-        key: either a Field instance or name of the field.'''
+        """Get a Record Field value by key.
+        key: either a Field instance or name of the field."""
         table = self.__class__
         if isinstance(field, orm.Field):
             assert field.table is table, 'This field is from another table.'
@@ -176,7 +176,7 @@ class Model(metaclass= ModelMeta):
     
     @orm.metamethod
     def delete(self):
-        '''Delete this record.'''
+        """Delete this record."""
         db = self._db
         table = self.__class__
         db.delete(table, where= (table._id == self._id))
@@ -185,7 +185,7 @@ class Model(metaclass= ModelMeta):
         
     @classmethod
     def getOne(cls, db, where):
-        '''Get a single record which falls under the given condition.'''
+        """Get a single record which falls under the given condition."""
         fields, rows = db.select(cls, where= where)
         if not rows: # not found
             raise orm.RecordNotFound
@@ -196,12 +196,12 @@ class Model(metaclass= ModelMeta):
         
     @classmethod
     def getOneById(cls, db, _id):
-        '''Get one record by id.'''
+        """Get one record by id."""
         return cls.getOne(db, cls._id == _id)
 
     @classmethod
     def get(cls, db, where, orderBy= False, limit= False):
-        '''Get records from this table which fall under the given condition.'''
+        """Get records from this table which fall under the given condition."""
         orderBy = orderBy or cls._ordering # use default table ordering if no ordering passed
         fields, rows = db.select(cls, where= where, orderBy= orderBy, limit= limit)
         for row in rows:
@@ -226,12 +226,12 @@ class Model(metaclass= ModelMeta):
         signals.post_delete.send(sender= self)
 
     def __str__(self):
-        '''How the record is presented.'''
+        """How the record is presented."""
         return '%s(%s)' % (self.__class__.__name__, 
             ', '.join('%s= %r' % (field.name, getattr(self, field.name))
                        for field in self.__class__)) 
 
     @classmethod
     def count(cls, db, where= None):
-        '''Request number of records in this table.'''
+        """Request number of records in this table."""
         return db.select(orm.COUNT(where or cls))[1][0][0]

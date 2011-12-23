@@ -1,4 +1,4 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import sys, os
 
@@ -10,11 +10,11 @@ try:
     from wic.widgets import w_widgets_rc # load resources (icons, etc.)
 except ImportError:
     sys.exit('Looks like resources are not compiled. Please run `compile_resources.py`.')
-    
-try: # monkeypatch: use cdecimal if present instead of decimal = it is faster
+
+try: # monkeypatch: use cdecimal instead of decimal, if present - it is faster
     import cdecimal
-    sys.modules['decimal'] = cdecimal 
-except ImportError: 
+    sys.modules['decimal'] = cdecimal
+except ImportError:
     pass
 
 appDir = os.path.dirname(os.path.abspath(__file__))
@@ -26,14 +26,41 @@ class Bunch(): # Alex Martelli's recipe
         self.__dict__.update(kwargs)
 
 
+
 if hasattr(sys, 'argv'): # for qt designer
+
     from wic import app, main_window
+
     app = app.WApp(sys.argv)
     mainWindow = main_window.WMainWindow()
+    statusBar = mainWindow.statusBar()
     messagesWindow = mainWindow.messagesWindow
+    printMessage = messagesWindow.printMessage
+
+
+    class MessagesOut():
+        """Our replacement for stdout. It prints messages also the the messages window."""
+        def write(self, txt):
+            print(txt, end = '', file = sys.__stdout__)
+            printMessage(txt, end = '')
+        def flush(self):
+            sys.__stdout__.flush()
+
+    sys.stdout = MessagesOut()  # redirect the real STDOUT
+
+
+    from PyQt4 import QtGui
+
+    def showWarning(title, text):
+        QtGui.QMessageBox.warning(mainWindow, title, text)
+    def showInformation(title, text):
+        QtGui.QMessageBox.information(mainWindow, title, text)
+
+
+    import traceback
 
     def exception_hook(excType, excValue, excTraceback): # Global function to catch unhandled exceptions (mostly in user modules)
-        import traceback
+        #traceback.print_exc()
         info = ''.join(traceback.format_exception(excType, excValue, excTraceback))
         print(info)
     #    import inspect
@@ -47,18 +74,7 @@ if hasattr(sys, 'argv'): # for qt designer
     #            '\n&nbsp;<span style="color:maroon">&nbsp;' + lines[0] + ' </span>'
     #    info = info + '<br>Описание ошибки: <span style="background-color:#EDEFF4">&nbsp;' + exc_type.__name__ + ' </span>: ' \
     #        '<span style="color:maroon">&nbsp;' + str(exc_value).replace('\n', '\n&nbsp;') + '</span>'
-    
-        mainWindow.messagesWindow.printMessage(info)
-    
+
+        #mainWindow.messagesWindow.printMessage(info)
+
     sys.excepthook = exception_hook # set our exception hook
-
-
-    class MessagesOut():
-        '''Our replacement for stdout. It prints messages also the the messages window.'''
-        def write(self, txt):
-            print(txt, end= '', file= sys.__stdout__)
-            messagesWindow.printMessage(txt, end= '')
-        def flush(self):
-            sys.__stdout__.flush()
-    
-    sys.stdout = MessagesOut()  # redirect the real STDOUT

@@ -1,12 +1,11 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 from PyQt4 import QtCore, QtGui, QtWebKit
 
 from wic.datetime import Date, RelDelta
 from decimal import Decimal as Dec
 from wic.forms import WForm
-from wic import w_table
-from wic import w
+from wic import w_table, mainWindow
 
 
 
@@ -206,7 +205,7 @@ class Form(WForm):
         html += '\n</table></body></html>'
         webView.setHtml(html)
     
-        window = w.mainWindow.mdiArea.addSubWindow(webView)
+        window = mainWindow.mdiArea.addSubWindow(webView) # FIXME: use openForm
         window.setWindowTitle('Print schedule')
         window.show()
     

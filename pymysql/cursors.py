@@ -14,14 +14,14 @@ from .err import Warning, Error, InterfaceError, DataError, \
 insert_values = re.compile(r'\svalues\s*(\(.+\))', re.IGNORECASE)
 
 class Cursor(object):
-    '''
+    """
     This is the object you use to interact with the database.
-    '''
+    """
     def __init__(self, connection):
-        '''
+        """
         Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
-        '''
+        """
         from weakref import proxy
         self.connection = proxy(connection)
         self.description = None
@@ -35,15 +35,15 @@ class Cursor(object):
         self._rows = ()
 
     def __del__(self):
-        '''
+        """
         When this gets GC'd close it.
-        '''
+        """
         self.close()
 
     def close(self):
-        '''
+        """
         Closing a cursor just exhausts all remaining data.
-        '''
+        """
         if not self.connection:
             return
         try:
@@ -70,7 +70,7 @@ class Cursor(object):
         """Does nothing, required by DB API."""
 
     def nextset(self):
-        ''' Get the next query set '''
+        """ Get the next query set """
         if self._executed:
             self.fetchall()
         del self.messages[:]
@@ -83,7 +83,7 @@ class Cursor(object):
         return True
 
     def execute(self, query, args=None):
-        ''' Execute a query '''
+        """ Execute a query """
         from sys import exc_info
 
         conn = self._get_db()
@@ -111,7 +111,7 @@ class Cursor(object):
         return result
 
     def executemany(self, query, args):
-        ''' Run several data against one query '''
+        """ Run several data against one query """
         del self.messages[:]
         conn = self._get_db()
         if not args:
@@ -171,7 +171,7 @@ class Cursor(object):
         return args
 
     def fetchone(self):
-        ''' Fetch the next row '''
+        """ Fetch the next row """
         self._check_executed()
         if self._rows is None or self.rownumber >= len(self._rows):
             return None
@@ -180,7 +180,7 @@ class Cursor(object):
         return result
 
     def fetchmany(self, size=None):
-        ''' Fetch several rows '''
+        """ Fetch several rows """
         self._check_executed()
         end = self.rownumber + (size or self.arraysize)
         result = self._rows[self.rownumber:end]
@@ -190,7 +190,7 @@ class Cursor(object):
         return result
 
     def fetchall(self):
-        ''' Fetch all the rows '''
+        """ Fetch all the rows """
         self._check_executed()
         if self._rows is None:
             return None

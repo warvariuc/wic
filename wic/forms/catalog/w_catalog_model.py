@@ -1,4 +1,4 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
@@ -14,18 +14,18 @@ from wic.widgets.w_decimal_edit import WDecimalEdit
 
 
 class WItemStyle():
-    '''Common style for representation of an ItemView item'''
+    """Common style for representation of an ItemView item"""
 
-    def __init__(self, roles={}, **kwargs):
+    def __init__(self, roles = {}, **kwargs):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: self.displayRole
         }
         _roles.update(roles)
         self.roles = _roles
         self.__dict__.update(kwargs)
-        
 
-    def data(self, role, value=None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
+
+    def data(self, role, value = None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
         data = self.roles.get(role)
         return data(value) if hasattr(data, '__call__') else data
 
@@ -34,13 +34,13 @@ class WItemStyle():
 
 
 class WDecimalItemStyle(WItemStyle):
-    '''Style for items with Decimal values.'''
+    """Style for items with Decimal values."""
 
-    def __init__(self, roles={}, format=''):
+    def __init__(self, roles = {}, format = ''):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight,
                       QtCore.Qt.DisplayRole: self.displayRole}
         _roles.update(roles)
-        super().__init__(roles=_roles, format=format)
+        super().__init__(roles = _roles, format = format)
 
     def displayRole(self, value):
         format_ = self.format
@@ -53,34 +53,34 @@ class WDecimalItemStyle(WItemStyle):
 
 
 class WDateItemStyle(WItemStyle):
-    '''Style for items with Date values.'''
+    """Style for items with Date values."""
 
-    def __init__(self, roles={}):
+    def __init__(self, roles = {}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                       QtCore.Qt.DisplayRole: formatDate}
         _roles.update(roles)
-        super().__init__(roles=_roles)
+        super().__init__(roles = _roles)
 
 
 class WBoolItemStyle(WItemStyle):
-    '''Style for items with bool values.'''
+    """Style for items with bool values."""
 
-    def __init__(self, roles={}):
+    def __init__(self, roles = {}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                       QtCore.Qt.DisplayRole: None,
                       QtCore.Qt.CheckStateRole: lambda value: QtCore.Qt.Checked if value else QtCore.Qt.Unchecked}
         _roles.update(roles)
-        super().__init__(roles=_roles)
-        
+        super().__init__(roles = _roles)
+
 
 class WVHeaderStyle(WItemStyle):
-    '''Style for vertical headers.'''
+    """Style for vertical headers."""
 
-    def __init__(self, roles={}, title='', width=None):
+    def __init__(self, roles = {}, title = '', width = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: title}
         _roles.update(roles)
-        super().__init__(roles=_roles, title=title, width=width)
+        super().__init__(roles = _roles, title = title, width = width)
 
     def displayRole(self, value):
         format_ = self.format
@@ -92,13 +92,13 @@ class WVHeaderStyle(WItemStyle):
             return format(value, format_)
 
 class WHHeaderStyle(WItemStyle):
-    '''Style for horizontal headers.'''
+    """Style for horizontal headers."""
 
-    def __init__(self, roles={}, height=None):
+    def __init__(self, roles = {}, height = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: lambda value: value}
         _roles.update(roles)
-        super().__init__(roles=_roles, height=height)
+        super().__init__(roles = _roles, height = height)
 
     def displayRole(self, value):
         format_ = self.format
@@ -110,8 +110,21 @@ class WHHeaderStyle(WItemStyle):
             return format(value, format_)
 
 
+def createStyleForField(field):
+    assert isinstance(field, orm.Field)
+    if isinstance(field, orm.DecimalField):
+        # align decimals and integers to right
+        return WDecimalItemStyle(format = ',.%if ' % field.fractionDigits)
+    elif isinstance(field, orm.DateField):
+        return WDateItemStyle()
+    elif isinstance(field, orm.BooleanField):
+        return WBoolItemStyle()
+    else:
+        return WItemStyle()
+
+
 class Cache():
-    '''Cache for keeping query results from DB'''
+    """Cache for keeping query results from DB"""
     def __init__(self, db, catalogModel, fields, where):
         self.db = db
         self.catalogModel = catalogModel
@@ -121,7 +134,7 @@ class Cache():
         self._rowsCount = None
         self.countStart = 0
         self.countEnd = 0
-        self.rows = db.select(*fields, where=where)[1]
+        self.rows = db.select(*fields, where = where)[1]
 
     def rowsCount(self):
         ''
@@ -140,24 +153,11 @@ class Cache():
         'Set the cache as expired'
 
 
-def createStyleForField(field):
-    assert isinstance(field, orm.Field)
-    if isinstance(field, orm.DecimalField):
-        # align decimals and integers to right
-        return WDecimalItemStyle(format=',.%if ' % field.fractionDigits)
-    elif isinstance(field, orm.DateField):
-        return WDateItemStyle()
-    elif isinstance(field, orm.BooleanField):
-        return WBoolItemStyle()
-    else:
-        return WItemStyle()
-
-
 
 class WCatalogModel(QtCore.QAbstractTableModel):
-    '''Model for showing list of catalog items.'''
-    
-    def __init__(self, db, catalogModel, where=None):
+    """Model for showing list of catalog items."""
+
+    def __init__(self, db, catalogModel, where = None):
         assert orm.isModel(catalogModel)
         super().__init__(None) # no parent
         self._hHeaderStyle = WHHeaderStyle()
@@ -167,7 +167,7 @@ class WCatalogModel(QtCore.QAbstractTableModel):
         for field in catalogModel:
             if field.name != '_timestamp':
                 self._fields.append(field)
-                self._vHeaderStyles.append(WVHeaderStyle(title=field.name))
+                self._vHeaderStyles.append(WVHeaderStyle(title = field.name))
                 self._columnStyles.append(createStyleForField(field))
         self._cache = Cache(db, catalogModel, self._fields, where)
 
@@ -195,7 +195,7 @@ class WCatalogModel(QtCore.QAbstractTableModel):
 
 
 #    def setQuery(self, model, fields):
-#        ''''''
+#        """"""
 #        assert isinstance(model, orm.Model), 'Pass an orm.Model instance'
 #        assert all(isinstance(field, orm.Field) for field in fields), 'All fields must be instances of orm.Field'
 

@@ -1,13 +1,12 @@
 import os, sys
 from PyQt4 import QtCore, QtGui
 
-from wic.w import printMessage
 from wic.forms import CatalogItemForm, setValue, getValue
 
 
 #class Form(CatalogItemForm):
-#    ''''''
-#    #uiFilePath = '' # auto generated form
+#    """"""
+#    uiFilePath = 'form.ui' # auto generated form
 #
 ##    def onOpen(self):
 #        #self.setWindowIcon(QtGui.QIcon(self.iconPath))
@@ -15,7 +14,6 @@ from wic.forms import CatalogItemForm, setValue, getValue
 #    
 #    def on_descriptionSource_textChanged(self):
 #        setValue(self.description, getValue(self.descriptionSource))
-
 
 import orm
 from datetime import datetime as DateTime

@@ -1,7 +1,10 @@
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+
 import os, sys
+
 from PyQt4 import QtCore, QtGui
 
-from wic import main_menu
+from wic import menu
 
 
 class WMainWindow(QtGui.QMainWindow):
@@ -34,7 +37,7 @@ class WMainWindow(QtGui.QMainWindow):
         self.messagesWindow = MessagesWindow(self)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow)
 
-        self.menu = main_menu.createMenu(self)
+        self.menu = menu.MainMenu(self)
 
         self.setWindowTitle('wic')
 
@@ -69,31 +72,11 @@ class WMainWindow(QtGui.QMainWindow):
         if self.mdiArea.subWindowList(): # there are still open subwindows
             event.ignore()
             return
-        from wic import w
-        if w.requestExit() == False: # именно False, иначе None тоже считается отрицательным
-            event.ignore()
-            return
+#        from wic import w
+#        if w.requestExit() == False: # именно False, иначе None тоже считается отрицательным
+#            event.ignore()
+#            return
         self.settings.saveSettings()
-
-    def updateRecentFiles(self, filePath=''):
-        '''Add a file to recent files list if file path given, otherwise update the menu.'''
-        recentFiles = list(filter(os.path.isfile, self.settings.recentFiles)) # remove from the list non existing files
-
-        if filePath:
-            filePath = os.path.abspath(filePath)
-            try: recentFiles.remove(filePath)
-            except ValueError: pass
-            recentFiles.insert(0, filePath)
-            del recentFiles[10:] # keep only 10 of recently used files
-        else:
-            menu = self.menu.recentFiles
-            menu.clear()
-            for file in recentFiles:
-                menu.addAction(QtGui.QIcon(':/icons/fugue/blue-folder-open-document-text.png'),
-                               file, lambda file=file: self._openFile(file))
-            if menu.isEmpty():
-                noItemsAction = menu.addAction('Пусто')
-                noItemsAction.setEnabled(False)
 
     def onFileOpen(self):
         filePath = QtGui.QFileDialog.getOpenFileName(self,
@@ -101,7 +84,7 @@ class WMainWindow(QtGui.QMainWindow):
         if filePath:
             self.settings.lastUsedDirectory = os.path.dirname(filePath)
             self._openFile(filePath)
-            self.updateRecentFiles(filePath) # add to recent files if the opening was successful
+            self.menu.updateRecentFiles(filePath) # add to recent files if the opening was successful
 
     def _openFile(self, filePath):
         if filePath.endswith('.ui'):
@@ -123,7 +106,7 @@ class WMainWindow(QtGui.QMainWindow):
         QtGui.QMessageBox.warning(self, 'Not implemented', 'This feature is not yet implemented')
 
     def showMessagesWindow(self):
-        self.messagesWindow.setVisible(self.menu.messagesWindow.isChecked())
+        self.messagesWindow.setVisible(self.menu.showMessagesWindow.isChecked())
 
     def windowRestoreAll(self):
         for window in self.mdiArea.subWindowList():
@@ -132,27 +115,6 @@ class WMainWindow(QtGui.QMainWindow):
     def windowMinimizeAll(self):
         for window in self.mdiArea.subWindowList():
             window.widget().showMinimized()
-
-    def updateWindowMenu(self):
-        self.menu.messagesWindow.setChecked(self.messagesWindow.isVisible()) #set checked here instead of catching visibilitychanged event
-        #Creates a window menu with actions to jump to any open subwindow.
-        menu = self.menu.windows
-        menu.clear()
-        main_menu.addItemsToMenu(self.menu.windows, self.menu.windowsStandard)
-        windows = self.mdiArea.subWindowList()
-        if windows:
-            menu.addSeparator()
-            for i, window in enumerate(windows):
-                title = window.windowTitle()
-                if i == 10:
-                    self.windowMenu.addSeparator()
-                    menu = menu.addMenu('&More')
-                accel = ''
-                if i < 10:
-                    accel = '&%i ' % i
-                elif i < 36:
-                    accel = '&%c ' % chr(i + ord('@') - 9)
-                menu.addAction('%s%s' % (accel, title), lambda w=window: self.mdiArea.setActiveSubWindow(w))
 
     def onSubwindowActivated(self, subwindow): #http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
         save_active = False

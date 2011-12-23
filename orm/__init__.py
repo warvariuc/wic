@@ -1,4 +1,4 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import sys, os
 
@@ -14,8 +14,8 @@ logger = logging.getLogger('wic.orm')
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
 
 def getObjectByPath(path, defaultModule):
-    '''Given the path in form 'some.module.object' return the object. 
-    If `.` is not present in path return object from defaultModule with that name.'''
+    """Given the path in form 'some.module.object' return the object. 
+    If `.` is not present in path return object from defaultModule with that name."""
     moduleName, sep, className = str(path).rpartition('.')
     if sep: # '.' is present 
         module = __import__(moduleName, fromlist= [className])
@@ -26,15 +26,15 @@ def isModel(obj):
     return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)
 
 def listify(obj):
-    '''Assure that obj is an iterable.'''
+    """Assure that obj is an iterable."""
     if hasattr(obj, '__iter__'):
         return list(obj)
     return [obj]
 
 class metamethod():
-    '''A descriptor you can use to decorate a method. 
+    """A descriptor you can use to decorate a method. 
     Then calling that method as instance method - calls its implemetation in the class.
-    Then calling that method as class method - calls its implemetation in the metaclass.'''
+    Then calling that method as class method - calls its implemetation in the metaclass."""
     def __init__(self, method):
         self.method = method
 
@@ -58,7 +58,7 @@ from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter
 #defaultAdapter = _Adapter(connect=False)
 
 def connect(uri, adapters):
-    '''Search for suitable adapter by protocol'''
+    """Search for suitable adapter by protocol"""
     for dbType, dbAdapterClass in adapters.items(): 
         uriStart = dbType + '://'
         if uri.startswith(uriStart):

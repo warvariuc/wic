@@ -5,13 +5,13 @@ Dec = decimal.Decimal
 
 
 def regularNotation(value):
-    '''Sometimes str(decimal) makes scientific notation. This function makes the regular notation.'''
+    """Sometimes str(decimal) makes scientific notation. This function makes the regular notation."""
     v = '{:.14f}'.format(value).rpartition('.') # 14 цифр после запятой
     return v[0] + (v[1] + v[2]).rstrip('.0') # убираем последние нули в дробной части
 
 
 class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator):
-    '''Calculator window'''
+    """Calculator window"""
     
     operators = '+-*/' # class attribute
     
@@ -205,8 +205,8 @@ class WDecimalEdit(QtGui.QLineEdit):
     def fractionDigits(self): 
         return self._fractionDigits
     def setFractionDigits(self, value):
-        '''How many digits after decimal point to show. If is 0 - no fraction digits - an integer.
-        If -1 - any number of digits in fractional part.'''
+        """How many digits after decimal point to show. If is 0 - no fraction digits - an integer.
+        If -1 - any number of digits in fractional part."""
         self._fractionDigits = max(value, -1)
         self._maxDigits = max(self._maxDigits, self._fractionDigits)
         self._format()
@@ -284,8 +284,8 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.setValue(0)
 
     def _format(self):
-        '''Format the value according to the view properties (maxDigits, fractionDigits, thousandsSeparator)).
-        Filters invalid entered symbols.'''
+        """Format the value according to the view properties (maxDigits, fractionDigits, thousandsSeparator)).
+        Filters invalid entered symbols."""
         txt = self.text()
         if self._fractionDigits > 0: 
             txt += '.' + '0' * self._fractionDigits
@@ -343,8 +343,8 @@ class WDecimalEdit(QtGui.QLineEdit):
 
     
     def onTextEdited(self, txt):
-        '''Called whenever the text is edited interactively (not programmatically like via setText()).
-        Filters invalid entered symbols.'''
+        """Called whenever the text is edited interactively (not programmatically like via setText()).
+        Filters invalid entered symbols."""
         self._format()
         if self._newText is None: # start of editing
             self._newText = self.text()
@@ -358,13 +358,13 @@ class WDecimalEdit(QtGui.QLineEdit):
         super().focusOutEvent(focusEvent)
 
     def value(self): 
-        '''Return the decimal entered in the field.'''
+        """Return the decimal entered in the field."""
         return Dec(self.text().replace(',', '') or 0)
     
     def setValue(self, value, emit= False):
-        '''Set field text for the given decimal value. 
+        """Set field text for the given decimal value. 
         value: the decimal value to set
-        emit: whether to emit `edited` signal (like when the date is entered interactively)'''
+        emit: whether to emit `edited` signal (like when the date is entered interactively)"""
         value = Dec(value)
         if self._fractionDigits != -1:
             value = round(value, self._fractionDigits)

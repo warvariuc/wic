@@ -1,9 +1,8 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import os, sys
 from PyQt4 import QtCore, QtGui
 
-from wic import w
 from wic.forms import WForm, setValue, getValue
 from datetime import date as Date
 from dateutil.relativedelta import relativedelta as RelDelta
@@ -16,7 +15,7 @@ class Form(WForm):
     formTitle = 'Тестовые модуль и форма'
 
     def onOpen(self): # called by the system after it loads the Form
-        w.printMessage('Форма загружена.')
+        print('Форма загружена.')
 
         self._.dteShowSelector = self.dateEdit.isSelectorVisible()
         self._.dateEdit = Date.today()
@@ -27,7 +26,7 @@ class Form(WForm):
 #        if QtGui.QMessageBox.question(self, 'Подтверждение', 'Вы действительно хотите закрыть форму?',
 #                        QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) != QtGui.QMessageBox.Yes:
 #            return False
-        w.printMessage('Форма закрывается.')
+        print('Форма закрывается.')
 
     def on_dceShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
         self.decimalEdit.selectorVisible = state
@@ -40,13 +39,13 @@ class Form(WForm):
         self.decimalEdit.thousandsSeparated = state
 
     def on_decimalEdit_edited(self):
-        w.printMessage('WDecimalEdit отредактирован. Новое значение: %s' % self._.decimalEdit)
+        print('WDecimalEdit отредактирован. Новое значение: %s' % self._.decimalEdit)
 
     def on_dteShowSelector_stateChanged(self, state): # widget 'checkBox' emited signal
         self.dateEdit.selectorVisible = state
 
     def on_dateEdit_edited(self):
-        w.printMessage('WDateEdit отредактирован. Новое значение: %s' % self._.dateEdit)
+        print('WDateEdit отредактирован. Новое значение: %s' % self._.dateEdit)
 
     @QtCore.pyqtSlot()
     def on_testGm_clicked(self):

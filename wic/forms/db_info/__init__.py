@@ -5,7 +5,7 @@ from wic.forms import WForm, getValue
 
 
 class Form(WForm):
-    ''''''
+    """"""
 
     @QtCore.pyqtSlot()
     def on_buttonTestConnection_clicked(self):

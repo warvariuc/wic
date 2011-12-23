@@ -29,7 +29,7 @@ class Persons(orm.Model):
     street_id = orm.RecordIdField(Streets)
     
     def checkNames(self):
-        '''An item function, like in Django'''
+        """An item function, like in Django"""
         pass
 
 

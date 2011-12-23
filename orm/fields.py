@@ -1,14 +1,14 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import orm
 
 
 class Nil(): 
-    '''Custom None'''
+    """Custom None"""
 
 
 class Column():
-    '''Abstract DB column, supported natively by the DB.'''
+    """Abstract DB column, supported natively by the DB."""
     def __init__(self, type, field, name= ''):
         self.type = type
         self.field = field
@@ -17,7 +17,7 @@ class Column():
     
 
 class Expression():
-    '''Expression - pair of operands and operation on them.'''
+    """Expression - pair of operands and operation on them."""
     sort = 'ASC' # default sorting
     
     def __init__(self, operation, left= Nil, right= Nil, type= None, **kwargs): # FIXME: type parameter not needed?
@@ -57,33 +57,33 @@ class Expression():
         return Expression('_ADD', self, other)
     
     def __neg__(self):
-        '''-Field: sort DESC'''
+        """-Field: sort DESC"""
         self.sort = 'DESC'
         return self
     def __pos__(self):
-        '''+Field: sort ASC'''
+        """+Field: sort ASC"""
         self.sort = 'ASC'
         return self
     
     def IN(self, *items):
-        '''The IN clause.''' 
+        """The IN clause.""" 
         return Expression('_IN', self, items)
     
     def _render(self, adapter):
-        '''Construct the text of the WHERE clause from this Expression.
-        adapter - db adapter to use for rendering. If None - use default.'''
+        """Construct the text of the WHERE clause from this Expression.
+        adapter - db adapter to use for rendering. If None - use default."""
         operation = getattr(adapter, self.operation)
         args = [arg for arg in (self.left, self.right) if arg is not Nil]      
         return operation(*args)
 
     def _cast(self, value):
-        '''Converts a value to Field's comparable type. Default implementation.'''
+        """Converts a value to Field's comparable type. Default implementation."""
         return value
     
 
 
 class Field(Expression):
-    '''ORM table field.'''
+    """ORM table field."""
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop('name', None)
         self.table = kwargs.pop('table', None) # part of which table is this field
@@ -93,7 +93,7 @@ class Field(Expression):
         self._orderNo = orm._fieldsCount  
 
     def _init(self, column, defaultValue, index= ''):
-        '''This is called by the Table metaclass to initialize the Field after a Table subclass is created.'''
+        """This is called by the Table metaclass to initialize the Field after a Table subclass is created."""
         del self._initArgs, self._initKwargs
         self.column = column
         self.defaultValue = defaultValue
@@ -108,7 +108,7 @@ class Field(Expression):
         return '{}.{}'.format(self.table, self.name)
     
     def __call__(self, value):
-        '''You can use Field()(value) to return a tuple for INSERT.'''
+        """You can use Field()(value) to return a tuple for INSERT."""
         return (self, value)
         
 
@@ -150,7 +150,7 @@ class DateTimeField(Field):
     
 
 class IdField(Field):
-    '''Primary integer autoincrement key. ID - implicitly present in each table.'''
+    """Primary integer autoincrement key. ID - implicitly present in each table."""
     def _init(self):
         self.maxDigits = 9 # int32 - should be enough
         self.autoincrement = True
@@ -164,7 +164,7 @@ class BooleanField(Field):
         
 
 class RecordIdField(Field):
-    '''Foreign key - stores id of a row in another table.'''
+    """Foreign key - stores id of a row in another table."""
     def _init(self, referTable, index= ''):
         self._referTable = referTable # foreign key - referenced type of table
         self.maxDigits = 9 # int32 - should be enough
@@ -178,7 +178,7 @@ class RecordIdField(Field):
     referTable = property(getReferTable)
         
     def _cast(self, value):
-        '''Convert a value into another value which is ok for this Field.'''
+        """Convert a value into another value which is ok for this Field."""
         try:
             return int(value)
         except ValueError:
@@ -186,7 +186,7 @@ class RecordIdField(Field):
 
 
 class TableIdField(Field):
-    '''This field stores id of a given table in this DB.'''
+    """This field stores id of a given table in this DB."""
     def _init(self, index= ''):
         self.maxDigits = 5
         super()._init(Column('INT', self), None, index)
@@ -198,8 +198,8 @@ class TableIdField(Field):
 
 
 #class AnyRecordField(Field):
-#    '''This field stores id of a row of any table.
-#    It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID.'''
+#    """This field stores id of a row of any table.
+#    It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID."""
 #    def _init(self, index= ''):
 #        super()._init(None, None) # no column, but later we create two fields
 #            

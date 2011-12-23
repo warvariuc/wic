@@ -1,6 +1,6 @@
 from PyQt4 import QtCore, QtGui
 from wic.datetime import DateTime
-from wic.main_menu import createAction, addItemsToMenu
+from wic.menu import createAction, addItemsToMenu
 
 
 
@@ -26,7 +26,7 @@ class MessagesWindow(QtGui.QDockWidget):
             addItemsToMenu(self.menu, (
                 createAction(self.textEdit, 'Clear', self.textEdit.clear, icon = ':/icons/fugue/eraser.png'),
                 createAction(self.textEdit, 'Copy', self.textEdit.copy, QtGui.QKeySequence.Copy, ':/icons/fugue/document-copy.png'),
-                createAction(self.textEdit, 'Select all', self.textEdit.selectAll, QtGui.QKeySequence.SelectAll),
+                createAction(self.textEdit, 'Select all', self.textEdit.selectAll, QtGui.QKeySequence.SelectAll, ':/icons/fugue/selection-select.png'),
             ))
         self.menu.popup(self.textEdit.mapToGlobal(coord))
 

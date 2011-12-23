@@ -166,27 +166,27 @@ class Resolver(BaseResolver):
 
 Resolver.add_implicit_resolver(
         'tag:yaml.org,2002:bool',
-        re.compile(r'''^(?:yes|Yes|YES|no|No|NO
+        re.compile(r"""^(?:yes|Yes|YES|no|No|NO
                     |true|True|TRUE|false|False|FALSE
-                    |on|On|ON|off|Off|OFF)$''', re.X),
+                    |on|On|ON|off|Off|OFF)$""", re.X),
         list('yYnNtTfFoO'))
 
 Resolver.add_implicit_resolver(
         'tag:yaml.org,2002:float',
-        re.compile(r'''^(?:[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+][0-9]+)?
+        re.compile(r"""^(?:[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+][0-9]+)?
                     |\.[0-9_]+(?:[eE][-+][0-9]+)?
                     |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*
                     |[-+]?\.(?:inf|Inf|INF)
-                    |\.(?:nan|NaN|NAN))$''', re.X),
+                    |\.(?:nan|NaN|NAN))$""", re.X),
         list('-+0123456789.'))
 
 Resolver.add_implicit_resolver(
         'tag:yaml.org,2002:int',
-        re.compile(r'''^(?:[-+]?0b[0-1_]+
+        re.compile(r"""^(?:[-+]?0b[0-1_]+
                     |[-+]?0[0-7_]+
                     |[-+]?(?:0|[1-9][0-9_]*)
                     |[-+]?0x[0-9a-fA-F_]+
-                    |[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$''', re.X),
+                    |[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$""", re.X),
         list('-+0123456789'))
 
 Resolver.add_implicit_resolver(
@@ -196,18 +196,18 @@ Resolver.add_implicit_resolver(
 
 Resolver.add_implicit_resolver(
         'tag:yaml.org,2002:null',
-        re.compile(r'''^(?: ~
+        re.compile(r"""^(?: ~
                     |null|Null|NULL
-                    | )$''', re.X),
+                    | )$""", re.X),
         ['~', 'n', 'N', ''])
 
 Resolver.add_implicit_resolver(
         'tag:yaml.org,2002:timestamp',
-        re.compile(r'''^(?:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
+        re.compile(r"""^(?:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
                     |[0-9][0-9][0-9][0-9] -[0-9][0-9]? -[0-9][0-9]?
                      (?:[Tt]|[ \t]+)[0-9][0-9]?
                      :[0-9][0-9] :[0-9][0-9] (?:\.[0-9]*)?
-                     (?:[ \t]*(?:Z|[-+][0-9][0-9]?(?::[0-9][0-9])?))?)$''', re.X),
+                     (?:[ \t]*(?:Z|[-+][0-9][0-9]?(?::[0-9][0-9])?))?)$""", re.X),
         list('0123456789'))
 
 Resolver.add_implicit_resolver(

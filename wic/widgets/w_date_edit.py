@@ -4,7 +4,7 @@ from wic.datetime import RelDelta, Date, DateTime
 
 
 class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
-    '''Popup window to select date interactively by showing a month calendar.'''
+    """Popup window to select date interactively by showing a month calendar."""
     def __init__(self, parent, persistent= False):
         if not parent: 
             persistent = True
@@ -168,16 +168,16 @@ class WDateEdit(QtGui.QLineEdit):
     selectorVisible = QtCore.pyqtProperty(bool, isSelectorVisible, setSelectorVisible)
 
     def date(self):
-        '''Return the date entered in the field. If it is empty or invalid - `None` is returned.''' 
+        """Return the date entered in the field. If it is empty or invalid - `None` is returned.""" 
         try:
             return DateTime.strptime(self.text(), '%d.%m.%Y').date()
         except ValueError:
             return None
     
     def setDate(self, value, emit= False):
-        '''Set field text for the given date. `None` - empty date. 
+        """Set field text for the given date. `None` - empty date. 
         value: the date to set
-        emit: whether to emit `edited` signal (like when the date is entered interactively)'''
+        emit: whether to emit `edited` signal (like when the date is entered interactively)"""
         if value is None:
             strValue = '  .  .    '
         elif isinstance(value, Date):
@@ -200,8 +200,8 @@ class WDateEdit(QtGui.QLineEdit):
         self.setDate(None)
     
     def onTextEdited(self, txt): 
-        '''Called whenever the text is edited interactively (not programmatically like via setText()).
-        Filters non digits or space entered symbols.'''
+        """Called whenever the text is edited interactively (not programmatically like via setText()).
+        Filters non digits or space entered symbols."""
         txt = list(str(self.text()))
         curPos = self.cursorPosition()
         i = 0

@@ -1,7 +1,7 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
-'''This module contains database adapters, which incapsulate all operations specific to a certain database.
-All other ORM modules should be database agnostic.'''
+"""This module contains database adapters, which incapsulate all operations specific to a certain database.
+All other ORM modules should be database agnostic."""
 
 import os, sys, base64
 import time, re, math
@@ -28,9 +28,9 @@ except ImportError:
 
 
 class GenericAdapter():
-    '''Generic DB adapter.'''
+    """Generic DB adapter."""
     def __init__(self, uri= '', connect= True, autocommit= True):
-        '''URI is already without protocol.'''
+        """URI is already without protocol."""
         print('Creating adapter for "%s"' % uri)
         self._timings = []
         if connect:
@@ -42,14 +42,14 @@ class GenericAdapter():
         self.autocommit = autocommit
     
     def connect(self):
-        '''Connect to the DB and return the connection'''
+        """Connect to the DB and return the connection"""
         return None # DB connection
 
     def commit(self):
         return self.connection.commit()
 
     def _autocommit(self):
-        '''Commit if autocommit is set.'''
+        """Commit if autocommit is set."""
         if self.autocommit:
             self.commit()
 
@@ -77,11 +77,11 @@ class GenericAdapter():
         return self.logExecute(*args, **kwargs)
 
     def _AND(self, left, right):
-        '''Render the AND clause.'''
+        """Render the AND clause."""
         return '(%s AND %s)' % (self.render(left), self.render(right, left))
 
     def _OR(self, left, right):
-        '''Render the OR clause.'''
+        """Render the OR clause."""
         return '(%s OR %s)' % (self.render(left), self.render(right, left))
     
     def _EQ(self, left, right):
@@ -137,7 +137,7 @@ class GenericAdapter():
 
     
     def render(self, value, castField=None):
-        '''Render of a value in a format suitable for operations with this DB field'''
+        """Render of a value in a format suitable for operations with this DB field"""
         if isinstance(value, orm.fields.Expression): # it's an expression
             return value._render(self) # render sub-expression
         else: # it's a value for a DB column
@@ -207,7 +207,7 @@ class GenericAdapter():
         return ''
 
     def getCreateTableQuery(self, table):
-        '''Get CREATE TABLE statement for this database'''
+        """Get CREATE TABLE statement for this database"""
         assert orm.isModel(table), 'Provide a Table subclass.'
         
         columns = self._getCreateTableColumns(table)
@@ -226,7 +226,7 @@ class GenericAdapter():
         return 'RANDOM()'
 
     def _INT(self, field):
-        '''INT column type.'''
+        """INT column type."""
         maxInt = int('9' * field.maxDigits)
 #        bitsCount = len(bin(maxInt)) - 2
 #        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
@@ -246,22 +246,22 @@ class GenericAdapter():
         return str(int(value))
 
     def _CHAR(self, field):
-        '''CHAR, VARCHAR'''
+        """CHAR, VARCHAR"""
         return 'VARCHAR (%i)' % field.maxLength
             
     def _DECIMAL(self, field):
-        '''The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
+        """The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
-        It has a range of 0 to 30 and must be no larger than M.'''
+        It has a range of 0 to 30 and must be no larger than M."""
         return 'DECIMAL (%s, %s)' % (field.maxDigits, field.fractionDigits)
     
     def encodeBLOB(self, value, field):
         return "'%s'" % base64.b64encode(value)
 
     def getExpressionTables(self, expression):
-        '''Get tables involved in WHERE expression.'''
+        """Get tables involved in WHERE expression."""
         tables = set()
         if orm.isModel(expression):
             tables.add(expression)
@@ -276,11 +276,11 @@ class GenericAdapter():
         return None
     
     def _insert(self, *fields):
-        '''Create and return INSERT query.
+        """Create and return INSERT query.
         INSERT INTO table_name [ ( col_name1, col_name2, ... ) ]
           VALUES ( expression1_1, expression1_2, ... ),
             ( expression2_1, expression2_2, ... ), ... 
-        '''
+        """
         table = None
         for item in fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
@@ -300,8 +300,8 @@ class GenericAdapter():
         return result
     
     def _update(self, *fields, where=None, limit=None):
-        '''UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
-          [ WHERE expression ] [ LIMIT limit_amount ]'''
+        """UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
+          [ WHERE expression ] [ LIMIT limit_amount ]"""
         table = None
         for item in fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
@@ -323,7 +323,7 @@ class GenericAdapter():
             return None
 
     def _delete(self, table, where, limit=None):
-        '''DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]'''
+        """DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]"""
         assert orm.isModel(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
         return 'DELETE FROM %s%s;' % (table, sql_w)
@@ -338,13 +338,13 @@ class GenericAdapter():
 
     def _select(self, *args, where=None, orderBy=False, limit=False,
                 distinct=False, groupBy=False, having=False):
-        '''SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
+        """SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
           [ FROM from_clause ]
           [ WHERE where_expression ]
           [ GROUP BY expression1, expression2, ... ]
           [ HAVING having_expression ]
           [ ORDER BY order_column_expr1, order_column_expr2, ... ]
-        '''        
+        """        
         tables = self.getExpressionTables(where) # get tables involved in the query
         fields = []
         joins = []
@@ -411,19 +411,19 @@ class GenericAdapter():
         return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
 
     def _selectWithLimit(self, sql_s, sql_f, sql_t, sql_w, sql_o, limit):
-        '''The syntax may differ in other dbs.'''
+        """The syntax may differ in other dbs."""
         if limit:
             (lmin, lmax) = limit
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
     def select(self, *args, where=None, **attributes):
-        '''Create and return SELECT query.
+        """Create and return SELECT query.
         fields: one or list of fields to select;
         where: expression for where;
         join: one or list of tables to join, in form Table(join_on_expression);
         tables are taken from fields and `where` expression;
-        limitBy: a tuple (start, end).'''
+        limitBy: a tuple (start, end)."""
         fields, sql = self._select(*args, where=where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
@@ -524,7 +524,7 @@ class SqliteAdapter(GenericAdapter):
         return 'TEXT'
 
     def _INT(self, field):
-        '''INTEGER column type for Sqlite.'''
+        """INTEGER column type for Sqlite."""
         maxInt = int('9' * field.maxDigits)
 #        bitsCount = len(bin(maxInt)) - 2
 #        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign

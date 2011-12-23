@@ -1,4 +1,4 @@
-'''
+"""
 PyMySQL: A pure-Python drop-in replacement for MySQLdb.
 
 Copyright (c) 2010 PyMySQL contributors
@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-'''
+"""
 
 VERSION = (0, 4, None)
 

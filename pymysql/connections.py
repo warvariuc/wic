@@ -536,14 +536,14 @@ class Connection(object):
 
 
     def close(self):
-        ''' Send the quit message and close the socket '''
+        """ Send the quit message and close the socket """
         send_data = struct.pack('<i',1) + int2byte(COM_QUIT)
         self.socket.send(send_data)
         self.socket.close()
         self.socket = None
 
     def autocommit(self, value):
-        ''' Set whether or not to commit after every execute() '''
+        """ Set whether or not to commit after every execute() """
         try:
             self._execute_command(COM_QUERY, "SET AUTOCOMMIT = %s" % \
                                       self.escape(value))
@@ -553,7 +553,7 @@ class Connection(object):
             self.errorhandler(None, exc, value)
 
     def commit(self):
-        ''' Commit changes to stable storage '''
+        """ Commit changes to stable storage """
         try:
             self._execute_command(COM_QUERY, "COMMIT")
             self.read_packet()
@@ -562,7 +562,7 @@ class Connection(object):
             self.errorhandler(None, exc, value)
 
     def rollback(self):
-        ''' Roll back the current transaction '''
+        """ Roll back the current transaction """
         try:
             self._execute_command(COM_QUERY, "ROLLBACK")
             self.read_packet()
@@ -571,23 +571,23 @@ class Connection(object):
             self.errorhandler(None, exc, value)
 
     def escape(self, obj):
-        ''' Escape whatever value you pass to it  '''
+        """ Escape whatever value you pass to it  """
         return escape_item(obj, self.charset)
 
     def literal(self, obj):
-        ''' Alias for escape() '''
+        """ Alias for escape() """
         return escape_item(obj, self.charset)
 
     def cursor(self):
-        ''' Create a new cursor to execute queries with '''
+        """ Create a new cursor to execute queries with """
         return self.cursorclass(self)
 
     def __enter__(self):
-        ''' Context manager that returns a Cursor '''
+        """ Context manager that returns a Cursor """
         return self.cursor()
 
     def __exit__(self, exc, value, traceback):
-        ''' On successful exit, commit. On exception, rollback. '''
+        """ On successful exit, commit. On exception, rollback. """
         if exc:
             self.rollback()
         else:
@@ -618,7 +618,7 @@ class Connection(object):
         return pkt.is_ok_packet()
 
     def ping(self, reconnect=True):
-        ''' Check if the server is alive '''
+        """ Check if the server is alive """
         try:
             self._execute_command(COM_PING, "")
         except:

@@ -1,15 +1,15 @@
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import os, sys
 import math, random
+
 from PyQt4 import QtCore, QtGui
 
-from wic import w
 from wic.forms import WForm, setValue, getValue
 
 
 class Form(WForm):
-    '''Lissajous figures in new fashion :).'''
+    """Lissajous figures in new fashion :)."""
 
     def on_open(self): 
         global dt

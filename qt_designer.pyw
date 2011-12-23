@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-'''Author: Victor Varvariuc <victor.varvariuc@gmail.com'''
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import os, sys, subprocess
 
