@@ -20,6 +20,7 @@ class WMainWindow(QtGui.QMainWindow):
 
         self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
         self.mdiArea.setTabPosition(QtGui.QTabWidget.North)
+        self.mdiArea.setActivationOrder(self.mdiArea.ActivationHistoryOrder)
 
         self.setCentralWidget(self.mdiArea)
         self.statusBar() # create status bar
@@ -30,6 +31,7 @@ class WMainWindow(QtGui.QMainWindow):
         tabBar.setMovable(True)
         tabBar.setDrawBase(True)
         #tabBar.setShape(tabBar.TriangularSouth)
+        tabBar.setSelectionBehaviorOnRemove(tabBar.SelectPreviousTab)
         tabBar.tabCloseRequested.connect(self.closeTab)
         self.tabBar = tabBar
 
@@ -43,8 +45,10 @@ class WMainWindow(QtGui.QMainWindow):
 
         from wic import w_settings
         self.settings = w_settings.WSettings(self)
-        self.settings.readSettings()
 
+    def closeTab(self, windowIndex):
+        subWindow = self.mdiArea.subWindowList()[windowIndex]
+        subWindow.close()
 
     def editDbInfo(self):
         from wic.forms import openForm, db_info
@@ -61,11 +65,6 @@ class WMainWindow(QtGui.QMainWindow):
     def showCalendar(self):
         from wic.widgets import w_date_edit
         w_date_edit.WCalendarPopup(self, persistent=True).show()
-
-    def closeTab(self, windowIndex):
-        subWindow = self.mdiArea.subWindowList()[windowIndex]
-        subWindow.close()
-        #self.mdiArea.removeSubWindow(subWindow)
 
     def closeEvent(self, event):
         self.mdiArea.closeAllSubWindows() # Passes a close event from main window to all subwindows.
@@ -117,7 +116,5 @@ class WMainWindow(QtGui.QMainWindow):
             window.widget().showMinimized()
 
     def onSubwindowActivated(self, subwindow): #http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
-        save_active = False
-        if subwindow and subwindow.isWindowModified():
-            save_active = True
-        #self.fileSaveAction.setEnabled(save_active)
+        saveActive = bool(subwindow and subwindow.isWindowModified())
+        #self.fileSaveAction.setEnabled(saveActive)

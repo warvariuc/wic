@@ -86,7 +86,7 @@ class ModelMeta(type):
         for fieldName, field in fields:
             if not fieldName.islower() or fieldName.startswith('_') and fieldName not in ('_id', '_timestamp'):
                 raise Exception('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
-            field_ = field.__class__(name= fieldName, table= newClass) # recreate the field - to handle correctly inheritance of Tables
+            field_ = field.__class__(name= fieldName, table= newClass, label= field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
                 field_._init(*field._initArgs, **field._initKwargs) # and initialize it
             except Exception:

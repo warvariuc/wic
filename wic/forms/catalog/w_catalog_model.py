@@ -123,35 +123,6 @@ def createStyleForField(field):
         return WItemStyle()
 
 
-class Cache():
-    """Cache for keeping query results from DB"""
-    def __init__(self, db, catalogModel, fields, where):
-        self.db = db
-        self.catalogModel = catalogModel
-        self.fields = fields
-        self.where = where
-        self.expireTime = 3 # in seconds
-        self._rowsCount = None
-        self.countStart = 0
-        self.countEnd = 0
-        self.rows = db.select(*fields, where = where)[1]
-
-    def rowsCount(self):
-        ''
-        if self._rowsCount is None:
-            self._rowsCount = self.catalogModel.count(self.db)
-        return self._rowsCount
-
-    def item(self, rowNo, columnNo):
-        ''
-        return self.rows[rowNo][columnNo]
-
-    def fetch(self):
-        'Fetch chunk of results of the query'
-
-    def expire(self):
-        'Set the cache as expired'
-
 
 
 class WCatalogModel(QtCore.QAbstractTableModel):
@@ -161,26 +132,45 @@ class WCatalogModel(QtCore.QAbstractTableModel):
         assert orm.isModel(catalogModel)
         super().__init__(None) # no parent
         self._hHeaderStyle = WHHeaderStyle()
-        self._fields = []
+        fields = []
         self._vHeaderStyles = []
         self._columnStyles = []
         for field in catalogModel:
             if field.name != '_timestamp':
-                self._fields.append(field)
-                self._vHeaderStyles.append(WVHeaderStyle(title = field.name))
+                fields.append(field)
+                self._vHeaderStyles.append(WVHeaderStyle(title = field.label))
                 self._columnStyles.append(createStyleForField(field))
-        self._cache = Cache(db, catalogModel, self._fields, where)
 
+        self.db = db
+        self.catalogModel = catalogModel
+        self.where = where
+        self.expireTime = 3 # in seconds
+        self._rowsCount = None
+        self.countStart = 0
+        self.countEnd = 0
+        self.fields, self.rows = db.select(*fields, where = where)
+
+
+    def item(self, rowNo, columnNo):
+        ''
+        return self.rows[rowNo][columnNo]
+
+    def getRowId(self, rowNo):
+        """"""
+        idColumnNo = self.fields.index(self.catalogModel._id)
+        return self.rows[rowNo][idColumnNo]
 
     def rowCount(self, parent):
-        return self._cache.rowsCount()
+        if self._rowsCount is None:
+            self._rowsCount = self.catalogModel.count(self.db)
+        return self._rowsCount
 
     def columnCount(self, parent):
         return len(self._columnStyles)
 
     def data(self, index, role):
         if index.isValid():
-            value = self._cache.item(index.row(), index.column())
+            value = self.item(index.row(), index.column())
             return self._columnStyles[index.column()].data(role, value)
 
 #    def flags(self, index):
@@ -194,7 +184,7 @@ class WCatalogModel(QtCore.QAbstractTableModel):
         return None
 
 
-#    def setQuery(self, model, fields):
+#    def setQuery(self, model, fields, where):
 #        """"""
 #        assert isinstance(model, orm.Model), 'Pass an orm.Model instance'
 #        assert all(isinstance(field, orm.Field) for field in fields), 'All fields must be instances of orm.Field'

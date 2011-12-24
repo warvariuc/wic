@@ -181,7 +181,7 @@ class CatalogForm(WForm):
         if not self.uiFilePath: # automatically generated form
             self.createWidgets()
         super().setupUi()
-        self.toolbar.setVisible(self.toolbarVisible)
+        self.toolbar.setVisible(self.toolbarVisible)        
         self.tableView.setModel(WCatalogModel(self.db, self.catalogModel))
         self.tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
 
@@ -251,11 +251,13 @@ class CatalogForm(WForm):
 
     def createItem(self):
         catalogItem = self.catalogModel(self.db)
-        openCatalogItemForm(catalogItem, CatalogItemForm)
+        openCatalogItemForm(catalogItem)
         
     def editItem(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
-        print('editItem')
+        id = self.tableView.model().getRowId(currentIndex.row())
+        catalogItem = self.catalogModel.getOneById(self.db, id)
+        openCatalogItemForm(catalogItem)
         
     def deleteItem(self):
         QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?', QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel)

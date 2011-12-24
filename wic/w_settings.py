@@ -8,7 +8,7 @@ class WSettings():
         #self.settings = QtCore.QSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'vic', 'wic')
         #path = 'd:\\wic_settings.ini'
         self.settings = QtCore.QSettings(self.path, QtCore.QSettings.IniFormat, self.mainWindow)
-
+        self.readSettings()
 
     def readSettings(self):
         #self.settings.beginGroup("/windows")
@@ -20,7 +20,7 @@ class WSettings():
 
         self.recentFiles = self.settings.value('recentFiles', None)
         if self.recentFiles is None: self.recentFiles = []
-        
+
         self.lastUsedDirectory = self.settings.value('lastUsedDirectory', '')
         #self.settings.endGroup()
 

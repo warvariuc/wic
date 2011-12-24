@@ -26,7 +26,7 @@ class Books(orm.Model):
     author_id = orm.RecordIdField(Authors, index= True)
     publication_date = orm.DateField()
     description = orm.TextField()
-    is_favorite = orm.BooleanField()
+    is_favorite = orm.BooleanField(label='Favorite')
 
 #    def save(self):
 #        self._timestamp = None
