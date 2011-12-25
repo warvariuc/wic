@@ -8,6 +8,9 @@ import orm
 import wic
 
 
+class FormNotFoundError(Exception):
+    """Raised when a form is not found"""
+
 
 def setValue(widget, value):
     """Automatically set a widget's value depending on its type."""

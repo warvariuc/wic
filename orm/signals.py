@@ -1,7 +1,7 @@
 from dispatch import Signal
 
-pre_save = Signal(providing_args=["instance", "raw", "using"])
-post_save = Signal(providing_args=["instance", "raw", "created", "using"])
+pre_save = Signal(providing_args=['record'])
+post_save = Signal(providing_args=['record', 'isNew'])
 
-pre_delete = Signal(providing_args=["instance", "using"])
-post_delete = Signal(providing_args=["instance", "using"])
+pre_delete = Signal(providing_args=['record'])
+post_delete = Signal(providing_args=['record'])

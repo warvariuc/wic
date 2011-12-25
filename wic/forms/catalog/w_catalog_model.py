@@ -16,7 +16,7 @@ from wic.widgets.w_decimal_edit import WDecimalEdit
 class WItemStyle():
     """Common style for representation of an ItemView item"""
 
-    def __init__(self, roles = {}, **kwargs):
+    def __init__(self, roles={}, **kwargs):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: self.displayRole
         }
@@ -25,7 +25,7 @@ class WItemStyle():
         self.__dict__.update(kwargs)
 
 
-    def data(self, role, value = None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
+    def data(self, role, value=None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
         data = self.roles.get(role)
         return data(value) if hasattr(data, '__call__') else data
 
@@ -36,11 +36,11 @@ class WItemStyle():
 class WDecimalItemStyle(WItemStyle):
     """Style for items with Decimal values."""
 
-    def __init__(self, roles = {}, format = ''):
+    def __init__(self, roles={}, format=''):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight,
                       QtCore.Qt.DisplayRole: self.displayRole}
         _roles.update(roles)
-        super().__init__(roles = _roles, format = format)
+        super().__init__(roles=_roles, format=format)
 
     def displayRole(self, value):
         format_ = self.format
@@ -55,32 +55,32 @@ class WDecimalItemStyle(WItemStyle):
 class WDateItemStyle(WItemStyle):
     """Style for items with Date values."""
 
-    def __init__(self, roles = {}):
+    def __init__(self, roles={}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                       QtCore.Qt.DisplayRole: formatDate}
         _roles.update(roles)
-        super().__init__(roles = _roles)
+        super().__init__(roles=_roles)
 
 
 class WBoolItemStyle(WItemStyle):
     """Style for items with bool values."""
 
-    def __init__(self, roles = {}):
+    def __init__(self, roles={}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                       QtCore.Qt.DisplayRole: None,
                       QtCore.Qt.CheckStateRole: lambda value: QtCore.Qt.Checked if value else QtCore.Qt.Unchecked}
         _roles.update(roles)
-        super().__init__(roles = _roles)
+        super().__init__(roles=_roles)
 
 
 class WVHeaderStyle(WItemStyle):
     """Style for vertical headers."""
 
-    def __init__(self, roles = {}, title = '', width = None):
+    def __init__(self, roles={}, title='', width=None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: title}
         _roles.update(roles)
-        super().__init__(roles = _roles, title = title, width = width)
+        super().__init__(roles=_roles, title=title, width=width)
 
     def displayRole(self, value):
         format_ = self.format
@@ -94,11 +94,11 @@ class WVHeaderStyle(WItemStyle):
 class WHHeaderStyle(WItemStyle):
     """Style for horizontal headers."""
 
-    def __init__(self, roles = {}, height = None):
+    def __init__(self, roles={}, height=None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: lambda value: value}
         _roles.update(roles)
-        super().__init__(roles = _roles, height = height)
+        super().__init__(roles=_roles, height=height)
 
     def displayRole(self, value):
         format_ = self.format
@@ -114,7 +114,7 @@ def createStyleForField(field):
     assert isinstance(field, orm.Field)
     if isinstance(field, orm.DecimalField):
         # align decimals and integers to right
-        return WDecimalItemStyle(format = ',.%if ' % field.fractionDigits)
+        return WDecimalItemStyle(format=',.%if ' % field.fractionDigits)
     elif isinstance(field, orm.DateField):
         return WDateItemStyle()
     elif isinstance(field, orm.BooleanField):
@@ -128,7 +128,7 @@ def createStyleForField(field):
 class WCatalogModel(QtCore.QAbstractTableModel):
     """Model for showing list of catalog items."""
 
-    def __init__(self, db, catalogModel, where = None):
+    def __init__(self, db, catalogModel, where=None):
         assert orm.isModel(catalogModel)
         super().__init__(None) # no parent
         self._hHeaderStyle = WHHeaderStyle()
@@ -136,29 +136,39 @@ class WCatalogModel(QtCore.QAbstractTableModel):
         self._vHeaderStyles = []
         self._columnStyles = []
         for field in catalogModel:
-            if field.name != '_timestamp':
-                fields.append(field)
-                self._vHeaderStyles.append(WVHeaderStyle(title = field.label))
-                self._columnStyles.append(createStyleForField(field))
+            fields.append(field)
+            self._vHeaderStyles.append(WVHeaderStyle(title=field.label))
+            self._columnStyles.append(createStyleForField(field))
 
         self.db = db
         self.catalogModel = catalogModel
+        self.fields = fields
         self.where = where
-        self.expireTime = 3 # in seconds
+        self.updateTime = 3000 # in milliseconds
         self._rowsCount = None
-        self.countStart = 0
-        self.countEnd = 0
-        self.fields, self.rows = db.select(*fields, where = where)
+        self.timer = QtCore.QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.refresh)
+        self.rows = None
 
 
     def item(self, rowNo, columnNo):
-        ''
+        ""
+        if self.rows is None:
+            self.refresh()
         return self.rows[rowNo][columnNo]
+
+    def refresh(self):
+        print('Refrsesh')
+        self.timer.stop()
+        self.layoutAboutToBeChanged.emit()
+        self.rows = self.db.select(*self.fields, where=self.where)
+        self.layoutChanged.emit()
+        self.timer.start(self.updateTime)
 
     def getRowId(self, rowNo):
         """"""
-        idColumnNo = self.fields.index(self.catalogModel._id)
-        return self.rows[rowNo][idColumnNo]
+        return self.rows.value(rowNo, self.catalogModel.id)
 
     def rowCount(self, parent):
         if self._rowsCount is None:

@@ -33,8 +33,8 @@ def listify(obj):
 
 class metamethod():
     """A descriptor you can use to decorate a method. 
-    Then calling that method as instance method - calls its implemetation in the class.
-    Then calling that method as class method - calls its implemetation in the metaclass."""
+    When calling that method as instance method - calls its implemetation in the class.
+    When calling that method as class method - calls its implemetation in the metaclass."""
     def __init__(self, method):
         self.method = method
 
@@ -50,8 +50,8 @@ class metamethod():
 
 
 from .exceptions import *
-from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, DateTimeField, \
-                    BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
+from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, \
+                    DateTimeField, BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
 from .models import Model, Index, Join, LeftJoin
 from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter
 

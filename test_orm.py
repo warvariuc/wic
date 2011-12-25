@@ -72,13 +72,13 @@ for data in authorsData:
 
 print('\nInserting books:')
 booksData = (dict(name= """Free as in Freedom: Richard Stallman's Crusade for Free Software""", 
-                  author_id= authors[1]._id, price= '9.55', publication_date= '2002-03-08'),
+                  author_id= authors[1].id, price= '9.55', publication_date= '2002-03-08'),
              dict(name= """Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition""", 
-                  author_id= authors[2]._id, price= '14.95', publication_date= '2010-03-27'),
+                  author_id= authors[2].id, price= '14.95', publication_date= '2010-03-27'),
              dict(name= """In The Plex: How Google Thinks, Works, and Shapes Our Lives""", 
-                  author_id= authors[2]._id, price= '13.98', publication_date= '2011-04-12'),
+                  author_id= authors[2].id, price= '13.98', publication_date= '2011-04-12'),
              dict(name= """Just for Fun.""", 
-                  author_id= authors[0]._id, price= '11.20', publication_date= '2002-12-01'),
+                  author_id= authors[0].id, price= '11.20', publication_date= '2002-12-01'),
 )
 for data in booksData:
     data['db'] = db
@@ -89,7 +89,7 @@ for data in booksData:
 
 
 print('\nSELECT query:')
-print(db._select(Books._id, where= (Books.price > '14.00'), limit= (0, 10)))
+print(db._select(Books.id, where= (Books.price > '14.00'), limit= (0, 10)))
 pprint(db.select(Books, where= (Books.price > '14'), limit= (0, 10)))
 book = Books.getOne(db, where= (Books.price > 14))
 print(book)

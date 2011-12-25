@@ -7,6 +7,7 @@ import os, sys, base64
 import time, re, math
 from datetime import date as Date, datetime as DateTime, timedelta as TimeDelta
 from decimal import Decimal
+from pprint import pprint
 
 import orm
 
@@ -64,10 +65,10 @@ class GenericAdapter():
         t0 = time.time()
         try:
             result = self.cursor.execute(*a, **b)
-        except:
+        except Exception:
             print(lastQuery)
             raise
-        self._timings.append((lastQuery, time.time() - t0))
+        self._timings.append((lastQuery, round(time.time() - t0, 4)))
         return result
     
     def getLastQuery(self):
@@ -160,7 +161,7 @@ class GenericAdapter():
             return self._NULL()
         if isinstance(column, orm.fields.Column):
             encodeFunc = getattr(self, 'encode' + column.type.upper(), None)
-            if hasattr(encodeFunc, '__call__'): 
+            if hasattr(encodeFunc, '__call__'):
                 return str(encodeFunc(value, column.field))
         return "'%s'" % str(value).replace("'", "''") # escaping single quotes  
 
@@ -406,7 +407,7 @@ class GenericAdapter():
                 
         if limit:
             if not orderBy and tables:
-                sql_o += ' ORDER BY %s' % ', '.join(map(str, (table._id for table in tables)))
+                sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
                 
         return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
 
@@ -427,15 +428,13 @@ class GenericAdapter():
         fields, sql = self._select(*args, where=where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
-        return self.parseResponse(fields, rows)
+        return self._parseResponse(fields, rows)
 
-    def parseResponse(self, fields, rows):
+    def _parseResponse(self, fields, rows):
         
-        for i in range(len(rows)):
-            row = rows[i]
+        for i, row in enumerate(rows):
             newRow = []
-            for j in range(len(fields)):
-                field = fields[j]
+            for j, field in enumerate(fields):
                 value = row[j]
                 if value is not None and isinstance(field, orm.Field):
                     column = field.column
@@ -445,9 +444,37 @@ class GenericAdapter():
                             value = decodeFunc(value, column.field)
                 newRow.append(value)
             rows[i] = newRow
+
+        return Rows(self, fields, rows)
     
-        return fields, rows
+
+
+class Rows():
+    """Keeps results of a SELECT and has methods for convenient access."""
+
+    def __init__(self, db, fields, rows):
+        self.db = db
+        self.fields = tuple(fields)
+        self.rows = rows
+        self._fields = dict((str(field), i) for i, field in enumerate(fields)) # {field_str: field_order}
+
+    def value(self, rowNo, field):
+        columnNo = self._fields[str(field)]
+        return self.rows[rowNo][columnNo]
     
+    def __len__(self):
+        return len(self.rows)
+
+    def __getitem__(self, i):
+        return self.rows[i]
+
+    def __iter__(self):
+        """Iterator over records."""
+        for row in self.rows:
+            yield row
+
+
+
 
 
 class SqliteAdapter(GenericAdapter):

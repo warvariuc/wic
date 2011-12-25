@@ -30,9 +30,7 @@ class Signal(object):
             A list of the arguments this signal can pass along in a send() call.
         """
         self.receivers = []
-        if providing_args is None:
-            providing_args = []
-        self.providing_args = set(providing_args)
+        self.providing_args = set(providing_args or [])
         self.lock = threading.Lock()
 
     def connect(self, receiver, sender=None, weak=True, dispatch_uid=None):

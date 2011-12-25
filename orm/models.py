@@ -84,7 +84,7 @@ class ModelMeta(type):
         fields.sort(key= lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
         
         for fieldName, field in fields:
-            if not fieldName.islower() or fieldName.startswith('_') and fieldName not in ('_id', '_timestamp'):
+            if not fieldName.islower() or fieldName.startswith('_'):
                 raise Exception('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
             field_ = field.__class__(name= fieldName, table= newClass, label= field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
@@ -132,8 +132,8 @@ class Model(metaclass= ModelMeta):
     """Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields."""
     
-    _id = orm.fields.IdField() # this field is present in all tables
-    _timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
+    id = orm.fields.IdField() # this field is present in all tables
+    timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
       
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
     _ordering = [] # default order for select when not specified
@@ -145,10 +145,10 @@ class Model(metaclass= ModelMeta):
         self._db = db
         
         table = None
-        for item in args:
-            assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
-            field, value = item
-            assert isinstance(field, orm.Field), 'First item must be a Field.'
+        for arg in args:
+            assert hasattr(arg, '__iter__') and len(arg) == 2, 'Pass tuples with 2 items: (field, value).'
+            field, value = arg
+            assert isinstance(field, orm.Field), 'First arg must be a Field.'
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
@@ -179,59 +179,64 @@ class Model(metaclass= ModelMeta):
         """Delete this record."""
         db = self._db
         table = self.__class__
-        db.delete(table, where= (table._id == self._id))
+        signals.post_delete.send(sender= table, record= self)
+        db.delete(table, where= (table.id == self.id))
         db.commit()
-        self._id = None
+        self.id = None
+        signals.post_delete.send(sender= table, record= self)
         
     @classmethod
     def getOne(cls, db, where):
         """Get a single record which falls under the given condition."""
-        fields, rows = db.select(cls, where= where)
-        if not rows: # not found
+        records = list(cls.get(db, where, limit= (0, 2)))
+        if not records: # not found
             raise orm.RecordNotFound
-        if len(rows) == 1:
-            return cls(db, *zip(fields, rows[0]))
+        if len(records) == 1:
+            return records[0]
         raise orm.TooManyRecords
         
         
     @classmethod
-    def getOneById(cls, db, _id):
+    def getOneById(cls, db, id):
         """Get one record by id."""
-        return cls.getOne(db, cls._id == _id)
+        return cls.getOne(db, cls.id == id)
 
     @classmethod
     def get(cls, db, where, orderBy= False, limit= False):
         """Get records from this table which fall under the given condition."""
         orderBy = orderBy or cls._ordering # use default table ordering if no ordering passed
-        fields, rows = db.select(cls, where= where, orderBy= orderBy, limit= limit)
+        rows = db.select(cls, where= where, orderBy= orderBy, limit= limit)
         for row in rows:
-            yield cls(db, *zip(fields, row))
+            yield cls(db, *zip(rows.fields, row))
 
     def save(self):
         db = self._db
         table = self.__class__
         values = [] # list of tuples (Field, value)
-        self._timestamp = DateTime.now()
+        self.timestamp = DateTime.now()
         for field in table:
             value = self[field]
             values.append((field, value))
-        if self._id: # existing record
-            db.update(*values, where= (table._id == self._id))
-            db.commit()
-        else: # new record
+        isNew = not self.id
+        signals.pre_save.send(sender= table, record= self)
+        if isNew: # new record
             db.insert(*values)
             db.commit()
-            self._id = db.lastInsertId()
+            self.id = db.lastInsertId()
+        else: # existing record
+            db.update(*values, where= (table.id == self.id))
+            db.commit()
         
-        signals.post_delete.send(sender= self)
+        signals.post_save.send(sender= table, record= self, isNnew= isNew)
 
     def __str__(self):
         """How the record is presented."""
         return '%s(%s)' % (self.__class__.__name__, 
-            ', '.join('%s= %r' % (field.name, getattr(self, field.name))
+            ', '.join("%s= '%s'" % (field.name, getattr(self, field.name))
                        for field in self.__class__)) 
 
     @classmethod
     def count(cls, db, where= None):
         """Request number of records in this table."""
-        return db.select(orm.COUNT(where or cls))[1][0][0]
+        count = orm.COUNT(where or cls)
+        return db.select(count).value(0, count)

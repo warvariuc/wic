@@ -8,7 +8,7 @@ import orm
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
 from wic.menu import createAction, addItemsToMenu
-from wic.forms import WForm, getValue, setValue, openForm
+from wic.forms import WForm, getValue, setValue, openForm, FormNotFoundError
 from wic import Bunch
 
 
@@ -21,7 +21,7 @@ class CatalogItemForm(WForm):
     catalogItem = None
 
     def __init__(self, catalogItem, **kwargs):
-        super().__init__(catalogItem = catalogItem, **kwargs)
+        super().__init__(catalogItem=catalogItem, **kwargs)
 
     def setupUi(self):
         """Initial setting up of the form. Reimplemented.
@@ -42,7 +42,7 @@ class CatalogItemForm(WForm):
             fieldName = field.name
             assert not hasattr(self, fieldName), 'Form already has attribute with name ""%s' % fieldName
             labelName = 'label_' + fieldName
-            label = QtGui.QLabel(fieldName)
+            label = QtGui.QLabel(field.label)
             label.setObjectName(labelName)
             widget = self.createWidgetForField(field)
             #widget.setObjectName(fieldName)
@@ -93,12 +93,12 @@ class CatalogItemForm(WForm):
         catalogItem.save()
 
         # update item id and timestamp on the form
-        idWidget = getattr(self, '_id', None)
+        idWidget = getattr(self, 'id', None)
         if idWidget:
-            setValue(idWidget, catalogItem._id)
-        timestampWidget = getattr(self, '_timestamp', None)
+            setValue(idWidget, catalogItem.id)
+        timestampWidget = getattr(self, 'timestamp', None)
         if timestampWidget:
-            setValue(timestampWidget, catalogItem._timestamp)
+            setValue(timestampWidget, catalogItem.timestamp)
 
 
     @staticmethod
@@ -111,7 +111,7 @@ class CatalogItemForm(WForm):
         elif isinstance(field, orm.DateField):
             return WDateEdit()
         elif isinstance(field, orm.BooleanField):
-            return QtGui.QCheckBox(field.name)
+            return QtGui.QCheckBox(field.label)
         elif isinstance(field, orm.TextField):
             return QtGui.QPlainTextEdit()
         raise Exception('Could not create a widget for field %s' % field)
@@ -129,7 +129,7 @@ class CatalogItemForm(WForm):
                 widget.setValidator(QtGui.QIntValidator())
         elif isinstance(field, orm.DateTimeField):
             if isinstance(widget, QtGui.QLineEdit):
-                widget.setInputMask('9999-99-99 99:99:99.999999;0')
+                widget.setInputMask('9999-99-99 99:99:99.999999')
         elif isinstance(field, orm.DecimalField):
             if isinstance(widget, WDecimalEdit):
                 widget.setMaxDigits(field.maxDigits)
@@ -137,9 +137,9 @@ class CatalogItemForm(WForm):
 
 
 
-def openCatalogItemForm(catalogItem, FormClass = None):
+def openCatalogItemForm(catalogItem, FormClass=None):
     assert isinstance(catalogItem, orm.Model), 'Pass an item (model instance).'
-    kwargs = dict(catalogItem = catalogItem)
+    kwargs = dict(catalogItem=catalogItem)
     if FormClass is None:
         formModulePath = catalogItem.__class__.__module__
         FormClass = getattr(sys.modules[formModulePath], 'Form', None)
@@ -150,7 +150,9 @@ def openCatalogItemForm(catalogItem, FormClass = None):
             uiFilePath = FormClass.uiFilePath
         kwargs['uiFilePath'] = uiFilePath
 
-    assert issubclass(FormClass, CatalogItemForm), 'This is not a CatalogItemForm'
+    if not isinstance(FormClass, type) and issubclass(FormClass, CatalogItemForm):
+        raise FormNotFoundError('This is not a CatalogItemForm')
+
     return openForm(FormClass, **kwargs)
 
 
@@ -171,7 +173,7 @@ class CatalogForm(WForm):
     #editRequested = QtCore.pyqtSignal()
 
     def __init__(self, catalogModel, db):
-        super().__init__(catalogModel = catalogModel, db = db)
+        super().__init__(catalogModel=catalogModel, db=db)
 
     def setupUi(self):
         """Initial setting up of the form.
@@ -181,9 +183,10 @@ class CatalogForm(WForm):
         if not self.uiFilePath: # automatically generated form
             self.createWidgets()
         super().setupUi()
-        self.toolbar.setVisible(self.toolbarVisible)        
+        self.toolbar.setVisible(self.toolbarVisible)
         self.tableView.setModel(WCatalogModel(self.db, self.catalogModel))
         self.tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
+        self.tableView.setFocus()
 
     def createWidgets(self):
         """Automatically create on the form widgets and labels for each catalog model field."""
@@ -233,7 +236,7 @@ class CatalogForm(WForm):
         menu = Bunch()
         menu.createItem = createAction(toolbar, 'Create new item', self.createItem, 'Insert', ':/icons/fugue/plus.png')
         menu.editItem = createAction(toolbar, 'Edit selected item', self.editItem, 'Enter', ':/icons/fugue/pencil.png')
-        menu.deleteItem = createAction(toolbar, 'Delete selected item', self.deleteItem, 'Delete', ':/icons/fugue/cross.png')   
+        menu.deleteItem = createAction(toolbar, 'Delete selected item', self.deleteItem, 'Delete', ':/icons/fugue/cross.png')
         addItemsToMenu(toolbar, (menu.createItem, menu.editItem, menu.deleteItem))
         toolbar.setIconSize(QtCore.QSize(16, 16))
         self.menu = menu
@@ -242,7 +245,7 @@ class CatalogForm(WForm):
     def onSelectionChanged(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
         self.menu.editItem.setEnabled(currentIndex.isValid())
-        
+
     def showContextMenu(self, coord):
         menu = QtGui.QMenu(self.tableView)
         addItemsToMenu(menu, (self.menu.createItem, self.menu.editItem, self.menu.deleteItem))
@@ -252,18 +255,18 @@ class CatalogForm(WForm):
     def createItem(self):
         catalogItem = self.catalogModel(self.db)
         openCatalogItemForm(catalogItem)
-        
+
     def editItem(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
         id = self.tableView.model().getRowId(currentIndex.row())
         catalogItem = self.catalogModel.getOneById(self.db, id)
         openCatalogItemForm(catalogItem)
-        
+
     def deleteItem(self):
         QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?', QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel)
 
 
-def openCatalogForm(catalogModel, db, FormClass = None):
+def openCatalogForm(catalogModel, db, FormClass=None):
     assert orm.isModel(catalogModel), 'Pass a model class.'
     if FormClass is None:
         formModulePath = catalogModel.__module__
