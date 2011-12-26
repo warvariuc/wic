@@ -3,7 +3,7 @@
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
-import traceback
+import traceback, time
 
 import orm
 
@@ -143,36 +143,53 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.catalogModel = catalogModel
         self.fields = fields
         self.where = where
-        self.updateTime = 5000 # milliseconds
+        self.updateTime = 5 # seconds
+        self.fetchCount = 50
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.refresh)
+        self.timer.timeout.connect(self.clearCache)
         self._rowsCount = None
-        self.rows = None
         
-        orm.signals.post_save.connect(self.refresh, catalogModel)
-        orm.signals.post_delete.connect(self.refresh, catalogModel)
+        self.clearCache()
+
+        orm.signals.post_save.connect(self.clearCache, catalogModel)
+        orm.signals.post_delete.connect(self.clearCache, catalogModel)
 
 
     def item(self, rowNo, columnNo):
         ""
-        if self.rows is None:
-            self.refresh()
-        return self.rows[rowNo][columnNo]
+        return self.row(rowNo)[columnNo]
 
-    def refresh(self, **kwargs):
-        #print('Refresh')
+    def clearCache(self, **kwargs):
+        print('clearCache')
         self.timer.stop()
         self.beginResetModel()
-        self._rowsCount = None
-        self.rows = self.db.select(*self.fields, where=self.where)
+        self._cache = {}  # {rowNo: (row + rowTime)}
         self.endResetModel()
-
-        self.timer.start(self.updateTime)
-
+        self.timer.start(self.updateTime * 1000)
+    
+    def row(self, rowNo):
+        """Request from DB and fill cache """
+        try:
+            return self._cache[rowNo]
+        except KeyError:
+            limit = (max(rowNo - self.fetchCount, 0), rowNo + self.fetchCount) 
+            print('cache fetch', limit)
+            rows = self.db.select(*self.fields, where=self.where, limit=limit)
+            now = time.time()
+            expiredTime = now - self.updateTime
+            # clean cache of expired rows
+            cache = {_rowNo: row for _rowNo, row in self._cache.items() 
+                        if row[-1] > expiredTime}
+            for i, row in enumerate(rows):
+                cache[rowNo + i] = tuple(row) + (now,)
+            self._cache = cache
+            return cache[rowNo]
+        
+    
     def getRowId(self, rowNo):
         """"""
-        return self.rows.value(rowNo, self.catalogModel.id)
+        return self.row(rowNo)[0] # id is always 0
 
     def rowCount(self, parent):
         if self._rowsCount is None:

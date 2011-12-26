@@ -69,14 +69,19 @@ def exception_hook(excType, excValue, excTraceback): # Global function to catch 
     #mainWindow.messagesWindow.printMessage(info)
 
 
+import html
+
 class MessagesOut():
-    """Our replacement for stdout. It prints messages also the the messages window."""
+    """Our replacement for stdout. It prints messages also the the messages window. 
+    If txt does not start with '<>' it is escaped to be properly shown in QTextEdit."""
+
     def __init__(self, printMessage):
         self.printMessage = printMessage
 
     def write(self, txt):
-        print(txt, end = '', file = sys.__stdout__)
-        self.printMessage(txt, end = '')
+        print(txt, end='', file=sys.__stdout__)
+        if not txt.startswith('<>'):
+            txt = html.escape(txt)
+        self.printMessage(txt, end='')
     def flush(self):
         sys.__stdout__.flush()
-

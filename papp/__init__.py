@@ -17,8 +17,8 @@ class App(wic.w_app.WApp):
 
     def onSystemStarted(self): # предопределенная процедура запускаемая при начале работы системы - when the core is ready
         self.statusBar.showMessage('Ready...', 5000)
-        self.printMessage('<b><span style="color: green">Система запущена.</span> Добро пожаловать!</b>', True, False)
-        print('Каталог приложения: ' + appDir)
+        self.printMessage('<><b><span style="color: green">Система запущена.</span> Добро пожаловать!</b>', True, False)
+        print('Каталог приложения: %s' % appDir)
 
         global db
         db = orm.SqliteAdapter(settings.dbUri)
