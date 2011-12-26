@@ -318,10 +318,7 @@ class GenericAdapter():
     def update(self, *fields, where=None, limit=None):
         sql = self._update(*fields, where=where)
         self.execute(sql)
-        try:
-            return self.cursor.rowcount
-        except Exception:
-            return None
+        return self.cursor.rowcount
 
     def _delete(self, table, where, limit=None):
         """DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]"""
@@ -332,10 +329,7 @@ class GenericAdapter():
     def delete(self, table, where, limit=None):
         sql = self._delete(table, where)
         self.execute(sql)
-        try:
-            return self.cursor.rowcount
-        except Exception:
-            return None
+        return self.cursor.rowcount
 
     def _select(self, *args, where=None, orderBy=False, limit=False,
                 distinct=False, groupBy=False, having=False):

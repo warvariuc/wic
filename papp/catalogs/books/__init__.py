@@ -20,7 +20,7 @@ from wic.forms import CatalogItemForm, setValue, getValue
 
 import orm
 from datetime import datetime as DateTime
-from conf.catalogs.authors import Authors
+from ..authors import Authors
 
 
 class Books(orm.Model):

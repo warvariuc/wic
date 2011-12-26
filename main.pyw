@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 
-from PyQt4 import QtCore
-import wic, conf
+import sys
+from papp import App
 
-
-# load  configuration, when event loop is working
-QtCore.QTimer.singleShot(0, conf.onSystemStarted)
-
-wic.mainWindow.show() # show main wndow
-wic.app.exec() # start the event loop
+App(sys.argv).exec()

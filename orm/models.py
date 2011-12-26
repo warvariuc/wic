@@ -221,11 +221,12 @@ class Model(metaclass= ModelMeta):
         signals.pre_save.send(sender= table, record= self)
         if isNew: # new record
             db.insert(*values)
-            db.commit()
             self.id = db.lastInsertId()
         else: # existing record
-            db.update(*values, where= (table.id == self.id))
-            db.commit()
+            rowsCount = db.update(*values, where= (table.id == self.id))
+            if not rowsCount:
+                raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, id=%s' % (table, self.id))
+        db.commit()
         
         signals.post_save.send(sender= table, record= self, isNnew= isNew)
 
@@ -238,5 +239,5 @@ class Model(metaclass= ModelMeta):
     @classmethod
     def count(cls, db, where= None):
         """Request number of records in this table."""
-        count = orm.COUNT(where or cls)
+        count = orm.COUNT(where or cls) # COUNT expression
         return db.select(count).value(0, count)

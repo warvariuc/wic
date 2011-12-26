@@ -4,8 +4,14 @@ class DbError(Exception):
 class ConnectionError(DbError):
     """"""
 
-class RecordNotFound(DbError):
+class OrmError(Exception):
+    """Base exception for ORM errors"""
+
+class RecordNotFound(OrmError):
     """"""
 
-class TooManyRecords(DbError):
+class TooManyRecords(OrmError):
     """Got too many records (usually where one was expected - got more than one)."""
+
+class SaveError(OrmError):
+    """Record save error."""

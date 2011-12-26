@@ -160,7 +160,7 @@ class WForm(QtGui.QDialog):
 
 
 def addSubwindow(widget):
-    window = wic.mainWindow.mdiArea.addSubWindow(widget) # create subwindow with the form
+    window = wic.app.mainWindow.mdiArea.addSubWindow(widget) # create subwindow with the form
     window.setWindowIcon(widget.windowIcon())
     window.show()
     widget.closed.connect(window.close) # when form closes - close subwindow too

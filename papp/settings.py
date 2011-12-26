@@ -1,4 +1,4 @@
-dbUri = 'conf/databases/db.sqlite'
+dbUri = 'papp/databases/db.sqlite'
 
 author = 'Виктор Варварюк <victor.varvariuc@gmail.com>'
 description = """This is a configuration for testing purposes.

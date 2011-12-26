@@ -71,10 +71,10 @@ class WMainWindow(QtGui.QMainWindow):
         if self.mdiArea.subWindowList(): # there are still open subwindows
             event.ignore()
             return
-#        from wic import w
-#        if w.requestExit() == False: # именно False, иначе None тоже считается отрицательным
-#            event.ignore()
-#            return
+        from wic import app
+        if app.onSystemAboutToExit() == False: # именно False, иначе None тоже считается отрицательным
+            event.ignore()
+            return
         self.settings.saveSettings()
 
     def onFileOpen(self):
@@ -93,7 +93,7 @@ class WMainWindow(QtGui.QMainWindow):
 
     def openQtDesigner(self, filePath=None):
         import subprocess, wic
-        os.putenv('PYQTDESIGNERPATH', os.path.join(wic.appDir, 'widgets'))
+        os.putenv('PYQTDESIGNERPATH', os.path.join(wic.wicDir, 'widgets'))
         os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) #designer needs python.dll to use python based widgets. on windows the dll is not in system32
         params = ['designer']
         if filePath:
