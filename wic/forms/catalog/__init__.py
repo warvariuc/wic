@@ -158,7 +158,7 @@ def openCatalogItemForm(catalogItem, FormClass=None):
 
 
 
-from .w_catalog_model import WCatalogModel
+from .w_catalog_model import WCatalogProxyModel
 
 
 class CatalogForm(WForm):
@@ -184,9 +184,22 @@ class CatalogForm(WForm):
             self.createWidgets()
         super().setupUi()
         self.toolbar.setVisible(self.toolbarVisible)
-        self.tableView.setModel(WCatalogModel(self.db, self.catalogModel))
+        catalogProxyModel = WCatalogProxyModel(self.db, self.catalogModel)
+        self.tableView.setModel(catalogProxyModel)
         self.tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
         self.tableView.setFocus()
+        #self.tableView.selectRow(0)
+        
+        catalogProxyModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
+        catalogProxyModel.modelReset.connect(self.onModelReset)
+
+    def onModelAboutToBeReset(self):
+        currentIndex = self.tableView.selectionModel().currentIndex()
+        self._lastSelectedRow = currentIndex.row()
+    
+    def onModelReset(self):
+        rowNo = min(self._lastSelectedRow,self.tableView.model().rowCount(None) - 1)
+        self.tableView.selectRow(rowNo)
 
     def createWidgets(self):
         """Automatically create on the form widgets and labels for each catalog model field."""
@@ -263,7 +276,13 @@ class CatalogForm(WForm):
         openCatalogItemForm(catalogItem)
 
     def deleteItem(self):
-        QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?', QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel)
+        if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?', QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel) \
+                    ==  QtGui.QMessageBox.Yes:
+            currentIndex = self.tableView.selectionModel().currentIndex()
+            id = self.tableView.model().getRowId(currentIndex.row())
+            catalogItem = self.catalogModel.getOneById(self.db, id)
+            catalogItem.delete()
+
 
 
 def openCatalogForm(catalogModel, db, FormClass=None):

@@ -174,4 +174,4 @@ def openForm(FormClass, *args, **kwargs):
 
 
 
-from wic.forms.catalog import WCatalogModel, openCatalogForm, openCatalogItemForm, CatalogItemForm
+from wic.forms.catalog import openCatalogForm, openCatalogItemForm, CatalogItemForm

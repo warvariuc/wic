@@ -57,7 +57,7 @@ class WDateItemStyle(WItemStyle):
 
     def __init__(self, roles={}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
-                      QtCore.Qt.DisplayRole: formatDate}
+                  QtCore.Qt.DisplayRole: formatDate}
         _roles.update(roles)
         super().__init__(roles=_roles)
 
@@ -67,8 +67,8 @@ class WBoolItemStyle(WItemStyle):
 
     def __init__(self, roles={}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
-                      QtCore.Qt.DisplayRole: None,
-                      QtCore.Qt.CheckStateRole: lambda value: QtCore.Qt.Checked if value else QtCore.Qt.Unchecked}
+                  QtCore.Qt.DisplayRole: None,
+                  QtCore.Qt.CheckStateRole: lambda value: QtCore.Qt.Checked if value else QtCore.Qt.Unchecked}
         _roles.update(roles)
         super().__init__(roles=_roles)
 
@@ -78,7 +78,7 @@ class WVHeaderStyle(WItemStyle):
 
     def __init__(self, roles={}, title='', width=None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                      QtCore.Qt.DisplayRole: title}
+                  QtCore.Qt.DisplayRole: title}
         _roles.update(roles)
         super().__init__(roles=_roles, title=title, width=width)
 
@@ -96,7 +96,7 @@ class WHHeaderStyle(WItemStyle):
 
     def __init__(self, roles={}, height=None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                      QtCore.Qt.DisplayRole: lambda value: value}
+                  QtCore.Qt.DisplayRole: lambda value: value}
         _roles.update(roles)
         super().__init__(roles=_roles, height=height)
 
@@ -113,7 +113,6 @@ class WHHeaderStyle(WItemStyle):
 def createStyleForField(field):
     assert isinstance(field, orm.Field)
     if isinstance(field, orm.DecimalField):
-        # align decimals and integers to right
         return WDecimalItemStyle(format=',.%if ' % field.fractionDigits)
     elif isinstance(field, orm.DateField):
         return WDateItemStyle()
@@ -125,7 +124,7 @@ def createStyleForField(field):
 
 
 
-class WCatalogModel(QtCore.QAbstractTableModel):
+class WCatalogProxyModel(QtCore.QAbstractTableModel):
     """Model for showing list of catalog items."""
 
     def __init__(self, db, catalogModel, where=None):
@@ -144,12 +143,15 @@ class WCatalogModel(QtCore.QAbstractTableModel):
         self.catalogModel = catalogModel
         self.fields = fields
         self.where = where
-        self.updateTime = 3000 # in milliseconds
-        self._rowsCount = None
+        self.updateTime = 5000 # milliseconds
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.refresh)
+        self._rowsCount = None
         self.rows = None
+        
+        orm.signals.post_save.connect(self.refresh, catalogModel)
+        orm.signals.post_delete.connect(self.refresh, catalogModel)
 
 
     def item(self, rowNo, columnNo):
@@ -158,12 +160,14 @@ class WCatalogModel(QtCore.QAbstractTableModel):
             self.refresh()
         return self.rows[rowNo][columnNo]
 
-    def refresh(self):
-        print('Refrsesh')
+    def refresh(self, **kwargs):
+        #print('Refresh')
         self.timer.stop()
-        self.layoutAboutToBeChanged.emit()
+        self.beginResetModel()
+        self._rowsCount = None
         self.rows = self.db.select(*self.fields, where=self.where)
-        self.layoutChanged.emit()
+        self.endResetModel()
+
         self.timer.start(self.updateTime)
 
     def getRowId(self, rowNo):

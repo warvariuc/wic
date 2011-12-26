@@ -1,3 +1,5 @@
+http://www.python.org/dev/peps/pep-0008/
+
 One of Guido's key insights is that code is read much more often than it
     is written.  The guidelines provided here are intended to improve the
     readability of code and make it consistent across the wide spectrum of
@@ -6,28 +8,33 @@ One of Guido's key insights is that code is read much more often than it
 Modules should have short, all-lowercase names.  Underscores can be used
       in the module name if it improves readability.
 
-Avoid short (e.g. ìaî, ìrbarrî, ìnughdegetî) names whenever possible
 
 
-Single character variable names are only okay for counters and temporaries, where the purpose of the variable is obvious
+
+http://wiki.qt-project.org/Coding_Style
+
+Indentation
+
+	4 spaces are used for indentation
+	Spaces, not tabs!
 
 
-Variables and functions start with a small letter. Each consecive word in a variableís
-name starts with a capital letter
+Declaring variables
 
+	Declare each variable on a separate line
+	Avoid short (e.g. ‚Äúa‚Äù, ‚Äúrbarr‚Äù, ‚Äúnughdeget‚Äù) names whenever possible
+	Single character variable names are only okay for counters and temporaries, where the purpose of the variable is obvious
+	Variables and functions start with a lower-case letter. Each consecutive word in a variable‚Äôs name starts with an upper-case letter
+	Classes always start with an upper-case letter.
+	Avoid abbreviations
 
-Classes always start with a big letter
+		// Wrong
+		short Cntr;
+		char ITEM_DELIM = '\t';
 
-
-Avoid abbreviations
-
-// Wrong
-short Cntr;  
-char ITEM_DELIM = '\t';  
-
-// Correct  
-short counter;  
-char itemDelimiter = '\t';  
+		// Correct
+		short counter;
+		char itemDelimiter = '\t';
 
 
 Keep lines shorter than 100 characters; insert breaks if necessary.
@@ -36,20 +43,15 @@ Keep lines shorter than 100 characters; insert breaks if necessary.
 Commas go at the end of a broken line; operators start at the beginning of the new line. The operator is at the end of the line to avoid having to scroll if your editor is too narrow.
 
 // Correct
-if (longExpression  
-    + otherLongExpression  
-    + otherOtherLongExpression) {  
-}  
+if (longExpression
+    + otherLongExpression
+    + otherOtherLongExpression) {
+}
 
-// Wrong  
-if (longExpression +  
-    otherLongExpression +  
-    otherOtherLongExpression) {  
+// Wrong
+if (longExpression +
+    otherLongExpression +
+    otherOtherLongExpression) {
 
 
 Feel free to break a rule if it makes your code look bad.
-
-http://www.python.org/dev/peps/pep-0008/
-http://qt.gitorious.org/qt/pages/QtCodingStyle
-
-
