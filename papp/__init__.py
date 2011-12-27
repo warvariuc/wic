@@ -21,7 +21,7 @@ class App(wic.w_app.WApp):
         print('Каталог приложения: %s' % appDir)
 
         global db
-        db = orm.SqliteAdapter(settings.dbUri)
+        db = orm.SqliteAdapter('../mtc.sqlite')
 
     #    from conf.reports.test import Form
     #    openForm(Form)
@@ -29,7 +29,7 @@ class App(wic.w_app.WApp):
     #    from conf.reports.repayment_schedule import Form
     #    openForm(Form)
     #    
-        from .catalogs.books import Books
+    #    from .catalogs.books import Books
     #    book = Books.getOne(db, where= (Books.price > 14))
     #    print(db.getLastQuery())
     #
@@ -38,7 +38,10 @@ class App(wic.w_app.WApp):
     #    
     #    wic.mainWindow.windowRestoreAll()
 
-        openCatalogForm(Books, db)
+#        openCatalogForm(Books, db)
+
+        from .catalogs.locations import Locations
+        openCatalogForm(Locations, db)
 
 
     def onSystemAboutToExit(self): # предопределенная процедура запускаемая при завершении работы системы

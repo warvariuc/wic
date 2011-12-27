@@ -130,7 +130,7 @@ class TextField(Field):
 
 
 class IntegerField(Field):
-    def _init(self, maxDigits, defaultValue=None, autoincrement=False, index=''):
+    def _init(self, maxDigits=9, defaultValue=None, autoincrement=False, index=''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
         super()._init(Column('INT', self), defaultValue, index)

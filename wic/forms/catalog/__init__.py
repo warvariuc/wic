@@ -188,7 +188,11 @@ class CatalogForm(WForm):
         self.tableView.setModel(catalogProxyModel)
         self.tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
         self.tableView.setFocus()
+        #self.tableView.resizeColumnsToContents() - too slow - requests all the data from model
+
         #self.tableView.selectRow(0)
+        self.tableView.verticalScrollBar().sliderMoved.connect(self.onScroll)
+        #self.tableView.verticalScrollBar().valueChanged.connect(self.onScroll)
         
         catalogProxyModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
         catalogProxyModel.modelReset.connect(self.onModelReset)
@@ -198,18 +202,58 @@ class CatalogForm(WForm):
         self._lastSelectedRow = currentIndex.row()
     
     def onModelReset(self):
+        #self.tableView.resizeColumnsToContents()
         rowNo = min(self._lastSelectedRow,self.tableView.model().rowCount(None) - 1)
         self.tableView.selectRow(rowNo)
+        
+    def eventFilter(self, tableView, event): # target - tableView
+        #print('eventFilter', event)
+        if event.type() == QtCore.QEvent.KeyPress:
+            key = event.key()
+            #print('key', key)
+            if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+                if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
+                    self.menu.editItem.trigger()
+                    return True
+                elif key == QtCore.Qt.Key_End:
+                    event = QtGui.QKeyEvent(QtCore.QEvent.KeyPress, QtCore.Qt.Key_End, QtCore.Qt.ControlModifier)
+                    QtCore.QCoreApplication.sendEvent(tableView, event)
+                    return True
+                elif key == QtCore.Qt.Key_Home:
+                    event = QtGui.QKeyEvent(QtCore.QEvent.KeyPress, QtCore.Qt.Key_Home, QtCore.Qt.ControlModifier)
+                    QtCore.QCoreApplication.sendEvent(tableView, event)
+                    return True
+        elif event.type() == QtCore.QEvent.MouseButtonDblClick:
+            if event.button() == QtCore.Qt.LeftButton:
+                self.menu.editItem.trigger()
+                return True
+        elif event.type() == QtCore.QEvent.Wheel:
+            print('wheel')
+        return super().eventFilter(tableView, event) # standard event processing        
+
+    def onScroll(self, *args):
+        ""
+        rect = self.tableView.viewport().rect()
+        centerPoint = QtCore.QPoint(rect.topLeft().x(), rect.topLeft().y() + rect.height() // 2)
+        centerIndex = self.tableView.indexAt(centerPoint)
+        rowNo = centerIndex.row()
+        print('onScroll', rowNo, self.tableView.currentIndex().row())
+        #self.tableView.selectRow(rowNo)
+        #QModelIndex modelIndex =  tableViewWidget->indexAt(QPoint(0,from));
+        #QModelIndex modelIndex =  model->index(from, 0, QModelIndex());
+        #self.tableView.scrollTo(modelIndex, self.tableView.PositionAtTop);
 
     def createWidgets(self):
-        """Automatically create on the form widgets and labels for each catalog model field."""
+        """Automatically create on the form widgets."""
         layout = QtGui.QVBoxLayout(self)
         layout.setMargin(2)
 
-        self.toolbar = self.createToolbar()
+        self.toolbar = QtGui.QToolBar()
+        self.setupToolbar(self.toolbar)
         layout.addWidget(self.toolbar)
 
-        self.tableView = self.createTableView()
+        self.tableView = QtGui.QTableView()
+        self.setupTableView(self.tableView)
         layout.addWidget(self.tableView)
 
         self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Close)
@@ -217,35 +261,23 @@ class CatalogForm(WForm):
 
         self.layout = layout
 
-    def createTableView(self):
-        tableView = QtGui.QTableView()
+    def setupTableView(self, tableView):
+        assert isinstance(tableView, QtGui.QTableView)
         #self.tableView.verticalHeader().hide()
         tableView.setSelectionBehavior(tableView.SelectRows)
         tableView.setSelectionMode(tableView.SingleSelection)
         tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
-        #tableView.verticalHeader().setDefaultSectionSize(...)
-        #tableView.resizeColumnsToContents()
+        rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4
+        tableView.verticalHeader().setDefaultSectionSize(rowHeight)
+        tableView.setGridStyle(QtCore.Qt.DotLine)        
+
         tableView.installEventFilter(self)
         tableView.doubleClicked.connect(self.menu.editItem.trigger)
         tableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         tableView.customContextMenuRequested.connect(self.showContextMenu)
-        return tableView
-
-    def eventFilter(self, tableView, event): # target - tableView
-        if event.type() == QtCore.QEvent.KeyPress:
-            key = event.key()
-            if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
-                if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
-                    self.menu.editItem.trigger()
-                    return True
-        if event.type() == QtCore.QEvent.MouseButtonDblClick:
-            if event.button() == QtCore.Qt.LeftButton:
-                self.menu.editItem.trigger()
-                return True
-        return super().eventFilter(tableView, event) # standard event processing        
-
-    def createToolbar(self):
-        toolbar = QtGui.QToolBar()
+    
+    def setupToolbar(self, toolbar):
+        assert isinstance(toolbar, QtGui.QToolBar)
         menu = Bunch()
         menu.createItem = createAction(toolbar, 'Create new item', self.createItem, 'Insert', ':/icons/fugue/plus.png')
         menu.editItem = createAction(toolbar, 'Edit selected item', self.editItem, 'Enter', ':/icons/fugue/pencil.png')
@@ -253,7 +285,6 @@ class CatalogForm(WForm):
         addItemsToMenu(toolbar, (menu.createItem, menu.editItem, menu.deleteItem))
         toolbar.setIconSize(QtCore.QSize(16, 16))
         self.menu = menu
-        return toolbar
 
     def onSelectionChanged(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
@@ -276,8 +307,8 @@ class CatalogForm(WForm):
         openCatalogItemForm(catalogItem)
 
     def deleteItem(self):
-        if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?', QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel) \
-                    ==  QtGui.QMessageBox.Yes:
+        if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?', 
+                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel) ==  QtGui.QMessageBox.Yes:
             currentIndex = self.tableView.selectionModel().currentIndex()
             id = self.tableView.model().getRowId(currentIndex.row())
             catalogItem = self.catalogModel.getOneById(self.db, id)

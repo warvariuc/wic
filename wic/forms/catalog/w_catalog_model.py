@@ -144,7 +144,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.fields = fields
         self.where = where
         self.updateTime = 5 # seconds
-        self.fetchCount = 50
+        self.fetchCount = 150
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.clearCache)
@@ -165,6 +165,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.timer.stop()
         self.beginResetModel()
         self._cache = {}  # {rowNo: (row + rowTime)}
+        self._rowsCount = None
         self.endResetModel()
         self.timer.start(self.updateTime * 1000)
     
@@ -173,28 +174,33 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         try:
             return self._cache[rowNo]
         except KeyError:
-            limit = (max(rowNo - self.fetchCount, 0), rowNo + self.fetchCount) 
-            print('cache fetch', limit)
-            rows = self.db.select(*self.fields, where=self.where, limit=limit)
+            self.timer.stop()
+            rangeStart = max(rowNo - self.fetchCount // 3, 0) 
+            rangeEnd = rangeStart + self.fetchCount
+            print('cache fetch', (rangeStart, rangeEnd))
+            rows = self.db.select(*self.fields, where=self.where, limit=(rangeStart, rangeEnd))
             now = time.time()
             expiredTime = now - self.updateTime
             # clean cache of expired rows
             cache = {_rowNo: row for _rowNo, row in self._cache.items() 
                         if row[-1] > expiredTime}
             for i, row in enumerate(rows):
-                cache[rowNo + i] = tuple(row) + (now,)
+                cache[rangeStart + i] = tuple(row) + (now,)
             self._cache = cache
+            self.timer.start(self.updateTime * 1000)
             return cache[rowNo]
         
     
     def getRowId(self, rowNo):
-        """"""
+        """Id field value of the given row."""
         return self.row(rowNo)[0] # id is always 0
 
     def rowCount(self, parent):
-        if self._rowsCount is None:
-            self._rowsCount = self.catalogModel.count(self.db)
-        return self._rowsCount
+        _rowsCount = self._rowsCount
+        if _rowsCount is None:
+            _rowsCount = self._rowsCount = self.catalogModel.count(self.db)
+            print('rowCount', _rowsCount)
+        return _rowsCount
 
     def columnCount(self, parent):
         return len(self._columnStyles)
