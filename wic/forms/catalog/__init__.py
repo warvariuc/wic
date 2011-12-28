@@ -21,7 +21,7 @@ class CatalogItemForm(WForm):
     catalogItem = None
 
     def __init__(self, catalogItem, **kwargs):
-        super().__init__(catalogItem=catalogItem, **kwargs)
+        super().__init__(catalogItem = catalogItem, **kwargs)
 
     def setupUi(self):
         """Initial setting up of the form. Reimplemented.
@@ -137,9 +137,9 @@ class CatalogItemForm(WForm):
 
 
 
-def openCatalogItemForm(catalogItem, FormClass=None):
+def openCatalogItemForm(catalogItem, FormClass = None):
     assert isinstance(catalogItem, orm.Model), 'Pass an item (model instance).'
-    kwargs = dict(catalogItem=catalogItem)
+    kwargs = dict(catalogItem = catalogItem)
     if FormClass is None:
         formModulePath = catalogItem.__class__.__module__
         FormClass = getattr(sys.modules[formModulePath], 'Form', None)
@@ -173,7 +173,7 @@ class CatalogForm(WForm):
     #editRequested = QtCore.pyqtSignal()
 
     def __init__(self, catalogModel, db):
-        super().__init__(catalogModel=catalogModel, db=db)
+        super().__init__(catalogModel = catalogModel, db = db)
 
     def setupUi(self):
         """Initial setting up of the form.
@@ -184,28 +184,65 @@ class CatalogForm(WForm):
             self.createWidgets()
         super().setupUi()
         self.toolbar.setVisible(self.toolbarVisible)
-        catalogProxyModel = WCatalogProxyModel(self.db, self.catalogModel)
-        self.tableView.setModel(catalogProxyModel)
-        self.tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
         self.tableView.setFocus()
         #self.tableView.resizeColumnsToContents() - too slow - requests all the data from model
 
-        #self.tableView.selectRow(0)
-        self.tableView.verticalScrollBar().sliderMoved.connect(self.onScroll)
-        #self.tableView.verticalScrollBar().valueChanged.connect(self.onScroll)
-        
+        self.tableView.selectRow(0)
+
+    def createWidgets(self):
+        """Automatically create on the form widgets."""
+        layout = QtGui.QVBoxLayout(self)
+        layout.setMargin(2)
+
+        self.toolbar = QtGui.QToolBar()
+        self.setupToolbar(self.toolbar)
+        layout.addWidget(self.toolbar)
+
+        self.tableView = QtGui.QTableView()
+        self.setupTableView(self.tableView)
+        layout.addWidget(self.tableView)
+
+        self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Close)
+        layout.addWidget(self.buttonBox) # add standard button box at the bottom
+
+        self.layout = layout
+
+    def setupToolbar(self, toolbar):
+        assert isinstance(toolbar, QtGui.QToolBar)
+        menu = Bunch()
+        menu.createItem = createAction(toolbar, 'Create new item', self.createItem, 'Insert', ':/icons/fugue/plus.png')
+        menu.editItem = createAction(toolbar, 'Edit selected item', self.editItem, 'Enter', ':/icons/fugue/pencil.png')
+        menu.deleteItem = createAction(toolbar, 'Delete selected item', self.deleteItem, 'Delete', ':/icons/fugue/cross.png')
+        addItemsToMenu(toolbar, (menu.createItem, menu.editItem, menu.deleteItem))
+        toolbar.setIconSize(QtCore.QSize(16, 16))
+        self.menu = menu
+
+    def setupTableView(self, tableView):
+        assert isinstance(tableView, QtGui.QTableView)
+        tableView.setSelectionBehavior(tableView.SelectRows)
+        tableView.setSelectionMode(tableView.SingleSelection)
+        #self.tableView.verticalHeader().hide()
+        tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+        rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4
+        tableView.verticalHeader().setDefaultSectionSize(rowHeight)
+        #tableView.setIconSize(QtCore.QSize(16, 16))
+        tableView.horizontalHeader().setStretchLastSection(True) # the last visible section in the header takes up all the available space
+        tableView.setGridStyle(QtCore.Qt.DotLine)
+
+        tableView.installEventFilter(self)
+        tableView.doubleClicked.connect(self.menu.editItem.trigger)
+        tableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        tableView.customContextMenuRequested.connect(self.showContextMenu)
+
+        catalogProxyModel = WCatalogProxyModel(self.db, self.catalogModel)
+        tableView.setModel(catalogProxyModel)
+        tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
+
         catalogProxyModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
         catalogProxyModel.modelReset.connect(self.onModelReset)
 
-    def onModelAboutToBeReset(self):
-        currentIndex = self.tableView.selectionModel().currentIndex()
-        self._lastSelectedRow = currentIndex.row()
-    
-    def onModelReset(self):
-        #self.tableView.resizeColumnsToContents()
-        rowNo = min(self._lastSelectedRow,self.tableView.model().rowCount(None) - 1)
-        self.tableView.selectRow(rowNo)
-        
+        tableView.verticalScrollBar().valueChanged.connect(self.onScroll)
+
     def eventFilter(self, tableView, event): # target - tableView
         #print('eventFilter', event)
         if event.type() == QtCore.QEvent.KeyPress:
@@ -227,64 +264,36 @@ class CatalogForm(WForm):
             if event.button() == QtCore.Qt.LeftButton:
                 self.menu.editItem.trigger()
                 return True
-        elif event.type() == QtCore.QEvent.Wheel:
-            print('wheel')
+        elif event.type() == QtCore.QEvent.Wheel: # received when scrolling on viewport is on the boundaries
+            currentIndex = tableView.selectionModel().currentIndex()
+            tableView.selectRow(currentIndex.row() - int(event.delta() / 120)) # when scrolling on the boundary - move the selection closer to that boundary
+            return True
+
         return super().eventFilter(tableView, event) # standard event processing        
 
     def onScroll(self, *args):
-        ""
-        rect = self.tableView.viewport().rect()
-        centerPoint = QtCore.QPoint(rect.topLeft().x(), rect.topLeft().y() + rect.height() // 2)
-        centerIndex = self.tableView.indexAt(centerPoint)
-        rowNo = centerIndex.row()
-        print('onScroll', rowNo, self.tableView.currentIndex().row())
-        #self.tableView.selectRow(rowNo)
-        #QModelIndex modelIndex =  tableViewWidget->indexAt(QPoint(0,from));
-        #QModelIndex modelIndex =  model->index(from, 0, QModelIndex());
-        #self.tableView.scrollTo(modelIndex, self.tableView.PositionAtTop);
+        "Ensure that selected row moves when scrolling - it must be always visible."
+        tableView = self.tableView
+        currentRow = tableView.selectionModel().currentIndex().row()
+        rect = tableView.viewport().rect()
+        topRow = tableView.indexAt(rect.topLeft()).row()
+        if currentRow < topRow:
+            tableView.selectRow(topRow)
+        else:
+            bottomRow = tableView.indexAt(rect.bottomLeft()).row()
+            if currentRow > bottomRow:
+                tableView.selectRow(bottomRow)
 
-    def createWidgets(self):
-        """Automatically create on the form widgets."""
-        layout = QtGui.QVBoxLayout(self)
-        layout.setMargin(2)
+    def onModelAboutToBeReset(self):
+        "Remember the selected row when the model is reset."
+        currentIndex = self.tableView.selectionModel().currentIndex()
+        self._lastSelectedRow = currentIndex.row()
 
-        self.toolbar = QtGui.QToolBar()
-        self.setupToolbar(self.toolbar)
-        layout.addWidget(self.toolbar)
-
-        self.tableView = QtGui.QTableView()
-        self.setupTableView(self.tableView)
-        layout.addWidget(self.tableView)
-
-        self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Close)
-        layout.addWidget(self.buttonBox) # add standard button box at the bottom
-
-        self.layout = layout
-
-    def setupTableView(self, tableView):
-        assert isinstance(tableView, QtGui.QTableView)
-        #self.tableView.verticalHeader().hide()
-        tableView.setSelectionBehavior(tableView.SelectRows)
-        tableView.setSelectionMode(tableView.SingleSelection)
-        tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
-        rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4
-        tableView.verticalHeader().setDefaultSectionSize(rowHeight)
-        tableView.setGridStyle(QtCore.Qt.DotLine)        
-
-        tableView.installEventFilter(self)
-        tableView.doubleClicked.connect(self.menu.editItem.trigger)
-        tableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        tableView.customContextMenuRequested.connect(self.showContextMenu)
-    
-    def setupToolbar(self, toolbar):
-        assert isinstance(toolbar, QtGui.QToolBar)
-        menu = Bunch()
-        menu.createItem = createAction(toolbar, 'Create new item', self.createItem, 'Insert', ':/icons/fugue/plus.png')
-        menu.editItem = createAction(toolbar, 'Edit selected item', self.editItem, 'Enter', ':/icons/fugue/pencil.png')
-        menu.deleteItem = createAction(toolbar, 'Delete selected item', self.deleteItem, 'Delete', ':/icons/fugue/cross.png')
-        addItemsToMenu(toolbar, (menu.createItem, menu.editItem, menu.deleteItem))
-        toolbar.setIconSize(QtCore.QSize(16, 16))
-        self.menu = menu
+    def onModelReset(self):
+        "Restore the selected row."
+        #self.tableView.resizeColumnsToContents()
+        rowNo = min(self._lastSelectedRow, self.tableView.model().rowCount(None) - 1)
+        self.tableView.selectRow(rowNo)
 
     def onSelectionChanged(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
@@ -307,8 +316,8 @@ class CatalogForm(WForm):
         openCatalogItemForm(catalogItem)
 
     def deleteItem(self):
-        if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?', 
-                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel) ==  QtGui.QMessageBox.Yes:
+        if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?',
+                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel) == QtGui.QMessageBox.Yes:
             currentIndex = self.tableView.selectionModel().currentIndex()
             id = self.tableView.model().getRowId(currentIndex.row())
             catalogItem = self.catalogModel.getOneById(self.db, id)
@@ -316,7 +325,7 @@ class CatalogForm(WForm):
 
 
 
-def openCatalogForm(catalogModel, db, FormClass=None):
+def openCatalogForm(catalogModel, db, FormClass = None):
     assert orm.isModel(catalogModel), 'Pass a model class.'
     if FormClass is None:
         formModulePath = catalogModel.__module__

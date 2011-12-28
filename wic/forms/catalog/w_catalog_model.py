@@ -147,20 +147,17 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.fetchCount = 150
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.clearCache)
-        self._rowsCount = None
-        
-        self.clearCache()
-
-        orm.signals.post_save.connect(self.clearCache, catalogModel)
-        orm.signals.post_delete.connect(self.clearCache, catalogModel)
+        self.timer.timeout.connect(self.resetCache)
+        orm.signals.post_save.connect(self.resetCache, catalogModel)
+        orm.signals.post_delete.connect(self.resetCache, catalogModel)
+        self.resetCache()
 
 
     def item(self, rowNo, columnNo):
         ""
         return self.row(rowNo)[columnNo]
 
-    def clearCache(self, **kwargs):
+    def resetCache(self, **kwargs):
         print('clearCache')
         self.timer.stop()
         self.beginResetModel()
