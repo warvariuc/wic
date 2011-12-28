@@ -50,22 +50,6 @@ class WMainWindow(QtGui.QMainWindow):
         subWindow = self.mdiArea.subWindowList()[windowIndex]
         subWindow.close()
 
-    def editDbInfo(self):
-        from wic.forms import openForm, db_info
-        openForm(db_info.Form)
-
-    def helpAbout(self):
-        from wic.forms import openForm, help_about
-        openForm(help_about.Form)
-
-    def showCalculator(self):
-        from wic.widgets import w_decimal_edit
-        w_decimal_edit.WPopupCalculator(self, persistent=True).show()
-
-    def showCalendar(self):
-        from wic.widgets import w_date_edit
-        w_date_edit.WCalendarPopup(self, persistent=True).show()
-
     def closeEvent(self, event):
         self.mdiArea.closeAllSubWindows() # Passes a close event from main window to all subwindows.
         if self.mdiArea.subWindowList(): # there are still open subwindows
@@ -76,36 +60,6 @@ class WMainWindow(QtGui.QMainWindow):
             event.ignore()
             return
         self.settings.saveSettings()
-
-    def onFileOpen(self):
-        filePath = QtGui.QFileDialog.getOpenFileName(self,
-                'Открыть файл', self.settings.lastUsedDirectory, 'Модули (*.py);;Формы (*.ui);;Все файлы (*.*)')
-        if filePath:
-            self.settings.lastUsedDirectory = os.path.dirname(filePath)
-            self._openFile(filePath)
-            self.menu.updateRecentFiles(filePath) # add to recent files if the opening was successful
-
-    def _openFile(self, filePath):
-        if filePath.endswith('.ui'):
-            self.openQtDesigner(filePath)
-        else:
-            __import__('w').loadModule(filePath)
-
-    def openQtDesigner(self, filePath=None):
-        import subprocess, wic
-        os.putenv('PYQTDESIGNERPATH', os.path.join(wic.wicDir, 'widgets'))
-        os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) #designer needs python.dll to use python based widgets. on windows the dll is not in system32
-        params = ['designer']
-        if filePath:
-            params.append(filePath)
-        subprocess.Popen(params)
-
-
-    def onFileSave(self):
-        QtGui.QMessageBox.warning(self, 'Not implemented', 'This feature is not yet implemented')
-
-    def showMessagesWindow(self):
-        self.messagesWindow.setVisible(self.menu.showMessagesWindow.isChecked())
 
     def windowRestoreAll(self):
         for window in self.mdiArea.subWindowList():

@@ -29,8 +29,9 @@ class WApp(QtGui.QApplication):
         self.statusBar = self.mainWindow.statusBar()
         self.messagesWindow = self.mainWindow.messagesWindow
         self.printMessage = self.messagesWindow.printMessage
+        self.menu = self.mainWindow.menu
 
-        sys.stdout = MessagesOut(self.printMessage)  # redirect the real STDOUT
+        sys.stdout = MessagesOut(self.printMessage)  # hook the real STDOUT
         sys.excepthook = exception_hook # set our exception hook
 
         self.mainWindow.show() # show main wndow
@@ -40,7 +41,7 @@ class WApp(QtGui.QApplication):
         """Called when everything is ready"""
 
     def onSystemAboutToExit(self):
-        """предопределенная процедура запускаемая при завершении работы системы"""
+        """Called when app is requested to quit. Return False to cancel"""
 
     def showWarning(self, title, text):
         QtGui.QMessageBox.warning(self.mainWindow, title, text)

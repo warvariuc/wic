@@ -6,7 +6,7 @@ from PyQt4 import QtCore, QtGui
 
 import wic
 import orm
-from wic.forms import openForm, openCatalogItemForm, openCatalogForm
+from wic import forms
 from wic.w_app import WApp
 from . import settings
 
@@ -41,7 +41,7 @@ class App(wic.w_app.WApp):
 #        openCatalogForm(Books, db)
 
         from .catalogs.locations import Locations
-        openCatalogForm(Locations, db)
+        forms.openCatalogForm(Locations, db)
 
 
     def onSystemAboutToExit(self): # предопределенная процедура запускаемая при завершении работы системы

@@ -253,8 +253,8 @@ class WDecimalEdit(QtGui.QLineEdit):
             self.selectAll() # select all on double click, otherwise only group of digits will be selected
             
     def keyPressEvent(self, keyEvent):
-        key = keyEvent.key()
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+            key = keyEvent.key()
             if key == QtCore.Qt.Key_Insert:
                 self.popupCalculator()
                 return

@@ -131,17 +131,22 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         assert orm.isModel(catalogModel)
         super().__init__(None) # no parent
         self._hHeaderStyle = WHHeaderStyle()
-        fields = []
         self._vHeaderStyles = []
         self._columnStyles = []
+        fields = []
+        _join = []
         for field in catalogModel:
             fields.append(field)
+            if isinstance(field, orm.RecordIdField):
+                referTable = field.referTable
+                _join.append(orm.Join(referTable, field == referTable.id))
+                #_join.append(referTable)
             self._vHeaderStyles.append(WVHeaderStyle(title=field.label))
             self._columnStyles.append(createStyleForField(field))
 
         self.db = db
         self.catalogModel = catalogModel
-        self.fields = fields
+        self.fields = fields# + _join
         self.where = where
         self.updateTime = 5 # seconds
         self.fetchCount = 150

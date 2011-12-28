@@ -241,14 +241,13 @@ class CatalogForm(WForm):
         catalogProxyModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
         catalogProxyModel.modelReset.connect(self.onModelReset)
 
-        tableView.verticalScrollBar().valueChanged.connect(self.onScroll)
+        tableView.verticalScrollBar().valueChanged.connect(self.onScrollBarValueChanged)
 
     def eventFilter(self, tableView, event): # target - tableView
         #print('eventFilter', event)
         if event.type() == QtCore.QEvent.KeyPress:
-            key = event.key()
-            #print('key', key)
             if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+                key = event.key()
                 if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
                     self.menu.editItem.trigger()
                     return True
@@ -271,18 +270,18 @@ class CatalogForm(WForm):
 
         return super().eventFilter(tableView, event) # standard event processing        
 
-    def onScroll(self, *args):
+    def onScrollBarValueChanged(self, value):
         "Ensure that selected row moves when scrolling - it must be always visible."
         tableView = self.tableView
         currentRow = tableView.selectionModel().currentIndex().row()
         rect = tableView.viewport().rect()
         topRow = tableView.indexAt(rect.topLeft()).row()
         if currentRow < topRow:
-            tableView.selectRow(topRow)
+            tableView.selectRow(topRow + 1)
         else:
             bottomRow = tableView.indexAt(rect.bottomLeft()).row()
             if currentRow > bottomRow:
-                tableView.selectRow(bottomRow)
+                tableView.selectRow(bottomRow - 1)
 
     def onModelAboutToBeReset(self):
         "Remember the selected row when the model is reset."
@@ -290,7 +289,7 @@ class CatalogForm(WForm):
         self._lastSelectedRow = currentIndex.row()
 
     def onModelReset(self):
-        "Restore the selected row."
+        "Restore the selected row after the model was reset."
         #self.tableView.resizeColumnsToContents()
         rowNo = min(self._lastSelectedRow, self.tableView.model().rowCount(None) - 1)
         self.tableView.selectRow(rowNo)
@@ -327,7 +326,7 @@ class CatalogForm(WForm):
 
 def openCatalogForm(catalogModel, db, FormClass = None):
     assert orm.isModel(catalogModel), 'Pass a model class.'
-    if FormClass is None:
+    if not FormClass:
         formModulePath = catalogModel.__module__
         FormClass = getattr(sys.modules[formModulePath], 'CatalogForm', CatalogForm)
 

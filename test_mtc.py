@@ -5,26 +5,26 @@ from orm import Join, LeftJoin
 
 
 class Regions(orm.Model):
-    region_name = orm.StringField(maxLength= 60)
-    region_type_name = orm.StringField(maxLength= 20)
+    region_name = orm.CharField(maxLength= 60)
+    region_type_name = orm.CharField(maxLength= 20)
 
 class Locations(orm.Model):
     region_id = orm.RecordIdField(Regions)
-    location_name = orm.StringField(maxLength= 100)
-    location_type_name = orm.StringField(maxLength= 20)
+    location_name = orm.CharField(maxLength= 100)
+    location_type_name = orm.CharField(maxLength= 20)
 
 class Streets(orm.Model):
     location_id = orm.RecordIdField(Locations)
-    street_name = orm.StringField(maxLength= 100)
-    street_old_name = orm.StringField(maxLength= 100)
-    street_type_name = orm.StringField(maxLength= 20)
+    street_name = orm.CharField(maxLength= 100)
+    street_old_name = orm.CharField(maxLength= 100)
+    street_type_name = orm.CharField(maxLength= 20)
 
 class Persons(orm.Model):
-    last_name = orm.StringField(maxLength= 100)
-    first_name = orm.StringField(maxLength= 100)
-    middle_name = orm.StringField(maxLength= 100)
-    phone_prefix = orm.IntegerField(bytesCount= 2) # phone prefix code of the location
-    phone_number = orm.IntegerField(bytesCount= 4)
+    last_name = orm.CharField(maxLength= 100)
+    first_name = orm.CharField(maxLength= 100)
+    middle_name = orm.CharField(maxLength= 100)
+    phone_prefix = orm.IntegerField(maxDigits= 3) # phone prefix code of the location
+    phone_number = orm.IntegerField(maxDigits= 10)
     location_id = orm.RecordIdField(Locations)
     street_id = orm.RecordIdField(Streets)
     
@@ -50,13 +50,13 @@ db = dbAdapter
 #pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
 #print(dbAdapter.getLastQuery(), '\n')
 
-#result = dbAdapter.select(Persons, Locations, Regions, 
-#                          LeftJoin(Locations, Locations.id == Persons.location_id), 
-#                          Join(Regions, Regions.id == Locations.region_id), 
-#                          where= Persons.phone_number == '763533', 
-#                          limitBy= (0, 10))
-#pprint(list(zip(result[0], result[1][0])))
-#print(dbAdapter.getLastQuery(), '\n')
+rows = dbAdapter.select(Persons.last_name, Persons.first_name, Locations.location_name, Regions.region_name, 
+              LeftJoin(Locations, Locations.id == Persons.location_id), 
+              Join(Regions, Regions.id == Locations.region_id), 
+              where= Persons.phone_number == '763533', 
+              limit= (0, 10))
+pprint(list(zip(rows.fields, rows)))
+print(dbAdapter.getLastQuery(), '\n')
 
 #pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
 #print(dbAdapter.getLastQuery(), '\n')

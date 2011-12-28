@@ -176,9 +176,11 @@ class RecordIdField(Field):
         super()._init(Column('INT', self), None, index)
 
     def getReferTable(self):
-        if isinstance(self._referTable, orm.Model):
+        if orm.isModel(self._referTable):
             return self._referTable
-        return orm.getObjectByPath(self._referTable, self.table.__module__)
+        assert isinstance(self._referTable, str) # otherwise it should be Model path
+        self._referTable = orm.getObjectByPath(self._referTable, self.table.__module__)
+        return self._referTable
 
     referTable = property(getReferTable)
 

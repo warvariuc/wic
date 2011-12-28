@@ -88,8 +88,8 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
     
     def eventFilter(self, target, event): # target - calendarWidget or any of its children
         if event.type() == QtCore.QEvent.KeyPress:
-            key = event.key()
             if event.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+                key = event.key()
                 if key in (QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return):
                     if not self.persistent:
                         self.accepted()
@@ -241,8 +241,8 @@ class WDateEdit(QtGui.QLineEdit):
             self.selectAll () # select all on double click, otherwise only group of digits will be selected
             
     def keyPressEvent(self, keyEvent):
-        key = keyEvent.key()
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
+            key = keyEvent.key()
             if key == QtCore.Qt.Key_Insert:
                 self.popupCalendar()
                 return
