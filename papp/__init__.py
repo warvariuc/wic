@@ -6,22 +6,22 @@ from PyQt4 import QtCore, QtGui
 
 import wic
 import orm
-from wic import forms
-from wic.w_app import WApp
-from . import settings
+from wic import forms, w_app
 
 appDir = os.path.dirname(os.path.abspath(__file__))
 
 
-class App(wic.w_app.WApp):
+class App(w_app.WApp):
 
     def onSystemStarted(self): # предопределенная процедура запускаемая при начале работы системы - when the core is ready
+        self.addCatalogActions(self.menu.catalogs)
         self.statusBar.showMessage('Ready...', 5000)
+        # `<>` in the beginning of the string means to treat it as HTML
         self.printMessage('<><b><span style="color: green">Система запущена.</span> Добро пожаловать!</b>', True, False)
         print('Каталог приложения: %s' % appDir)
 
         global db
-        db = orm.SqliteAdapter('../mtc.sqlite')
+        db = orm.SqliteAdapter('papp/databases/mtc.sqlite')
 
     #    from conf.reports.test import Form
     #    openForm(Form)
@@ -45,7 +45,24 @@ class App(wic.w_app.WApp):
 
 
     def onSystemAboutToExit(self): # предопределенная процедура запускаемая при завершении работы системы
-        return True
+        return True # return False to cancel quitting
+
+    def addCatalogActions(self, menu):
+        """Add actions for catalogs."""
+        # http://docs.python.org/library/pkgutil.html#pkgutil.walk_packages
+        from wic.menu import addActionsToMenu, createAction
+        catalogs = ('persons', 'locations', 'districts', 'regions', 'streets')
+        for catalog in catalogs:
+            modelName = catalog.capitalize()
+            modelPath = 'papp.catalogs.' + catalog + '.' + modelName
+            addActionsToMenu(menu, (
+                createAction(menu, modelName, lambda *args, m=modelPath: self.openCatalogForm(m)),
+            ))
+        
+    def openCatalogForm(self, modelPath):
+        from wic import getObjectByPath
+        forms.openCatalogForm(getObjectByPath(modelPath), db)
+    
 
 
 def test():

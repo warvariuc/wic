@@ -28,6 +28,9 @@ wicDir = os.path.dirname(os.path.abspath(__file__))
 
 app = None
 
+import orm
+getObjectByPath = orm.getObjectByPath
+
 #import errno
 #
 #def pid_exists(pid):

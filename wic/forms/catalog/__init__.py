@@ -7,7 +7,7 @@ import orm
 
 from wic.widgets.w_date_edit import WDateEdit
 from wic.widgets.w_decimal_edit import WDecimalEdit
-from wic.menu import createAction, addItemsToMenu
+from wic.menu import createAction, addActionsToMenu
 from wic.forms import WForm, getValue, setValue, openForm, FormNotFoundError
 from wic import Bunch
 
@@ -213,7 +213,7 @@ class CatalogForm(WForm):
         menu.createItem = createAction(toolbar, 'Create new item', self.createItem, 'Insert', ':/icons/fugue/plus.png')
         menu.editItem = createAction(toolbar, 'Edit selected item', self.editItem, 'Enter', ':/icons/fugue/pencil.png')
         menu.deleteItem = createAction(toolbar, 'Delete selected item', self.deleteItem, 'Delete', ':/icons/fugue/cross.png')
-        addItemsToMenu(toolbar, (menu.createItem, menu.editItem, menu.deleteItem))
+        addActionsToMenu(toolbar, (menu.createItem, menu.editItem, menu.deleteItem))
         toolbar.setIconSize(QtCore.QSize(16, 16))
         self.menu = menu
 
@@ -300,7 +300,7 @@ class CatalogForm(WForm):
 
     def showContextMenu(self, coord):
         menu = QtGui.QMenu(self.tableView)
-        addItemsToMenu(menu, (self.menu.createItem, self.menu.editItem, self.menu.deleteItem))
+        addActionsToMenu(menu, (self.menu.createItem, self.menu.editItem, self.menu.deleteItem))
         menu.popup(self.tableView.viewport().mapToGlobal(coord))
 
 

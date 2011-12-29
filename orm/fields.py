@@ -10,7 +10,7 @@ class Nil():
 class Column():
     """Abstract DB column, supported natively by the DB."""
 
-    def __init__(self, type, field, name=''):
+    def __init__(self, type, field, name = ''):
         self.type = type
         self.field = field
         self.name = name or field.name
@@ -22,7 +22,7 @@ class Expression():
 
     sort = 'ASC' # default sorting
 
-    def __init__(self, operation, left=Nil, right=Nil, type=None, **kwargs): # FIXME: type parameter not needed?
+    def __init__(self, operation, left = Nil, right = Nil, type = None, **kwargs): # FIXME: type parameter not needed?
         if left is not Nil and not type:
             if isinstance(left, Field):
                 self.type = left
@@ -96,12 +96,12 @@ class Field(Expression):
         orm._fieldsCount += 1 # tracking creation order
         self._orderNo = orm._fieldsCount
 
-    def _init(self, column, defaultValue, index=''):
+    def _init(self, column, defaultValue, index = ''):
         """This is called by the metaclass to initialize the Field after a Table subclass is created."""
         del self._initArgs, self._initKwargs
         self.column = column
         self.defaultValue = defaultValue
-        self.label = self.label or self.name.replace('_', ' ').capitalize() 
+        self.label = self.label or self.name.replace('_', ' ').capitalize()
 
         if index:
             self.table._indexes.append(orm.Index([self], index))
@@ -119,37 +119,37 @@ class Field(Expression):
 
 
 class CharField(Field):
-    def _init(self, maxLength, defaultValue=None, index=''):
+    def _init(self, maxLength, defaultValue = None, index = ''):
         self.maxLength = maxLength
         super()._init(Column('CHAR', self), defaultValue, index)
 
 
 class TextField(Field):
-    def _init(self, defaultValue=None):
+    def _init(self, defaultValue = None):
         super()._init(Column('TEXT', self), defaultValue, None)
 
 
 class IntegerField(Field):
-    def _init(self, maxDigits=9, defaultValue=None, autoincrement=False, index=''):
+    def _init(self, maxDigits = 9, defaultValue = None, autoincrement = False, index = ''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
         super()._init(Column('INT', self), defaultValue, index)
 
 
 class DecimalField(Field):
-    def _init(self, maxDigits, fractionDigits, defaultValue=None, index=''):
+    def _init(self, maxDigits, fractionDigits, defaultValue = None, index = ''):
         self.maxDigits = maxDigits
         self.fractionDigits = fractionDigits
         super()._init(Column('DECIMAL', self), defaultValue, index)
 
 
 class DateField(Field):
-    def _init(self, defaultValue=None, index=''):
+    def _init(self, defaultValue = None, index = ''):
         super()._init(Column('DATE', self), defaultValue, index)
 
 
 class DateTimeField(Field):
-    def _init(self, defaultValue=None, index=''):
+    def _init(self, defaultValue = None, index = ''):
         super()._init(Column('DATETIME', self), defaultValue, index)
 
 
@@ -163,23 +163,24 @@ class IdField(Field):
 
 
 class BooleanField(Field):
-    def _init(self, defaultValue=None, index=''):
+    def _init(self, defaultValue = None, index = ''):
         self.maxDigits = 1
         super()._init(Column('INT', self), defaultValue, index)
 
 
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table."""
-    def _init(self, referTable, index=''):
+    def _init(self, referTable, index = ''):
         self._referTable = referTable # foreign key - referenced type of table
         self.maxDigits = 9 # int32 - should be enough
         super()._init(Column('INT', self), None, index)
 
     def getReferTable(self):
-        if orm.isModel(self._referTable):
-            return self._referTable
-        assert isinstance(self._referTable, str) # otherwise it should be Model path
-        self._referTable = orm.getObjectByPath(self._referTable, self.table.__module__)
+        referTable = self._referTable
+        if orm.isModel(referTable):
+            return referTable
+        assert isinstance(referTable, str) # otherwise it should be path to the Model
+        self._referTable = orm.getObjectByPath(referTable, self.table.__module__)
         return self._referTable
 
     referTable = property(getReferTable)
@@ -194,7 +195,7 @@ class RecordIdField(Field):
 
 class TableIdField(Field):
     """This field stores id of a given table in this DB."""
-    def _init(self, index=''):
+    def _init(self, index = ''):
         self.maxDigits = 5
         super()._init(Column('INT', self), None, index)
 
@@ -229,9 +230,9 @@ class TableIdField(Field):
 #                  Expression('EQ', self._fields['itemId'], other.id))
 
 
-def COUNT(expression, distinct=False):
+def COUNT(expression, distinct = False):
     assert isinstance(expression, orm.Expression) or orm.isModel(expression), 'Argument must be a Field, an Expression or a Table.'
-    return Expression('_COUNT', expression, distinct=distinct)
+    return Expression('_COUNT', expression, distinct = distinct)
 
 def MAX(expression):
     assert isinstance(expression, orm.Expression), 'Argument must be a Field or an Expression.'

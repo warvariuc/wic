@@ -158,9 +158,9 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.resetCache()
 
 
-    def item(self, rowNo, columnNo):
-        ""
-        return self.row(rowNo)[columnNo]
+    def getRowId(self, rowNo):
+        """Id field value of the given row."""
+        return self.row(rowNo)[0] # id is always 0
 
     def resetCache(self, **kwargs):
         print('clearCache')
@@ -192,10 +192,10 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
             self.timer.start(self.updateTime * 1000)
             return cache[rowNo]
         
-    
-    def getRowId(self, rowNo):
-        """Id field value of the given row."""
-        return self.row(rowNo)[0] # id is always 0
+    def data(self, index, role):
+        if index.isValid():
+            value = self.row(index.row())[index.column()]
+            return self._columnStyles[index.column()].data(role, value)
 
     def rowCount(self, parent):
         _rowsCount = self._rowsCount
@@ -206,11 +206,6 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
 
     def columnCount(self, parent):
         return len(self._columnStyles)
-
-    def data(self, index, role):
-        if index.isValid():
-            value = self.item(index.row(), index.column())
-            return self._columnStyles[index.column()].data(role, value)
 
 #    def flags(self, index):
 #        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable

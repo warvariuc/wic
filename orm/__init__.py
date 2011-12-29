@@ -7,20 +7,22 @@ if sys.version < pythonRequiredVersion:
     sys.exit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
 
-import logging, inspect
+import logging, inspect, importlib
 
 logger = logging.getLogger('wic.orm')
 
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
 
-def getObjectByPath(path, defaultModule):
-    """Given the path in form 'some.module.object' return the object. 
-    If `.` is not present in path return object from defaultModule with that name."""
-    moduleName, sep, className = str(path).rpartition('.')
-    if sep: # '.' is present 
-        module = __import__(moduleName, fromlist= [className])
-        return getattr(module, className)            
-    return getattr(sys.modules[defaultModule], path) 
+def getObjectByPath(objectPath, packagePath= None):
+    """Given the path in form 'some.module.object' return the object.
+    If path is relative or only object name in the path is given, modulePath should be given."""
+    modulePath, sep, objectName = str(objectPath).rpartition('.')
+    if not sep: # '.' not present - only object name is given in the path
+        assert packagePath, "You've given the object name, but haven't specified the module in which i can find it. " + objectPath
+        objectName = objectPath
+        objectPath = packagePath
+    module = importlib.import_module(modulePath, packagePath)
+    return getattr(module, objectName)
     
 def isModel(obj):
     return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)

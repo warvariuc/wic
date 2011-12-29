@@ -11,32 +11,34 @@ class MainMenu():
         self.mainWindow = mainWindow
 
         self.file = mainWindow.menuBar().addMenu('File')
-        self.open = createAction(mainWindow, 'Open…', mainWindow.onFileOpen, QtGui.QKeySequence.Open, ':/icons/fugue/folder-open-document-text.png')
-        self.save = createAction(mainWindow, 'Save', mainWindow.onFileSave, QtGui.QKeySequence.Save, ':/icons/fugue/disk-black.png')
+        self.open = createAction(mainWindow, 'Open…', self.onFileOpen, QtGui.QKeySequence.Open, ':/icons/fugue/folder-open-document-text.png')
+        self.save = createAction(mainWindow, 'Save', self.onFileSave, QtGui.QKeySequence.Save, ':/icons/fugue/disk-black.png')
         self.quitApp = createAction(mainWindow, 'Quit', mainWindow.close, QtGui.QKeySequence.Quit, ':/icons/fugue/cross-button.png')
 
-        addItemsToMenu(self.file, (self.open,))
+        addActionsToMenu(self.file, (self.open,))
         self.recentFiles = self.file.addMenu(QtGui.QIcon(':/icons/fugue/folders-stack.png'), 'Recent files')
         self.recentFiles.aboutToShow.connect(self.updateRecentFiles)
-        addItemsToMenu(self.file, (self.save, self.quitApp))
+        addActionsToMenu(self.file, (self.save, self.quitApp))
 
         self.service = mainWindow.menuBar().addMenu('Service')
-        addItemsToMenu(self.service, (
-            createAction(mainWindow, 'Calculator', mainWindow.showCalculator, 'Ctrl+F2', ':/icons/fugue/calculator-scientific.png'),
-            createAction(mainWindow, 'Calendar', mainWindow.showCalendar, icon = ':/icons/fugue/calendar-blue.png'),
+        addActionsToMenu(self.service, (
+            createAction(mainWindow, 'Calculator', self.showCalculator, 'Ctrl+F2', ':/icons/fugue/calculator-scientific.png'),
+            createAction(mainWindow, 'Calendar', self.showCalendar, icon = ':/icons/fugue/calendar-blue.png'),
             None,
-            createAction(mainWindow, 'Database…', mainWindow.editDbInfo, None, ':/icons/fugue/database.png', 'Database connection'),
-            createAction(mainWindow, 'Qt Designer', mainWindow.openQtDesigner, None, ':/icons/fugue/application-form.png', 'Run Designer with custom widgets'),
+            createAction(mainWindow, 'Database…', self.editDbInfo, None, ':/icons/fugue/database.png', 'Database connection'),
+            createAction(mainWindow, 'Qt Designer', self.openQtDesigner, None, ':/icons/fugue/application-form.png', 'Run Designer with custom widgets'),
         ))
+
+        self.catalogs = mainWindow.menuBar().addMenu('Справочники')
 
         self.windows = mainWindow.menuBar().addMenu('Windows')
 
         self.help = mainWindow.menuBar().addMenu('Help')
-        addItemsToMenu(self.help, (
-            createAction(mainWindow, 'About application', mainWindow.helpAbout, 'F1', ':/icons/fugue/question-button.png', 'See information about this application'),
+        addActionsToMenu(self.help, (
+            createAction(mainWindow, 'About application', self.helpAbout, 'F1', ':/icons/fugue/question-button.png', 'See information about this application'),
         ))
 
-        self.showMessagesWindow = createAction(mainWindow, 'Messages window', mainWindow.showMessagesWindow, 'F12', tip = 'Show/hide messages window', checkable = True)
+        self.showMessagesWindow = createAction(mainWindow, 'Messages window', self.showMessagesWindow, 'F12', tip = 'Show/hide messages window', checkable = True)
 
         self.windowsStandard = (
             createAction(mainWindow, 'Next', mainWindow.mdiArea.activateNextSubWindow, QtGui.QKeySequence.NextChild),
@@ -57,7 +59,7 @@ class MainMenu():
         self.showMessagesWindow.setChecked(self.mainWindow.messagesWindow.isVisible()) # set checked here instead of catching visibilitychanged event
         menu = self.windows
         menu.clear()
-        addItemsToMenu(menu, self.windowsStandard)
+        addActionsToMenu(menu, self.windowsStandard)
         windows = self.mainWindow.mdiArea.subWindowList()
         if windows:
             menu.addSeparator()
@@ -95,29 +97,29 @@ class MainMenu():
 
 
 
-def editDbInfo():
-    from wic.forms import openForm, db_info
-    openForm(db_info.Form)
+    def editDbInfo(self):
+        from wic.forms import openForm, db_info
+        openForm(db_info.Form)
 
-def helpAbout():
-    from wic.forms import openForm, help_about
-    openForm(help_about.Form)
+    def helpAbout(self):
+        from wic.forms import openForm, help_about
+        openForm(help_about.Form)
 
-def showCalculator():
-    from wic.widgets import w_decimal_edit
-    w_decimal_edit.WPopupCalculator(self, persistent=True).show()
+    def showCalculator(self):
+        from wic.widgets import w_decimal_edit
+        w_decimal_edit.WPopupCalculator(self.mainWindow, persistent = True).show()
 
-def showCalendar(self):
-    from wic.widgets import w_date_edit
-    w_date_edit.WCalendarPopup(self, persistent=True).show()
+    def showCalendar(self):
+        from wic.widgets import w_date_edit
+        w_date_edit.WCalendarPopup(self.mainWindow, persistent = True).show()
 
     def onFileOpen(self):
-        filePath = QtGui.QFileDialog.getOpenFileName(self,
+        filePath = QtGui.QFileDialog.getOpenFileName(self.mainWindow,
                 'Open file', self.settings.lastUsedDirectory, 'Modules (*.py);;Forms (*.ui);;All files (*.*)')
         if filePath:
-            self.settings.lastUsedDirectory = os.path.dirname(filePath)
+            self.mainWindow.settings.lastUsedDirectory = os.path.dirname(filePath)
             self._openFile(filePath)
-            self.menu.updateRecentFiles(filePath) # add to recent files if the opening was successful
+            self.updateRecentFiles(filePath) # add to recent files if the opening was successful
 
     def _openFile(self, filePath):
         if filePath.endswith('.ui'):
@@ -125,10 +127,10 @@ def showCalendar(self):
         else:
             print(filePath)
 
-    def openQtDesigner(self, filePath=None):
-        import subprocess, wic
+    def openQtDesigner(self, filePath = ''):
+        import sys, subprocess, wic
         os.putenv('PYQTDESIGNERPATH', os.path.join(wic.wicDir, 'widgets'))
-        os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) #designer needs python.dll to use python based widgets. on windows the dll is not in system32
+        os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) # designer needs python.dll to use PyQt widgets. on windows the dll is not in system32
         params = ['designer']
         if filePath:
             params.append(filePath)
@@ -139,13 +141,13 @@ def showCalendar(self):
         QtGui.QMessageBox.warning(self, 'Not implemented', 'This feature is not yet implemented')
 
     def showMessagesWindow(self):
-        self.messagesWindow.setVisible(self.menu.showMessagesWindow.isChecked())
+        self.mainWindow.messagesWindow.setVisible(self.showMessagesWindow.isChecked())
 
 
 
-def createAction(widget, text, slot = None, shortcut = None, icon = None, tip = None, checkable = False, signal = 'triggered'):
-    """Convenience function to create PyQt actions"""
-    action = QtGui.QAction(text, widget)
+def createAction(parent, text, slot = None, shortcut = None, icon = None, tip = None, checkable = False, signal = 'triggered'):
+    """Convenience function to create QActions"""
+    action = QtGui.QAction(text, parent)
     if icon:
         action.setIcon(QtGui.QIcon(icon))
     if shortcut:
@@ -159,8 +161,9 @@ def createAction(widget, text, slot = None, shortcut = None, icon = None, tip = 
     return action
 
 
-def addItemsToMenu(menu, items):
+def addActionsToMenu(menu, items):
     """Add multiple actions/menus to a menu"""
+    assert hasattr(items, '__iter__'), 'Items argument must an iterable'
     for item in items:
         if isinstance(item, QtGui.QAction):
             menu.addAction(item)
