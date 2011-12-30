@@ -7,7 +7,7 @@ from ..locations import Locations
 from ..streets import Streets
 
 
-class Persons(orm.Model):
+class Persons(forms.catalog.CatalogModel):
     last_name = orm.CharField(maxLength= 50)
     first_name = orm.CharField(maxLength= 50)
     middle_name = orm.CharField(maxLength= 50)

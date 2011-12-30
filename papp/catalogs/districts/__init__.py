@@ -6,7 +6,7 @@ import orm
 from ..locations import Locations
 
 
-class Districts(orm.Model):
+class Districts(forms.catalog.CatalogModel):
     localitate = orm.CharField(maxLength= 100)
     judet = orm.CharField(maxLength= 50)
     raion = orm.CharField(maxLength= 50)

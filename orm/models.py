@@ -62,39 +62,40 @@ class LeftJoin(Join):
 
 
 class ModelMeta(type):
-    """Metaclass for all tables (models)."""
+    """Metaclass for all tables (models).
+    It gives names to all fields and makes instances for fields for each of the models. 
+    It has some class methods for models."""
     
     def __new__(cls, name, bases, attrs):
-        newClass = type.__new__(cls, name, bases, attrs)
+        NewClass = type.__new__(cls, name, bases, attrs)
         
         try: # we need only Model subclasses
             Model
         except NameError: # if Model is not defined: __new__ is called for Model itself
-            return newClass # return wihout any processing
+            return NewClass # return wihout any processing
         
-        newClass._indexes = list(newClass._indexes) # assure each class has its own attribute
-        for index in newClass._indexes :
+        NewClass._indexes = list(NewClass._indexes) # assure each class has its own attribute
+        for index in NewClass._indexes :
             assert isinstance(index, Index), 'Found a non Index in the _indexes.'
             
         fields = []
-        for fieldName, field in inspect.getmembers(newClass):
+        for fieldName, field in inspect.getmembers(NewClass):
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field)) 
                     
         fields.sort(key= lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
-        
         for fieldName, field in fields:
             if not fieldName.islower() or fieldName.startswith('_'):
                 raise Exception('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
-            field_ = field.__class__(name= fieldName, table= newClass, label= field.label) # recreate the field - to handle correctly inheritance of Tables
+            field_ = field.__class__(name= fieldName, table= NewClass, label= field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
                 field_._init(*field._initArgs, **field._initKwargs) # and initialize it
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
-            setattr(newClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
+            setattr(NewClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
                     
-        return newClass
+        return NewClass
 
     def __getitem__(self, key):
         """Get a Table Field by name - Table['field_name']."""

@@ -8,9 +8,9 @@ import traceback, time
 import orm
 
 
-from wic.widgets.w_date_edit import WDateEdit
-from wic.widgets.w_decimal_edit import WDecimalEdit
 
+class CatalogModel(orm.Model):
+    deleted = orm.BooleanField()
 
 
 class WItemStyle():
@@ -128,7 +128,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
     """Model for showing list of catalog items."""
 
     def __init__(self, db, catalogModel, where=None):
-        assert orm.isModel(catalogModel)
+        assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'
         super().__init__(None) # no parent
         self._hHeaderStyle = WHHeaderStyle()
         self._vHeaderStyles = []

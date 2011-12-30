@@ -33,6 +33,11 @@ class Books(orm.Model):
         self.timestamp = DateTime.now()
         super().save()
     
+class CatalogModel(orm.Model):
+    deleted = orm.BooleanField()
+
+class Streets(CatalogModel):
+    street_name = orm.CharField(maxLength= 50)
 
 ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 

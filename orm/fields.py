@@ -88,6 +88,7 @@ class Field(Expression):
     """ORM table field."""
 
     def __init__(self, *args, **kwargs):
+        #print('Field.__init__', self.__class__, args, kwargs)
         self.name = kwargs.pop('name', None) # attribute name of the field
         self.table = kwargs.pop('table', None) # part of which table is this field
         self.label = kwargs.pop('label', None) # label (textual name) of this field
@@ -98,7 +99,7 @@ class Field(Expression):
 
     def _init(self, column, defaultValue, index = ''):
         """This is called by the metaclass to initialize the Field after a Table subclass is created."""
-        del self._initArgs, self._initKwargs
+        #del self._initArgs, self._initKwargs
         self.column = column
         self.defaultValue = defaultValue
         self.label = self.label or self.name.replace('_', ' ').capitalize()

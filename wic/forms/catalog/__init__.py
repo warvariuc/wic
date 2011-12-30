@@ -5,8 +5,7 @@ from PyQt4 import QtGui, QtCore
 
 import orm
 
-from wic.widgets.w_date_edit import WDateEdit
-from wic.widgets.w_decimal_edit import WDecimalEdit
+from wic.widgets import w_date_edit, w_decimal_edit
 from wic.menu import createAction, addActionsToMenu
 from wic.forms import WForm, getValue, setValue, openForm, FormNotFoundError
 from wic import Bunch
@@ -107,9 +106,9 @@ class CatalogItemForm(WForm):
         if isinstance(field, (orm.CharField, orm.IntegerField, orm.IdField, orm.RecordIdField, orm.DateTimeField)):
             return QtGui.QLineEdit()
         elif isinstance(field, orm.DecimalField):
-            return WDecimalEdit()
+            return w_decimal_edit.WDecimalEdit()
         elif isinstance(field, orm.DateField):
-            return WDateEdit()
+            return w_date_edit.WDateEdit()
         elif isinstance(field, orm.BooleanField):
             return QtGui.QCheckBox(field.label)
         elif isinstance(field, orm.TextField):
@@ -131,7 +130,7 @@ class CatalogItemForm(WForm):
             if isinstance(widget, QtGui.QLineEdit):
                 widget.setInputMask('9999-99-99 99:99:99.999999')
         elif isinstance(field, orm.DecimalField):
-            if isinstance(widget, WDecimalEdit):
+            if isinstance(widget, w_decimal_edit.WDecimalEdit):
                 widget.setMaxDigits(field.maxDigits)
                 widget.setFractionDigits(field.fractionDigits)
 
@@ -158,7 +157,7 @@ def openCatalogItemForm(catalogItem, FormClass = None):
 
 
 
-from .w_catalog_model import WCatalogProxyModel
+from .w_catalog_model import WCatalogProxyModel, CatalogModel
 
 
 class CatalogForm(WForm):
