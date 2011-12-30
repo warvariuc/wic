@@ -2,8 +2,7 @@
 
 import os, sys, traceback
 from PyQt4 import QtGui, QtCore, uic
-from wic.widgets.w_date_edit import WDateEdit
-from wic.widgets.w_decimal_edit import WDecimalEdit
+from wic.widgets import w_date_edit, w_decimal_edit
 import orm
 import wic
 
@@ -22,9 +21,9 @@ def setValue(widget, value):
         widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
         widget.setChecked(bool(value))
         widget.blockSignals(False)
-    elif isinstance(widget, WDateEdit):
+    elif isinstance(widget, w_date_edit.WDateEdit):
         widget.setDate(value)
-    elif isinstance(widget, (WDecimalEdit, QtGui.QSpinBox)):
+    elif isinstance(widget, (w_decimal_edit.WDecimalEdit, QtGui.QSpinBox)):
         widget.setValue(value)
     elif isinstance(widget, QtGui.QLineEdit):
         widget.setText('' if value is None else str(value))
@@ -50,9 +49,9 @@ def getValue(widget):
         return widget.toHtml()
     elif isinstance(widget, QtGui.QCheckBox):
         return widget.isChecked()
-    elif isinstance(widget, WDecimalEdit):
+    elif isinstance(widget, w_decimal_edit.WDecimalEdit):
         return widget.value()
-    elif isinstance(widget, WDateEdit):
+    elif isinstance(widget, w_date_edit.WDateEdit):
         return widget.date()
     elif isinstance(widget, QtGui.QSpinBox):
         return widget.value()
@@ -159,17 +158,10 @@ class WForm(QtGui.QDialog):
 
 
 
-def addSubwindow(widget):
-    window = wic.app.mainWindow.mdiArea.addSubWindow(widget) # create subwindow with the form
-    window.setWindowIcon(widget.windowIcon())
-    window.show()
-    widget.closed.connect(window.close) # when form closes - close subwindow too
-
-
 def openForm(FormClass, *args, **kwargs):
     assert issubclass(FormClass, WForm), 'This is not a WForm.'
     form = FormClass(*args, **kwargs) # no parent widget for now
-    addSubwindow(form)
+    wic.app.mainWindow.addSubWindow(form)    
     return form
 
 

@@ -163,7 +163,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         return self.row(rowNo)[0] # id is always 0
 
     def resetCache(self, **kwargs):
-        print('clearCache')
+        #print('clearCache')
         self.timer.stop()
         self.beginResetModel()
         self._cache = {}  # {rowNo: (row + rowTime)}
@@ -179,7 +179,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
             self.timer.stop()
             rangeStart = max(rowNo - self.fetchCount // 3, 0) 
             rangeEnd = rangeStart + self.fetchCount
-            print('cache fetch', (rangeStart, rangeEnd))
+            #print('cache fetch', (rangeStart, rangeEnd))
             rows = self.db.select(*self.fields, where=self.where, limit=(rangeStart, rangeEnd))
             now = time.time()
             expiredTime = now - self.updateTime
@@ -201,7 +201,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         _rowsCount = self._rowsCount
         if _rowsCount is None:
             _rowsCount = self._rowsCount = self.catalogModel.count(self.db)
-            print('rowCount', _rowsCount)
+            #print('rowCount', _rowsCount)
         return _rowsCount
 
     def columnCount(self, parent):

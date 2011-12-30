@@ -16,14 +16,11 @@ class WMainWindow(QtGui.QMainWindow):
         self.mdiArea.setDocumentMode(True)
         self.mdiArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.mdiArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
-
         self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
         self.mdiArea.setTabPosition(QtGui.QTabWidget.North)
         self.mdiArea.setActivationOrder(self.mdiArea.ActivationHistoryOrder)
-
+        self.mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
         self.setCentralWidget(self.mdiArea)
-        self.statusBar() # create status bar
 
         tabBar = self.mdiArea.findChildren(QtGui.QTabBar)[0] # hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
         tabBar.setTabsClosable(True)
@@ -31,9 +28,12 @@ class WMainWindow(QtGui.QMainWindow):
         tabBar.setMovable(True)
         tabBar.setDrawBase(True)
         #tabBar.setShape(tabBar.TriangularSouth)
+        #tabBar.setIconSize(QtCore.QSize(16, 16))
         tabBar.setSelectionBehaviorOnRemove(tabBar.SelectPreviousTab)
-        tabBar.tabCloseRequested.connect(self.closeTab)
+        tabBar.tabCloseRequested.connect(self.onTabCloseRequested)
         self.tabBar = tabBar
+
+        self.statusBar() # create status bar
 
         from wic.messages_window import MessagesWindow
         self.messagesWindow = MessagesWindow(self)
@@ -46,7 +46,12 @@ class WMainWindow(QtGui.QMainWindow):
         from wic import w_settings
         self.settings = w_settings.WSettings(self)
 
-    def closeTab(self, windowIndex):
+    def onSubwindowActivated(self, subWindow): # http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
+        #self.mdiArea.setActiveSubWindow(subWindow)
+        saveActive = bool(subWindow and subWindow.isWindowModified())
+        #self.fileSaveAction.setEnabled(saveActive)
+
+    def onTabCloseRequested(self, windowIndex):
         subWindow = self.mdiArea.subWindowList()[windowIndex]
         subWindow.close()
 
@@ -61,14 +66,20 @@ class WMainWindow(QtGui.QMainWindow):
             return
         self.settings.saveSettings()
 
-    def windowRestoreAll(self):
+    def restoreSubwindows(self):
         for window in self.mdiArea.subWindowList():
-            window.widget().showNormal()
+            window.showNormal()
 
-    def windowMinimizeAll(self):
+    def minimizeSubwindows(self):
         for window in self.mdiArea.subWindowList():
-            window.widget().showMinimized()
+            window.showMinimized()
 
-    def onSubwindowActivated(self, subwindow): #http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
-        saveActive = bool(subwindow and subwindow.isWindowModified())
-        #self.fileSaveAction.setEnabled(saveActive)
+    def addSubWindow(self, widget): # https://bugreports.qt.nokia.com/browse/QTBUG-9462
+        """Add a new subwindow with the given widget"""
+        subWindow = QtGui.QMdiSubWindow() # no parent
+        subWindow.setWidget(widget)
+        subWindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.mdiArea.addSubWindow(subWindow)    
+        subWindow.setWindowIcon(widget.windowIcon())
+        subWindow.show()
+        widget.closed.connect(subWindow.close) # when form closes - close subWindow too

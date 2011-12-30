@@ -36,12 +36,13 @@ class App(w_app.WApp):
     #    openCatalogItemForm(book)
     #    openCatalogItemForm(Books(db))
     #    
-    #    wic.mainWindow.windowRestoreAll()
 
 #        openCatalogForm(Books, db)
 
         from .catalogs.locations import Locations
         forms.openCatalogForm(Locations, db)
+
+        #self.mainWindow.restoreSubwindows()
 
 
     def onSystemAboutToExit(self): # предопределенная процедура запускаемая при завершении работы системы

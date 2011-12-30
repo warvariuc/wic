@@ -45,8 +45,8 @@ class MainMenu():
             createAction(mainWindow, 'Previous', mainWindow.mdiArea.activatePreviousSubWindow, QtGui.QKeySequence.PreviousChild),
             createAction(mainWindow, 'Cascade', mainWindow.mdiArea.cascadeSubWindows),
             createAction(mainWindow, 'Tile', mainWindow.mdiArea.tileSubWindows),
-            createAction(mainWindow, 'Restore All', mainWindow.windowRestoreAll),
-            createAction(mainWindow, 'Iconize All', mainWindow.windowMinimizeAll),
+            createAction(mainWindow, 'Restore All', mainWindow.restoreSubwindows),
+            createAction(mainWindow, 'Iconize All', mainWindow.minimizeSubwindows),
             None, # separator
             createAction(mainWindow, 'Close', mainWindow.mdiArea.closeActiveSubWindow, QtGui.QKeySequence.Close, ':/icons/fugue/cross-white.png', 'Закрыть активное окно'),
             None,
