@@ -61,7 +61,7 @@ class WMainWindow(QtGui.QMainWindow):
             event.ignore()
             return
         from wic import app
-        if app.onSystemAboutToExit() == False: # именно False, иначе None тоже считается отрицательным
+        if app.onSystemAboutToQuit() == False: # именно False, иначе None тоже считается отрицательным
             event.ignore()
             return
         self.settings.saveSettings()

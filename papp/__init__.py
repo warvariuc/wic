@@ -40,7 +40,7 @@ class App(w_app.WApp):
 #        openCatalogForm(Books, db)
 
         from .catalogs.locations import Locations
-        forms.openCatalogForm(Locations, db)
+        forms.openCatalogForm(Locations, db, modal=True)
 
         #self.mainWindow.restoreSubwindows()
 

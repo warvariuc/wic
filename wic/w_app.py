@@ -7,6 +7,12 @@ import wic
 
 
 class WApp(QtGui.QApplication):
+    
+    _authenticationEnabled = True
+    _unconditionalQuit = True # whether to allow unconditional quit (if some forms didn't close)
+    _windowIcon = ':/icons/fugue/leaf-plant.png'
+    _organizationName = 'vic'
+    _applicationName = 'wic'
 
     def __init__(self, argv):
         if wic.app:
@@ -14,14 +20,16 @@ class WApp(QtGui.QApplication):
 
         super().__init__(argv)
         self.setup()
+        if self._authenticationEnabled:
+            self.authenticate()
 
         QtCore.QTimer.singleShot(0, self.onSystemStarted) # when event loop is working
         wic.app = self
 
     def setup(self):
-        self.setWindowIcon(QtGui.QIcon(':/icons/fugue/leaf-plant.png'))
-        self.setOrganizationName('vic')
-        self.setApplicationName('wic')
+        self.setWindowIcon(QtGui.QIcon(self._windowIcon))
+        self.setOrganizationName(self._organizationName)
+        self.setApplicationName(self._applicationName)
 
         from wic import main_window
 
@@ -36,11 +44,18 @@ class WApp(QtGui.QApplication):
 
         self.mainWindow.show() # show main wndow
 
+    def authenticate(self):
+        """Show log in window."""
+
+    def requestQuit(self, unconditional=False):
+        """Request application quit."""
+        self._unconditionalQuit = unconditional
+        self.mainWindow.close() # TODO: check wic.app._unconditionalQuit when closing forms and mainWindow
 
     def onSystemStarted(self):
         """Called when everything is ready"""
 
-    def onSystemAboutToExit(self):
+    def onSystemAboutToQuit(self):
         """Called when app is requested to quit. Return False to cancel"""
 
     def showWarning(self, title, text):

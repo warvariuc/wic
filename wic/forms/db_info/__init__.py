@@ -26,7 +26,7 @@ class Form(WForm):
         print('accepted')
         
     #def on_open(self):
-        #self.setWindowIcon(QtGui.QIcon(self.iconPath))
+        #self.setWindowIcon(QtGui.QIcon(self._iconPath))
         #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
 
 

@@ -85,10 +85,9 @@ class Expression():
 
 
 class Field(Expression):
-    """ORM table field."""
+    """Generic ORM table field."""
 
     def __init__(self, *args, **kwargs):
-        #print('Field.__init__', self.__class__, args, kwargs)
         self.name = kwargs.pop('name', None) # attribute name of the field
         self.table = kwargs.pop('table', None) # part of which table is this field
         self.label = kwargs.pop('label', None) # label (textual name) of this field

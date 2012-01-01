@@ -11,8 +11,8 @@ import conf as globalModule
 
 class Form(WForm):
 
-    iconPath = ':/icons/fugue/leaf-wormhole.png'
-    formTitle = 'Тестовые модуль и форма'
+    _iconPath = ':/icons/fugue/leaf-wormhole.png'
+    _formTitle = 'Тестовые модуль и форма'
 
     def onOpen(self): # called by the system after it loads the Form
         print('Форма загружена.')
