@@ -7,22 +7,36 @@ from PyQt4 import QtCore, QtGui
 from wic import menu
 
 
+
+class TabBarEventFilter(QtCore.QObject):
+    """Event filter for main window's tab bar."""
+    
+    def eventFilter(self, tabBar, event):
+        if event.type() == QtCore.QEvent.MouseButtonDblClick:
+            if event.button() == QtCore.Qt.LeftButton:
+                self.parent().onTabBarLeftDblClick()
+                return True
+        return super().eventFilter(tabBar, event) # standard event processing        
+    
+
+
 class WMainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.mdiArea = QtGui.QMdiArea()
-        self.mdiArea.setDocumentMode(True)
-        self.mdiArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.mdiArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
-        self.mdiArea.setTabPosition(QtGui.QTabWidget.North)
-        self.mdiArea.setActivationOrder(self.mdiArea.ActivationHistoryOrder)
-        self.mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
-        self.setCentralWidget(self.mdiArea)
+        mdiArea = QtGui.QMdiArea()
+        mdiArea.setDocumentMode(True)
+        mdiArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        mdiArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
+        mdiArea.setTabPosition(QtGui.QTabWidget.North)
+        mdiArea.setActivationOrder(mdiArea.ActivationHistoryOrder)
+        mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
+        self.setCentralWidget(mdiArea)
+        self.mdiArea = mdiArea
 
-        tabBar = self.mdiArea.findChildren(QtGui.QTabBar)[0] # hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
+        tabBar = mdiArea.findChildren(QtGui.QTabBar)[0] # hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
         tabBar.setTabsClosable(True)
         tabBar.setExpanding(False)
         tabBar.setMovable(True)
@@ -32,6 +46,9 @@ class WMainWindow(QtGui.QMainWindow):
         tabBar.setSelectionBehaviorOnRemove(tabBar.SelectPreviousTab)
         tabBar.tabCloseRequested.connect(self.onTabCloseRequested)
         self.tabBar = tabBar
+        
+        tabBarEventFilter = TabBarEventFilter(self)
+        tabBar.installEventFilter(tabBarEventFilter)
 
         self.statusBar() # create status bar
 
@@ -51,6 +68,13 @@ class WMainWindow(QtGui.QMainWindow):
         saveActive = bool(subWindow and subWindow.isWindowModified())
         #self.fileSaveAction.setEnabled(saveActive)
 
+    def onTabBarLeftDblClick(self):
+        subWindow = self.mdiArea.currentSubWindow()
+        if subWindow.isMaximized():
+            subWindow.showNormal()
+        else:
+            subWindow.showMaximized()
+    
     def onTabCloseRequested(self, windowIndex):
         subWindow = self.mdiArea.subWindowList()[windowIndex]
         subWindow.close()

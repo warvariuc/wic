@@ -162,7 +162,7 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
 
 
 class WDecimalEdit(QtGui.QLineEdit):
-    'Custom widget - for editing decimals. You can specify total number of digits, fractional part digits.'
+    """Custom widget - for editing decimals. You can specify total number of digits, fractional part digits."""
     
     edited = QtCore.pyqtSignal()
     

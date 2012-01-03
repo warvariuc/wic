@@ -2,7 +2,7 @@
 
 import os, sys, traceback
 from PyQt4 import QtGui, QtCore, uic
-from wic.widgets import w_date_edit, w_decimal_edit
+from wic.widgets import w_date_edit, w_decimal_edit, w_record_id_widget
 import orm
 import wic
 
@@ -21,10 +21,12 @@ def setValue(widget, value):
         widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
         widget.setChecked(bool(value))
         widget.blockSignals(False)
-    elif isinstance(widget, w_date_edit.WDateEdit):
+    elif isinstance(widget, w_date_edit.WDateEdit): # this goes before checking QLineEdit, because WDateEdit is subclass of QLineEdit 
         widget.setDate(value)
     elif isinstance(widget, (w_decimal_edit.WDecimalEdit, QtGui.QSpinBox)):
         widget.setValue(value)
+    elif isinstance(widget, w_record_id_widget.WRecordIdWidget):
+        widget.setId(value)
     elif isinstance(widget, QtGui.QLineEdit):
         widget.setText('' if value is None else str(value))
         widget.home(False)
@@ -41,6 +43,7 @@ def setValue(widget, value):
     elif isinstance(widget, QtGui.QCheckBox):
         widget.setChecked(value)
 
+
 def getValue(widget):
     """Automatically extract a widget's value depending on its type."""
     if isinstance(widget, QtGui.QPlainTextEdit):
@@ -53,6 +56,8 @@ def getValue(widget):
         return widget.value()
     elif isinstance(widget, w_date_edit.WDateEdit):
         return widget.date()
+    elif isinstance(widget, w_record_id_widget.WRecordIdWidget):
+        widget.getId()
     elif isinstance(widget, QtGui.QSpinBox):
         return widget.value()
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)):
@@ -64,7 +69,7 @@ def getValue(widget):
     elif isinstance(widget, QtGui.QSpinBox):
         return widget.value()
     elif isinstance(widget, QtGui.QCheckBox):
-        return bool(widget.isChecked())
+        return widget.isChecked()
 
 
 class WFormWidgetsProxy():
@@ -140,6 +145,24 @@ class WForm(QtGui.QDialog):
                 resetButton.clicked.connect(self.onReset)
             buttonBox.rejected.connect(self.reject)
 
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.onContextMenuRequested)
+
+    def onContextMenuRequested(self, coord):
+        from wic.menu import createAction, addActionsToMenu
+        menu = QtGui.QMenu(self)
+        addActionsToMenu(menu, (createAction(menu, 'Save this form into a *.ui file.', self.saveFormToUi),))
+        menu.popup(self.mapToGlobal(coord))
+
+    def saveFormToUi(self):
+        from PyQt4.QtDesigner import QFormBuilder
+        filePath = QtGui.QFileDialog.getSaveFileName(parent = self, caption = 'Save file', directory = '', filter = 'Forms (*.ui)')
+        if filePath:
+            file = QtCore.QFile(filePath)
+            file.open(file.WriteOnly)
+            formBuilder = QFormBuilder()
+            formBuilder.save(file, self)
+
     def done(self, resultCode): # accept/reject by default bypasses closeEvent
         super().done(resultCode)
         self.close()
@@ -155,18 +178,18 @@ class WForm(QtGui.QDialog):
 
     def onOpen(self):
         return
-    
+
     def onReset(self):
         ""
 
 
 
-def openForm(FormClass, *args, modal=False, **kwargs):
+def openForm(FormClass, *args, modal = False, **kwargs):
     assert issubclass(FormClass, WForm), 'This is not a WForm.'
     form = FormClass(*args, **kwargs) # no parent widget for now
     if modal:
         return form.exec()
-    wic.app.mainWindow.addSubWindow(form)    
+    wic.app.mainWindow.addSubWindow(form)
     return form
 
 

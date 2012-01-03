@@ -6,7 +6,7 @@ from PyQt4 import QtCore, QtGui
 from wic.forms import WForm, setValue, getValue
 from datetime import date as Date
 from dateutil.relativedelta import relativedelta as RelDelta
-import conf as globalModule
+import papp
 
 
 class Form(WForm):
@@ -49,7 +49,7 @@ class Form(WForm):
 
     @QtCore.pyqtSlot()
     def on_testGm_clicked(self):
-        globalModule.test()
+        papp.test()
 
     def on_dceTotalDigits_valueChanged(self, text):
         self.decimalEdit.setMaxDigits(int(text))

@@ -120,7 +120,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
 
 
 class WDateEdit(QtGui.QLineEdit):
-    "Custom widget for editing dates. Allows selecting a date using a popup calendar."
+    """Custom widget for editing dates. Allows selecting a date using a popup calendar."""
     
     edited = QtCore.pyqtSignal()
     

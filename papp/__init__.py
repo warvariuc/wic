@@ -23,8 +23,8 @@ class App(w_app.WApp):
         global db
         db = orm.SqliteAdapter('papp/databases/mtc.sqlite')
 
-    #    from conf.reports.test import Form
-    #    openForm(Form)
+        from .reports.test import Form
+        forms.openForm(Form)
     #    
     #    from conf.reports.repayment_schedule import Form
     #    openForm(Form)
@@ -40,7 +40,7 @@ class App(w_app.WApp):
 #        openCatalogForm(Books, db)
 
         from .catalogs.locations import Locations
-        forms.openCatalogForm(Locations, db, modal=True)
+        forms.openCatalogForm(Locations, db)
 
         #self.mainWindow.restoreSubwindows()
 
