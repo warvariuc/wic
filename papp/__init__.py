@@ -4,8 +4,9 @@ import sys, os
 
 from PyQt4 import QtCore, QtGui
 
-import wic
 import orm
+
+import wic
 from wic import forms, w_app
 
 appDir = os.path.dirname(os.path.abspath(__file__))
@@ -23,11 +24,11 @@ class App(w_app.WApp):
         global db
         db = orm.SqliteAdapter('papp/databases/mtc.sqlite')
 
-        from .reports.test import Form
-        forms.openForm(Form)
+#        from .reports.test import Form
+#        forms.openForm(Form)
     #    
-    #    from conf.reports.repayment_schedule import Form
-    #    openForm(Form)
+    #    from .reports.repayment_schedule import Form
+    #    forms.openForm(Form)
     #    
     #    from .catalogs.books import Books
     #    book = Books.getOne(db, where= (Books.price > 14))

@@ -57,7 +57,7 @@ def getValue(widget):
     elif isinstance(widget, w_date_edit.WDateEdit):
         return widget.date()
     elif isinstance(widget, w_record_id_widget.WRecordIdWidget):
-        widget.getId()
+        return widget.getId()
     elif isinstance(widget, QtGui.QSpinBox):
         return widget.value()
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)):

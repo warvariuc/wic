@@ -20,8 +20,8 @@ class WRecordIdWidget(QtGui.QLineEdit):
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
         self.selector.clicked.connect(self.openRecordList)
 
-        self.setModel('') # will cause text update
         self._db = None
+        self.setModel('') # will cause text update
         
         self.setSelectorVisible(True) # cause style recalculation
 
@@ -38,20 +38,23 @@ class WRecordIdWidget(QtGui.QLineEdit):
     def setModel(self, model):
         assert isinstance(model, str), 'Model path must be a string'
         self._model = model
-        self.setId(0)
+        self.setId(None)
     model = QtCore.pyqtProperty(str, getModel, setModel)
 
     def getId(self):
         return self._id
     def setId(self, id):
-        assert isinstance(id, int), 'id must be an int (%s)' % id
+        assert id is None or isinstance(id, int), 'id must be an int or None (%s)' % id
         self._id = id
         self.changed.emit()
         self._format() # to reflect changes
     id = QtCore.pyqtProperty(int, getId, setId)
 
+    def clear(self):
+        self.setId(None)
+
     def _format(self):
-        self.setText('%s: %i' % (self._model, self._id))
+        self.setText('' if self._id is None else str(self._id))
 
     def resizeEvent(self, event):
         sz = self.selector.sizeHint()
@@ -92,9 +95,6 @@ class WRecordIdWidget(QtGui.QLineEdit):
                 self.openRecord()
                 return
         super().keyPressEvent(keyEvent)
-
-    def clear(self):
-        self.setId(0)
 
     def openRecord(self):
         """"""
