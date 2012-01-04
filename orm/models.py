@@ -191,7 +191,7 @@ class Model(metaclass= ModelMeta):
         """Get a single record which falls under the given condition."""
         records = list(cls.get(db, where, limit= (0, 2)))
         if not records: # not found
-            raise orm.RecordNotFound
+            raise orm.RecordNotFound(where._render(db))
         if len(records) == 1:
             return records[0]
         raise orm.TooManyRecords

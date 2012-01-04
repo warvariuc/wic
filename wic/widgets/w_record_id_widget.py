@@ -1,9 +1,7 @@
 from PyQt4 import QtGui, QtCore
 
-#import orm
 
-
-class WRecordIdWidget(QtGui.QLineEdit):
+class WCatalogItemIdWidget(QtGui.QLineEdit):
     """Custom widget - for keeping id of a record."""
 
     changed = QtCore.pyqtSignal()
@@ -14,7 +12,7 @@ class WRecordIdWidget(QtGui.QLineEdit):
         #self.setAlignment(QtCore.Qt.AlignRight)
         self.setReadOnly(True)
         self.selector = QtGui.QToolButton(self)
-        self.selector.setIcon(QtGui.QIcon(':/icons/fugue/table-select-row.png'))
+        self.selector.setIcon(QtGui.QIcon(':/icons/fugue/cards-stack.png'))
         self.selector.setCursor(QtCore.Qt.PointingHandCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
@@ -80,7 +78,8 @@ class WRecordIdWidget(QtGui.QLineEdit):
 
     def mouseDoubleClickEvent(self, mouseEvent):
         if mouseEvent.button() == QtCore.Qt.LeftButton:
-            self.selectAll() # select all on double click, otherwise only group of characters will be selected
+            #self.selectAll() # select all on double click, otherwise only group of characters will be selected
+            self.openRecord()
 
     def keyPressEvent(self, keyEvent):
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
@@ -98,9 +97,12 @@ class WRecordIdWidget(QtGui.QLineEdit):
 
     def openRecord(self):
         """"""
-        print(self.id, self.model, self.db)
-        #from wic import forms
-        #WPopupCalculator(self).show()
+        if self._db:
+            import orm
+            from wic import forms
+            model = orm.getObjectByPath(self._model)
+            catalogItem = model.getOneById(self._db, self._id)
+            forms.openCatalogItemForm(catalogItem)
 
     def openRecordList(self):
         """"""
@@ -113,8 +115,8 @@ class WRecordIdWidget(QtGui.QLineEdit):
             from wic.menu import createAction, addActionsToMenu
             menu = QtGui.QMenu(self) # context menu
             addActionsToMenu(menu, (
-                createAction(menu, 'Select', self.openRecordList, 'Insert', ':/icons/fugue/hand-point-090.png'),
-                createAction(menu, 'Open', self.openRecord, 'Space', ':/icons/fugue/hand.png'),
+                createAction(menu, 'Select', self.openRecordList, 'Insert', ':/icons/fugue/cards-stack.png'),
+                createAction(menu, 'Open', self.openRecord, 'Space', ':/icons/fugue/card-address.png'),
                 createAction(menu, 'Clear', self.clear, 'Delete', ':/icons/fugue/eraser.png'),
             ))
             self.menu = menu

@@ -76,11 +76,11 @@ class WDecimalEditPlugin(WDateEditPlugin):
 
 
 
-class WRecordIdWidgetPlugin(WDateEditPlugin):
+class WCatalogItemIdWidgetPlugin(WDateEditPlugin):
 
     _module = 'wic.widgets.w_record_id_widget'
-    _Klass = 'WRecordIdWidget'
-    _icon = ':/icons/fugue/table-select-row.png'
+    _Klass = 'WCatalogItemIdWidget'
+    _icon = ':/icons/fugue/cards-stack.png'
 
 
 

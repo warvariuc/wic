@@ -8,8 +8,9 @@ import orm
 from wic.widgets import w_date_edit, w_decimal_edit, w_record_id_widget
 from wic.menu import createAction, addActionsToMenu
 from wic.forms import WForm, getValue, setValue, openForm, FormNotFoundError
-from .w_catalog_model import WCatalogProxyModel, CatalogModel
 from wic import Bunch
+
+from .w_catalog_model import WCatalogProxyModel, CatalogModel
 
 
 class CatalogItemForm(WForm):
@@ -69,7 +70,7 @@ class CatalogItemForm(WForm):
         self.fillFormFromItem()
     
     def fillFormFromItem(self):
-        'Automatically fill the form fields using values from the catalog item fields.'
+        """Automatically fill the form fields using values from the catalog item fields."""
         catalogItem = self._catalogItem
         for field in catalogItem.__class__:
             fieldName = field.name
@@ -79,7 +80,7 @@ class CatalogItemForm(WForm):
                 setValue(widget, fieldValue)
 
     def fillItemFromForm(self):
-        'Automatically fill the item field values from the corresponding form widgets.'
+        """Automatically fill the item field values from the corresponding form widgets."""
         catalogItem = self._catalogItem
         for field in catalogItem.__class__:
             fieldName = field.name
@@ -119,7 +120,7 @@ class CatalogItemForm(WForm):
         elif isinstance(field, orm.TextField):
             return QtGui.QPlainTextEdit()
         elif isinstance(field, orm.RecordIdField):
-            return w_record_id_widget.WRecordIdWidget()
+            return w_record_id_widget.WCatalogItemIdWidget()
         raise Exception('Could not create a widget for field %s' % field)
 
     def setupWidgetForField(self, widget, field):
@@ -140,8 +141,8 @@ class CatalogItemForm(WForm):
                 widget.setMaxDigits(field.maxDigits)
                 widget.setFractionDigits(field.fractionDigits)
         elif isinstance(field, orm.RecordIdField):
-            if isinstance(widget, w_record_id_widget.WRecordIdWidget):
-                catalogModel = field.table
+            if isinstance(widget, w_record_id_widget.WCatalogItemIdWidget):
+                catalogModel = field.referTable
                 widget.setModel(catalogModel.__module__ + '.' + catalogModel.__name__)
                 widget.setDb(self._catalogItem._db)
 

@@ -25,7 +25,7 @@ def setValue(widget, value):
         widget.setDate(value)
     elif isinstance(widget, (w_decimal_edit.WDecimalEdit, QtGui.QSpinBox)):
         widget.setValue(value)
-    elif isinstance(widget, w_record_id_widget.WRecordIdWidget):
+    elif isinstance(widget, w_record_id_widget.WCatalogItemIdWidget):
         widget.setId(value)
     elif isinstance(widget, QtGui.QLineEdit):
         widget.setText('' if value is None else str(value))
@@ -56,7 +56,7 @@ def getValue(widget):
         return widget.value()
     elif isinstance(widget, w_date_edit.WDateEdit):
         return widget.date()
-    elif isinstance(widget, w_record_id_widget.WRecordIdWidget):
+    elif isinstance(widget, w_record_id_widget.WCatalogItemIdWidget):
         return widget.getId()
     elif isinstance(widget, QtGui.QSpinBox):
         return widget.value()
