@@ -16,7 +16,7 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
         self.selector.setCursor(QtCore.Qt.PointingHandCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.selector.clicked.connect(self.openRecordList)
+        self.selector.clicked.connect(self.selectItem)
 
         self._db = None
         self.setModel('') # will cause text update
@@ -78,36 +78,37 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
 
     def mouseDoubleClickEvent(self, mouseEvent):
         if mouseEvent.button() == QtCore.Qt.LeftButton:
-            #self.selectAll() # select all on double click, otherwise only group of characters will be selected
-            self.openRecord()
+            self.openItem()
 
     def keyPressEvent(self, keyEvent):
         if keyEvent.modifiers() in (QtCore.Qt.NoModifier, QtCore.Qt.KeypadModifier):
             key = keyEvent.key()
             if key == QtCore.Qt.Key_Insert:
-                self.openRecordList()
+                self.selectItem()
                 return
             elif key == QtCore.Qt.Key_Delete:
                 self.clear()
                 return
             elif key == QtCore.Qt.Key_Space:
-                self.openRecord()
+                self.openItem()
                 return
         super().keyPressEvent(keyEvent)
 
-    def openRecord(self):
+    def openItem(self):
         """"""
-        if self._db:
-            import orm
-            from wic import forms
-            model = orm.getObjectByPath(self._model)
+        if self._db and self._id is not None:
+            from wic import forms, getObjectByPath
+            model = getObjectByPath(self._model)
             catalogItem = model.getOneById(self._db, self._id)
             forms.openCatalogItemForm(catalogItem)
 
-    def openRecordList(self):
+    def selectItem(self):
         """"""
-        #from wic import forms
-        #WPopupCalculator(self).show()
+        if self._db:
+            from wic import forms, getObjectByPath
+            model = getObjectByPath(self._model)
+            catalogForm = forms.openCatalogForm(model, self._db, type=1)
+            catalogForm.itemSelected.connect(self.setId)
 
     def contextMenuEvent(self, qContextMenuEvent):
         menu = getattr(self, 'menu', None)
@@ -115,8 +116,8 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
             from wic.menu import createAction, addActionsToMenu
             menu = QtGui.QMenu(self) # context menu
             addActionsToMenu(menu, (
-                createAction(menu, 'Select', self.openRecordList, 'Insert', ':/icons/fugue/cards-stack.png'),
-                createAction(menu, 'Open', self.openRecord, 'Space', ':/icons/fugue/card-address.png'),
+                createAction(menu, 'Select', self.selectItem, 'Insert', ':/icons/fugue/cards-stack.png'),
+                createAction(menu, 'Open', self.openItem, 'Space', ':/icons/fugue/card-address.png'),
                 createAction(menu, 'Clear', self.clear, 'Delete', ':/icons/fugue/eraser.png'),
             ))
             self.menu = menu
@@ -125,6 +126,6 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
 
 if __name__ == '__main__': # some tests
     app = QtGui.QApplication([])
-    widget = WRecordIdWidget(None)
+    widget = WCatalogItemIdWidget(None)
     widget.show()
     app.exec()

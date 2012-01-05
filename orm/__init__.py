@@ -25,7 +25,8 @@ def getObjectByPath(objectPath, packagePath= None):
     return getattr(module, objectName)
     
 def isModel(obj):
-    return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)
+    #return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)
+    return isinstance(obj, ModelMeta)
 
 def listify(obj):
     """Assure that obj is an iterable."""
@@ -54,7 +55,7 @@ class metamethod():
 from .exceptions import *
 from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, \
                     DateTimeField, BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
-from .models import Model, Index, Join, LeftJoin
+from .models import Model, Index, Join, LeftJoin, ModelMeta
 from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter
 
 #defaultAdapter = _Adapter(connect=False)

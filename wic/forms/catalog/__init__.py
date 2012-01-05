@@ -21,9 +21,9 @@ class CatalogItemForm(WForm):
     _iconPath = ':/icons/fugue/card-address.png'
     _catalogItem = None
 
-    def __init__(self, _catalogItem, **kwargs):
-        assert isinstance(_catalogItem, CatalogModel), 'Must be a catalog item (CatalogModel instance)'
-        super().__init__(_catalogItem=_catalogItem, **kwargs)
+    def __init__(self, catalogItem, **kwargs):
+        assert isinstance(catalogItem, CatalogModel), 'Must be a catalog item (CatalogModel instance)'
+        super().__init__(_catalogItem=catalogItem, **kwargs)
 
     def setupUi(self):
         """Initial setting up of the form. Reimplemented.
@@ -158,10 +158,11 @@ class CatalogForm(WForm):
     _catalogModel = None
     _toolbarVisible = True
 
-    #editRequested = QtCore.pyqtSignal()
+    itemSelected = QtCore.pyqtSignal(int)
+    _type = 0 # 0: selection causes opening item form, 1: send itemSelected signal and close the form, 2: send signal but do not close the form (for multiple selection) 
 
-    def __init__(self, _catalogModel, _db):
-        super().__init__(_catalogModel=_catalogModel, _db=_db)
+    def __init__(self, catalogModel, db, type=0):
+        super().__init__(_catalogModel=catalogModel, _db=db, _type=type)
 
     def setupUi(self):
         """Initial setting up of the form.
@@ -299,8 +300,14 @@ class CatalogForm(WForm):
     def editItem(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
         id = self.tableView.model().getRowId(currentIndex.row())
-        catalogItem = self._catalogModel.getOneById(self._db, id)
-        openCatalogItemForm(catalogItem)
+        if self._type == 0:
+            catalogItem = self._catalogModel.getOneById(self._db, id)
+            openCatalogItemForm(catalogItem)
+        elif self._type == 1: # emit signal and close the form
+            self.itemSelected.emit(id)
+            self.close()
+        else: # emit signal but do not close the form
+            self.itemSelected.emit(id)
 
     def deleteItem(self):
         if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?',
@@ -323,7 +330,7 @@ def openCatalogItemForm(catalogItem, FormClass=None, **kwargs):
         else:
             _uiFilePath = FormClass._uiFilePath
         kwargs['_uiFilePath'] = _uiFilePath
-    kwargs['_catalogItem'] = catalogItem
+    kwargs['catalogItem'] = catalogItem
 
     if not isinstance(FormClass, type) and issubclass(FormClass, CatalogItemForm):
         raise FormNotFoundError('This is not a CatalogItemForm')
@@ -338,6 +345,6 @@ def openCatalogForm(catalogModel, db, FormClass=None, **kwargs):
         FormClass = getattr(sys.modules[formModulePath], 'CatalogForm', CatalogForm)
 
     assert issubclass(FormClass, CatalogForm), 'This is not a CatalogForm'
-    kwargs['_catalogModel'] = catalogModel
-    kwargs['_db'] = db
+    kwargs['catalogModel'] = catalogModel
+    kwargs['db'] = db
     return openForm(FormClass, **kwargs)
