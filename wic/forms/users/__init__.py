@@ -1,15 +1,24 @@
 import os, sys
 from PyQt4 import QtCore, QtGui
 
+import orm
 from wic import forms
 
 
-class Form(forms.WForm):
+
+class Users(forms.catalog.CatalogModel):
+    name = orm.CharField(maxLength=20)
+    full_name = orm.CharField(maxLength=50)
+    password_hash = orm.CharField(maxLength=32)
+    is_enabled = orm.BooleanField()
+
+
+class Form(forms.CatalogItemForm):
     """"""
 
     @QtCore.pyqtSlot()
     def on_buttonTestConnection_clicked(self):
-        dbUri = self._.dbUri
+        dbUri = getValue(self.dbUri)
         import orm
         ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
         try: # 'sqlite://../mtc.sqlite'
@@ -32,3 +41,5 @@ class Form(forms.WForm):
 
 
 
+import hashlib
+hashlib.md5("Nobody inspects the spammish repetition".encode()).hexdigest()

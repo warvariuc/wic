@@ -21,7 +21,7 @@ Here i log my actions.
 Install packages needed for compiling (i am not sure these are all needed):
 sudo apt-get install build-essential python3-dev libqt4-dev
 
-Download sources of the latest SIP - sip-4.12.4.tar.gz (Linux, UNIX, MacOS/X source).
+Download sources of the latest SIP - sip-4.12.4.tar.gz (http://www.riverbankcomputing.co.uk/software/sip/download Linux, UNIX, MacOS/X source).
 Unpack them and enter the directory:
 vic@wic:~/Desktop/sip-4.12.4$ python3 configure.py
 This is SIP 4.12.4 for Python 3.2 on linux2.
@@ -38,7 +38,7 @@ make[1]: Entering directory `/home/vic/Desktop/sip-4.12.4/sipgen'
 cp -f /home/vic/Desktop/sip-4.12.4/sipdistutils.py /usr/lib/python3/dist-packages/sipdistutils.py
 vic@wic:~/Desktop/sip-4.12.4$
 
-Download the sources of the latest PyQt - PyQt-x11-gpl-4.8.5.tar.gz (Linux, UNIX source), and install it:
+Download the sources of the latest PyQt - PyQt-x11-gpl-4.8.5.tar.gz (http://www.riverbankcomputing.co.uk/software/pyqt/download Linux, UNIX source), and install it:
 vic@wic:~/Desktop/PyQt-x11-gpl-4.8.5$ python3 configure.py
 Determining the layout of your Qt installation...
 This is the GPL version of PyQt 4.8.5 (licensed under the GNU General Public License) for Python 3.2 on linux2.

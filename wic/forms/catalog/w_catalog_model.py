@@ -18,7 +18,7 @@ class WItemStyle():
 
     def __init__(self, roles={}, **kwargs):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                      QtCore.Qt.DisplayRole: self.displayRole
+                      QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
         }
         _roles.update(roles)
         self.roles = _roles
@@ -31,6 +31,9 @@ class WItemStyle():
 
     def displayRole(self, value):
         return str(value) if value else ''
+
+    def toolTipRole(self, value):
+        return str(value) if value else None
 
 
 class WDecimalItemStyle(WItemStyle):

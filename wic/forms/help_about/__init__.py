@@ -2,10 +2,10 @@ import os, sys
 import platform
 from PyQt4 import QtCore, QtGui
 
-from wic.forms import WForm
+from wic import forms
 
 
-class Form(WForm):
+class Form(forms.WForm):
     """Info about application"""
 
     def onOpen(self):

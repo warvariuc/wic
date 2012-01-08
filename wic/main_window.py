@@ -1,23 +1,17 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
-import os, sys
-
 from PyQt4 import QtCore, QtGui
-
-from wic import menu
-
 
 
 class TabBarEventFilter(QtCore.QObject):
     """Event filter for main window's tab bar."""
-    
+
     def eventFilter(self, tabBar, event):
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
             if event.button() == QtCore.Qt.LeftButton:
                 self.parent().onTabBarLeftDblClick()
                 return True
         return super().eventFilter(tabBar, event) # standard event processing        
-    
 
 
 class WMainWindow(QtGui.QMainWindow):
@@ -29,7 +23,7 @@ class WMainWindow(QtGui.QMainWindow):
         mdiArea.setDocumentMode(True)
         mdiArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         mdiArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
+        mdiArea.setViewMode(mdiArea.TabbedView)
         mdiArea.setTabPosition(QtGui.QTabWidget.North)
         mdiArea.setActivationOrder(mdiArea.ActivationHistoryOrder)
         mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
@@ -43,10 +37,9 @@ class WMainWindow(QtGui.QMainWindow):
         tabBar.setDrawBase(True)
         #tabBar.setShape(tabBar.TriangularSouth)
         #tabBar.setIconSize(QtCore.QSize(16, 16))
-        tabBar.setSelectionBehaviorOnRemove(tabBar.SelectPreviousTab)
         tabBar.tabCloseRequested.connect(self.onTabCloseRequested)
         self.tabBar = tabBar
-        
+
         tabBarEventFilter = TabBarEventFilter(self)
         tabBar.installEventFilter(tabBarEventFilter)
 
@@ -56,6 +49,7 @@ class WMainWindow(QtGui.QMainWindow):
         self.messagesWindow = MessagesWindow(self)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow)
 
+        from wic import menu
         self.menu = menu.MainMenu(self)
 
         self.setWindowTitle('wic')
@@ -74,7 +68,7 @@ class WMainWindow(QtGui.QMainWindow):
             subWindow.showNormal()
         else:
             subWindow.showMaximized()
-    
+
     def onTabCloseRequested(self, windowIndex):
         subWindow = self.mdiArea.subWindowList()[windowIndex]
         subWindow.close()
@@ -103,7 +97,7 @@ class WMainWindow(QtGui.QMainWindow):
         subWindow = QtGui.QMdiSubWindow() # no parent
         subWindow.setWidget(widget)
         subWindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.mdiArea.addSubWindow(subWindow)    
+        self.mdiArea.addSubWindow(subWindow)
         subWindow.setWindowIcon(widget.windowIcon())
         subWindow.show()
         widget.closed.connect(subWindow.close) # when form closes - close subWindow too
