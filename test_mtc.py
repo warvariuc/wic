@@ -36,7 +36,7 @@ class Persons(orm.Model):
 ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 
 
-dbAdapter = orm.connect('sqlite://../mtc.sqlite', ADAPTERS)
+dbAdapter = orm.connect('sqlite://papp/databases/mtc.sqlite', ADAPTERS)
 db = dbAdapter
 
 #print('\nRegions table fields:')

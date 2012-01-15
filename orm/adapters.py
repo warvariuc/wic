@@ -28,6 +28,54 @@ except ImportError:
 
 
 
+class Column():
+    """Abstract DB column, supported natively by the DB."""
+
+    def __init__(self, type, field, name=''):
+        self.type = type
+        self.field = field
+        self.name = name or field.name
+
+
+
+class Index():
+    """Defines a DB table index.
+    type: index, unique, fulltext, spatial
+    sort: asc, desc
+    method: btree, hash, gist, and gin"""
+    def __init__(self, fields, type='index', name='', sortOrders=None, prefixLengths=None, method='', **kwargs):
+        assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
+        assert fields, 'You did not indicate which fields to index.'
+        table = fields[0].table
+        for field in fields:
+            assert isinstance(field, orm.fields.Field)
+            assert field.table is table, 'Indexed fields should be from the same table!'
+        sortOrders = sortOrders or ['asc'] * len(fields)
+        prefixLengths = prefixLengths or [0] * (len(fields))
+        assert isinstance(sortOrders, (list, tuple)), 'Sort orders must be a list.'
+        assert isinstance(prefixLengths, (list, tuple)), 'Prefix lengths must be a list.'
+        assert len(fields) == len(sortOrders) == len(prefixLengths), 'Lists of fields, sort orders and prefix lengths must be the same length.'
+
+        if type == True:
+            type = 'index'
+
+        if name == '':
+            for field in fields:
+                name += field.name + '_'
+            name += type
+        self.name = name
+        self.fields = fields # fields involved in this index
+        self.type = type # index type: unique, primary, etc.
+        self.prefixLengths = prefixLengths # prefix lengths
+        self.sortOrders = sortOrders # sort direction: asc, desc
+        self.method = method # if empty - will be used default for this type of DB
+        self.other = kwargs # other parameters for a specific DB adapter
+
+    def __str__(self):
+        return '{} `{}` ON ({}) {}'.format(self.type, self.name,
+                            ', '.join(map(str, self.fields)), self.method)
+
+
 class GenericAdapter():
     """Generic DB adapter."""
     def __init__(self, uri= '', connect= True, autocommit= True):
@@ -590,6 +638,73 @@ class SqliteAdapter(GenericAdapter):
     def decodeDECIMAL(self, value, field):
         return Decimal(value) / (10 ** field.fractionDigits)
 
+    def getTables(self):
+        """"""
+#        QStringList QSQLiteDriver::tables(QSql::TableType type) const
+#        {
+#            QStringList res;
+#            if (!isOpen())
+#                return res;
+#        
+#            QSqlQuery q(createResult());
+#            q.setForwardOnly(true);
+#        
+#            QString sql = QLatin1String("SELECT name FROM sqlite_master WHERE %1 "
+#                                        "UNION ALL SELECT name FROM sqlite_temp_master WHERE %1");
+#            if ((type & QSql::Tables) && (type & QSql::Views))
+#                sql = sql.arg(QLatin1String("type='table' OR type='view'"));
+#            else if (type & QSql::Tables)
+#                sql = sql.arg(QLatin1String("type='table'"));
+#            else if (type & QSql::Views)
+#                sql = sql.arg(QLatin1String("type='view'"));
+#            else
+#                sql.clear();
+#        
+#            if (!sql.isEmpty() && q.exec(sql)) {
+#                while(q.next())
+#                    res.append(q.value(0).toString());
+#            }
+#        
+#            if (type & QSql::SystemTables) {
+#                // there are no internal tables beside this one:
+#                res.append(QLatin1String("sqlite_master"));
+#            }
+#        
+#            return res;
+#        }
+
+    def getColumns(self, tableName):
+        """"""
+#        static QSqlIndex qGetTableInfo(QSqlQuery &q, const QString &tableName, bool onlyPIndex = false)
+#        {
+#            QString schema;
+#            QString table(tableName);
+#            int indexOfSeparator = tableName.indexOf(QLatin1Char('.'));
+#            if (indexOfSeparator > -1) {
+#                schema = tableName.left(indexOfSeparator).append(QLatin1Char('.'));
+#                table = tableName.mid(indexOfSeparator + 1);
+#            }
+#            q.exec(QLatin1String("PRAGMA ") + schema + QLatin1String("table_info (") + _q_escapeIdentifier(table) + QLatin1String(")"));
+#        
+#            QSqlIndex ind;
+#            while (q.next()) {
+#                bool isPk = q.value(5).toInt();
+#                if (onlyPIndex && !isPk)
+#                    continue;
+#                QString typeName = q.value(2).toString().toLower();
+#                QSqlField fld(q.value(1).toString(), qGetColumnType(typeName));
+#                if (isPk && (typeName == QLatin1String("integer")))
+#                    // INTEGER PRIMARY KEY fields are auto-generated in sqlite
+#                    // INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
+#                    fld.setAutoValue(true);
+#                fld.setRequired(q.value(3).toInt() != 0);
+#                fld.setDefaultValue(q.value(4));
+#                ind.append(fld);
+#            }
+#            return ind;
+#        }
+
+
 # alternative store format - using strings
 #    def _DATE(self, **kwargs):
 #        return 'TEXT'
@@ -666,6 +781,14 @@ class MysqlAdapter(GenericAdapter):
 
     def lastInsertId(self):
         return self.cursor.lastrowid
+
+    def getTables(self):
+        """"""
+        #"select table_name from information_schema.tables where table_schema = '") + QLatin1String(d->mysql->db) + QLatin1String("' and table_type = 'BASE TABLE'"
+
+    def getColumns(self, tableName):
+        """"""
+        #"show index from %1;"
 
     
 

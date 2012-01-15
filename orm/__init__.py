@@ -16,7 +16,7 @@ _fieldsCount = 0 # will be used to track the original definition order of the fi
 def getObjectByPath(objectPath, packagePath= None):
     """Given the path in form 'some.module.object' return the object.
     If path is relative or only object name in the path is given, modulePath should be given."""
-    modulePath, sep, objectName = str(objectPath).rpartition('.')
+    modulePath, sep, objectName = objectPath.rpartition('.')
     if not sep: # '.' not present - only object name is given in the path
         assert packagePath, "You've given the object name, but haven't specified the module in which i can find it. " + objectPath
         objectName = objectPath
@@ -29,15 +29,15 @@ def isModel(obj):
     return isinstance(obj, ModelMeta)
 
 def listify(obj):
-    """Assure that obj is an iterable."""
+    """Assure that obj is a list."""
     if hasattr(obj, '__iter__'):
         return list(obj)
     return [obj]
 
 class metamethod():
     """A descriptor you can use to decorate a method. 
-    When calling that method as instance method - calls its implemetation in the class.
-    When calling that method as class method - calls its implemetation in the metaclass."""
+    When calling the method on an instance - calls its implemetation in the class.
+    When calling the method on a class -calls its implemetation in the metaclass."""
     def __init__(self, method):
         self.method = method
 
@@ -52,11 +52,15 @@ class metamethod():
         return wrapped        
 
 
+class Nil():
+    """Custom None"""
+
+
 from .exceptions import *
+from .adapters import Column, Index, SqliteAdapter, MysqlAdapter, GenericAdapter
 from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, \
                     DateTimeField, BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
-from .models import Model, Index, Join, LeftJoin, ModelMeta
-from .adapters import SqliteAdapter, MysqlAdapter, GenericAdapter
+from .models import Model, Join, LeftJoin, ModelMeta
 
 #defaultAdapter = _Adapter(connect=False)
 
