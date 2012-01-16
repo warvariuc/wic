@@ -14,14 +14,14 @@ from .err import Warning, Error, InterfaceError, DataError, \
 insert_values = re.compile(r'\svalues\s*(\(.+\))', re.IGNORECASE)
 
 class Cursor(object):
-    """
+    '''
     This is the object you use to interact with the database.
-    """
+    '''
     def __init__(self, connection):
-        """
+        '''
         Do not create an instance of a Cursor yourself. Call
         connections.Connection.cursor().
-        """
+        '''
         from weakref import proxy
         self.connection = proxy(connection)
         self.description = None
@@ -35,15 +35,15 @@ class Cursor(object):
         self._rows = ()
 
     def __del__(self):
-        """
+        '''
         When this gets GC'd close it.
-        """
+        '''
         self.close()
 
     def close(self):
-        """
+        '''
         Closing a cursor just exhausts all remaining data.
-        """
+        '''
         if not self.connection:
             return
         try:
@@ -70,7 +70,7 @@ class Cursor(object):
         """Does nothing, required by DB API."""
 
     def nextset(self):
-        """ Get the next query set """
+        ''' Get the next query set '''
         if self._executed:
             self.fetchall()
         del self.messages[:]
@@ -83,7 +83,7 @@ class Cursor(object):
         return True
 
     def execute(self, query, args=None):
-        """ Execute a query """
+        ''' Execute a query '''
         from sys import exc_info
 
         conn = self._get_db()
@@ -93,7 +93,16 @@ class Cursor(object):
         # TODO: make sure that conn.escape is correct
 
         if args is not None:
-            query = query % conn.escape(args)
+            if isinstance(args, tuple) or isinstance(args, list):
+                escaped_args = tuple(conn.escape(arg) for arg in args)
+            elif isinstance(args, dict):
+                escaped_args = dict((key, conn.escape(val)) for (key, val) in list(args.items()))
+            else:
+                #If it's not a dictionary let's try escaping it anyways.
+                #Worst case it will throw a Value error
+                escaped_args = conn.escape(args)
+
+            query = query % escaped_args
 
         if isinstance(query, str):
             query = query.encode(charset)
@@ -111,14 +120,14 @@ class Cursor(object):
         return result
 
     def executemany(self, query, args):
-        """ Run several data against one query """
+        ''' Run several data against one query '''
         del self.messages[:]
-        conn = self._get_db()
+        #conn = self._get_db()
         if not args:
             return
-        charset = conn.charset
-        if isinstance(query, str):
-            query = query.encode(charset)
+        #charset = conn.charset
+        #if isinstance(query, unicode):
+        #    query = query.encode(charset)
 
         self.rowcount = sum([ self.execute(query, arg) for arg in args ])
         return self.rowcount
@@ -171,7 +180,7 @@ class Cursor(object):
         return args
 
     def fetchone(self):
-        """ Fetch the next row """
+        ''' Fetch the next row '''
         self._check_executed()
         if self._rows is None or self.rownumber >= len(self._rows):
             return None
@@ -180,7 +189,7 @@ class Cursor(object):
         return result
 
     def fetchmany(self, size=None):
-        """ Fetch several rows """
+        ''' Fetch several rows '''
         self._check_executed()
         end = self.rownumber + (size or self.arraysize)
         result = self._rows[self.rownumber:end]
@@ -190,7 +199,7 @@ class Cursor(object):
         return result
 
     def fetchall(self):
-        """ Fetch all the rows """
+        ''' Fetch all the rows '''
         self._check_executed()
         if self._rows is None:
             return None
@@ -231,12 +240,9 @@ class Cursor(object):
         self.lastrowid = conn._result.insert_id
         self._rows = conn._result.rows
         self._has_next = conn._result.has_next
-        conn._result = None
 
     def __iter__(self):
-        self._check_executed()
-        result = self.rownumber and self._rows[self.rownumber:] or self._rows
-        return iter(result)
+        return iter(self.fetchone, None)
 
     Warning = Warning
     Error = Error
@@ -248,3 +254,157 @@ class Cursor(object):
     InternalError = InternalError
     ProgrammingError = ProgrammingError
     NotSupportedError = NotSupportedError
+
+class DictCursor(Cursor):
+    """A cursor which returns results as a dictionary"""
+
+    def execute(self, query, args=None):
+        result = super(DictCursor, self).execute(query, args)
+        if self.description:
+            self._fields = [ field[0] for field in self.description ]
+        return result
+
+    def fetchone(self):
+        ''' Fetch the next row '''
+        self._check_executed()
+        if self._rows is None or self.rownumber >= len(self._rows):
+            return None
+        result = dict(list(zip(self._fields, self._rows[self.rownumber])))
+        self.rownumber += 1
+        return result
+
+    def fetchmany(self, size=None):
+        ''' Fetch several rows '''
+        self._check_executed()
+        if self._rows is None:
+            return None
+        end = self.rownumber + (size or self.arraysize)
+        result = [ dict(list(zip(self._fields, r))) for r in self._rows[self.rownumber:end] ]
+        self.rownumber = min(end, len(self._rows))
+        return tuple(result)
+
+    def fetchall(self):
+        ''' Fetch all the rows '''
+        self._check_executed()
+        if self._rows is None:
+            return None
+        if self.rownumber:
+            result = [ dict(list(zip(self._fields, r))) for r in self._rows[self.rownumber:] ]
+        else:
+            result = [ dict(list(zip(self._fields, r))) for r in self._rows ]
+        self.rownumber = len(self._rows)
+        return tuple(result)
+
+class SSCursor(Cursor):
+    """
+    Unbuffered Cursor, mainly useful for queries that return a lot of data,
+    or for connections to remote servers over a slow network.
+    
+    Instead of copying every row of data into a buffer, this will fetch
+    rows as needed. The upside of this, is the client uses much less memory,
+    and rows are returned much faster when traveling over a slow network,
+    or if the result set is very big.
+    
+    There are limitations, though. The MySQL protocol doesn't support
+    returning the total number of rows, so the only way to tell how many rows
+    there are is to iterate over every row returned. Also, it currently isn't
+    possible to scroll backwards, as only the current row is held in memory.
+    """
+    
+    def close(self):
+        conn = self._get_db()
+        conn._result._finish_unbuffered_query()
+        
+        try:
+            if self._has_next:
+                while self.nextset(): pass
+        except: pass
+
+    def _query(self, q):
+        conn = self._get_db()
+        self._last_executed = q
+        conn.query(q, unbuffered=True)
+        self._do_get_result()
+        return self.rowcount
+    
+    def read_next(self):
+        """ Read next row """
+    
+        conn = self._get_db()
+        conn._result._read_rowdata_packet_unbuffered()
+        return conn._result.rows
+    
+    def fetchone(self):
+        """ Fetch next row """
+        
+        self._check_executed()
+        row = self.read_next()
+        if row is None:
+            return None
+        self.rownumber += 1
+        return row
+    
+    def fetchall(self):
+        """
+        Fetch all, as per MySQLdb. Pretty useless for large queries, as
+        it is buffered. See fetchall_unbuffered(), if you want an unbuffered
+        generator version of this method.
+        """
+    
+        rows = []
+        while True:
+            row = self.fetchone()
+            if row is None:
+                break
+            rows.append(row)
+        return tuple(rows)
+
+    def fetchall_unbuffered(self):
+        """
+        Fetch all, implemented as a generator, which isn't to standard,
+        however, it doesn't make sense to return everything in a list, as that
+        would use ridiculous memory for large result sets.
+        """
+    
+        row = self.fetchone()
+        while row is not None:
+            yield row
+            row = self.fetchone()
+    
+    def fetchmany(self, size=None):
+        """ Fetch many """
+    
+        self._check_executed()
+        if size is None:
+            size = self.arraysize
+        
+        rows = []
+        for i in range(0, size):
+            row = self.read_next()
+            if row is None:
+                break
+            rows.append(row)
+            self.rownumber += 1
+        return tuple(rows)
+        
+    def scroll(self, value, mode='relative'):
+        self._check_executed()
+        if not mode == 'relative' and not mode == 'absolute':
+            self.errorhandler(self, ProgrammingError,
+                    "unknown scroll mode %s" % mode)
+    
+        if mode == 'relative':
+            if value < 0:
+                self.errorhandler(self, NotSupportedError,
+                    "Backwards scrolling not supported by this cursor")
+            
+            for i in range(0, value): self.read_next()
+            self.rownumber += value
+        else:
+            if value < self.rownumber:
+                self.errorhandler(self, NotSupportedError,
+                    "Backwards scrolling not supported by this cursor")
+                
+            end = value - self.rownumber
+            for i in range(0, end): self.read_next()
+            self.rownumber = value

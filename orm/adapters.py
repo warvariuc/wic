@@ -29,20 +29,37 @@ except ImportError:
 
 
 class Column():
-    """Abstract DB column, supported natively by the DB."""
+    """A database table column."""
 
-    def __init__(self, type, field, name=''):
-        self.type = type
-        self.field = field
-        self.name = name or field.name
+    def __init__(self, type, field, name='', default=None, precision=None, scale=None, unsigned=None,
+                 nullable=True, autoincrement=False, comment=''):
+        self.name = name or field.name # column name
+        self.type = type # string with the name of data type (decimal, varchar, bigint...)
+        self.field = field # model field related to this column
+        self.default = default # column default value
+        self.precision = precision # char max length or decimal/int max digits
+        self.scale = scale # for decimals
+        self.unsigned = unsigned # for decimals, integers
+        assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
+        self.nullable = nullable # can contain NULL values?
+        self.autoincrement = autoincrement # for primary integer
+        self.comment = comment
+
+    def __str__(self, db=None):
+        db = db or GenericAdapter
+        assert isinstance(db, GenericAdapter) or (isinstance(db, type) and issubclass(db, GenericAdapter)), 'Must be GenericAdapter class or instance'
+        colFunc = getattr(db, '_' + self.type.upper())
+        columnType = colFunc(self)
+        return '`%s` %s' % (self.name, columnType)
 
 
 
 class Index():
-    """Defines a DB table index.
+    """A database table index.
     type: index, unique, fulltext, spatial
     sort: asc, desc
     method: btree, hash, gist, and gin"""
+
     def __init__(self, fields, type='index', name='', sortOrders=None, prefixLengths=None, method='', **kwargs):
         assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
         assert fields, 'You did not indicate which fields to index.'
@@ -76,9 +93,13 @@ class Index():
                             ', '.join(map(str, self.fields)), self.method)
 
 
+
 class GenericAdapter():
     """Generic DB adapter."""
-    def __init__(self, uri= '', connect= True, autocommit= True):
+
+    epoch = Date(1970, 1, 1) # from this date number of days will be counted when storing DATE values in the DB
+
+    def __init__(self, uri='', connect=True, autocommit=True):
         """URI is already without protocol."""
         print('Creating adapter for "%s"' % uri)
         self._timings = []
@@ -89,7 +110,7 @@ class GenericAdapter():
             self.connection = None
             self.cursor = None
         self.autocommit = autocommit
-    
+
     def connect(self):
         """Connect to the DB and return the connection"""
         return None # DB connection
@@ -118,77 +139,101 @@ class GenericAdapter():
             raise
         self._timings.append((lastQuery, round(time.time() - t0, 4)))
         return result
-    
+
+    def execute(self, *args, **kwargs):
+        """Execute a query."""
+        return self.logExecute(*args, **kwargs)
+
     def getLastQuery(self):
         return self._timings[-1]
 
-    def execute(self, *args, **kwargs):
-        return self.logExecute(*args, **kwargs)
-
-    def _AND(self, left, right):
+    @classmethod
+    def _AND(cls, left, right):
         """Render the AND clause."""
-        return '(%s AND %s)' % (self.render(left), self.render(right, left))
+        return '(%s AND %s)' % (cls.render(left), cls.render(right, left))
 
-    def _OR(self, left, right):
+    @classmethod
+    def _OR(cls, left, right):
         """Render the OR clause."""
-        return '(%s OR %s)' % (self.render(left), self.render(right, left))
-    
-    def _EQ(self, left, right):
+        return '(%s OR %s)' % (cls.render(left), cls.render(right, left))
+
+    @classmethod
+    def _EQ(cls, left, right):
         if right is None:
-            return '(%s IS NULL)' % self.render(left)
-        return '(%s = %s)' % (self.render(left), self.render(right, left))
+            return '(%s IS NULL)' % cls.render(left)
+        return '(%s = %s)' % (cls.render(left), cls.render(right, left))
 
-    def _NE(self, left, right):
+    @classmethod
+    def _NE(cls, left, right):
         if right is None:
-            return '(%s IS NOT NULL)' % self.render(left)
-        return '(%s <> %s)' % (self.render(left), self.render(right, left))
+            return '(%s IS NOT NULL)' % cls.render(left)
+        return '(%s <> %s)' % (cls.render(left), cls.render(right, left))
 
-    def _GT(self, left, right):
-        return '(%s > %s)' % (self.render(left), self.render(right, left))
+    @classmethod
+    def _GT(cls, left, right):
+        return '(%s > %s)' % (cls.render(left), cls.render(right, left))
 
-    def _GE(self, left, right):
-        return '(%s >= %s)' % (self.render(left), self.render(right, left))
+    @classmethod
+    def _GE(cls, left, right):
+        return '(%s >= %s)' % (cls.render(left), cls.render(right, left))
 
-    def _LT(self, left, right):
-        return '(%s < %s)' % (self.render(left), self.render(right, left))
+    @classmethod
+    def _LT(cls, left, right):
+        return '(%s < %s)' % (cls.render(left), cls.render(right, left))
 
-    def _LE(self, left, right):
-        return '(%s <= %s)' % (self.render(left), self.render(right, left))
+    @classmethod
+    def _LE(cls, left, right):
+        return '(%s <= %s)' % (cls.render(left), cls.render(right, left))
 
-    def _ADD(self, left, right):
-        return '(%s + %s)' % (self.render(left), self.render(right, left))
-    
-    def _IN(self, first, second):
+    @classmethod
+    def _ADD(cls, left, right):
+        return '(%s + %s)' % (cls.render(left), cls.render(right, left))
+
+    @classmethod
+    def _IN(cls, first, second):
         if isinstance(second, str):
-            return '(%s IN (%s))' % (self.render(first), second[:-1])
-        items = ', '.join(self.render(item, first) for item in second)
-        return '(%s IN (%s))' % (self.render(first), items)
+            return '(%s IN (%s))' % (cls.render(first), second[:-1])
+        items = ', '.join(cls.render(item, first) for item in second)
+        return '(%s IN (%s))' % (cls.render(first), items)
 
-    def _COUNT(self, expression):
-        expression = '*' if orm.isModel(expression) else self.render(expression)
+    @classmethod
+    def _COUNT(cls, expression):
+        expression = '*' if orm.isModel(expression) else cls.render(expression)
         distinct = getattr(expression, 'distinct', False)
         if distinct:
             return 'COUNT(DISTINCT %s)' % expression
         else:
             return 'COUNT(%s)' % expression
 
-    def _MAX(self, expression):
-        return 'MAX(%s)' % self.render(expression)
-    
-    def _MIN(self, expression):
-        return 'MIN(%s)' % self.render(expression)
-    
-    def _LOWER(self, expression):
-        return 'LOWER(%s)' % self.render(expression)
+    @classmethod
+    def _MAX(cls, expression):
+        return 'MAX(%s)' % cls.render(expression)
 
-    def _UPPER(self, expression):
-        return 'UPPER(%s)' % self.render(expression)
+    @classmethod
+    def _MIN(cls, expression):
+        return 'MIN(%s)' % cls.render(expression)
 
-    
-    def render(self, value, castField=None):
+    @classmethod
+    def _LOWER(cls, expression):
+        return 'LOWER(%s)' % cls.render(expression)
+
+    @classmethod
+    def _UPPER(cls, expression):
+        return 'UPPER(%s)' % cls.render(expression)
+
+    @classmethod
+    def _NULL(cls):
+        return 'NULL'
+
+    @classmethod
+    def _RANDOM(cls):
+        return 'RANDOM()'
+
+    @classmethod
+    def render(cls, value, castField=None):
         """Render of a value in a format suitable for operations with this DB field"""
         if isinstance(value, orm.fields.Expression): # it's an expression
-            return value._render(self) # render sub-expression
+            return value._render(cls) # render sub-expression
         else: # it's a value for a DB column
             if value is not None and castField is not None:
                 assert isinstance(castField, orm.fields.Expression), 'Cast field must be an Expression.'
@@ -198,38 +243,41 @@ class GenericAdapter():
                     castField = castField.type # expression right operand type
                 value = castField._cast(value)
                 try:
-                    return self._render(value, castField.column)
+                    return cls._render(value, castField.column)
                 except:
                     print('Check %r._cast().' % castField)
                     raise
-            return self._render(value, None)
-        
-    def _render(self, value, column):
+            return cls._render(value, None)
+
+    @classmethod
+    def _render(cls, value, column):
         if value is None:
-            return self._NULL()
-        if isinstance(column, orm.fields.Column):
-            encodeFunc = getattr(self, 'encode' + column.type.upper(), None)
+            return cls._NULL()
+        if isinstance(column, Column):
+            encodeFunc = getattr(cls, '_encode' + column.type.upper(), None)
             if hasattr(encodeFunc, '__call__'):
-                return str(encodeFunc(value, column.field))
+                return str(encodeFunc(value, column))
         return "'%s'" % str(value).replace("'", "''") # escaping single quotes  
 
-    def IntegrityError(self): 
-        return self.driver.IntegrityError
-    
-    def OperationalError(self): 
-        return self.driver.OperationalError
+    @classmethod
+    def IntegrityError(cls):
+        return cls.driver.IntegrityError
 
-    def _getCreateTableColumns(self, table):
+    @classmethod
+    def OperationalError(cls):
+        return cls.driver.OperationalError
+
+    @classmethod
+    def _getCreateTableColumns(cls, table):
         columns = []
         for field in table:
             column = field.column
             if column is not None:
-                colFunc = getattr(self, '_' + column.type.upper())
-                columnType = colFunc(column.field)
-                columns.append('%s %s' % (column.name, columnType))
+                columns.append(column.__str__(cls))
         return columns
-    
-    def _getCreateTableIndexes(self, table):
+
+    @classmethod
+    def _getCreateTableIndexes(cls, table):
         indexes = []
         for index in table._indexes:
             if index.type == 'primary':
@@ -241,75 +289,111 @@ class GenericAdapter():
             columns = []
             for i, field in enumerate(index.fields):
                 column = field.column.name
-                prefixLength = index.prefixLengths[i] 
+                prefixLength = index.prefixLengths[i]
                 if prefixLength:
                     column += '(%i)' % prefixLength
                 sortOrder = index.sortOrders[i]
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
-                
+
             indexes.append('%s %s (%s)' % (indexType, index.name, ', '.join(columns)))
-            
+
         return indexes
 
-    def _getCreateTableOther(self, table):
+    @classmethod
+    def _getCreateTableOther(cls, table):
         return ''
 
-    def getCreateTableQuery(self, table):
+    @classmethod
+    def getCreateTableQuery(cls, table):
         """Get CREATE TABLE statement for this database"""
         assert orm.isModel(table), 'Provide a Table subclass.'
-        
-        columns = self._getCreateTableColumns(table)
-        indexes = self._getCreateTableIndexes(table)
-        other = self._getCreateTableOther(table)
+
+        columns = cls._getCreateTableColumns(table)
+        indexes = cls._getCreateTableIndexes(table)
+        other = cls._getCreateTableOther(table)
         query = 'CREATE TABLE %s (' % str(table)
         query += '\n  ' + ',\n  '.join(columns)
         query += ',\n  ' + ',\n  '.join(indexes)
         query += '\n) ' + other + ';'
         return query
 
-    def _NULL(self):   
-        return 'NULL'
-        
-    def _RANDOM(self):
-        return 'RANDOM()'
-
-    def _INT(self, field):
-        """INT column type."""
-        maxInt = int('9' * field.maxDigits)
-#        bitsCount = len(bin(maxInt)) - 2
-#        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+    @classmethod
+    def _INT(cls, column, intMap=[(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]):
+        """INT column type.
+        `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s rating from store'
+        """
+        maxInt = int('9' * column.precision)
         bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
-
-        intMap = [(1, 'TINYINT'), (2, 'SMALLINT'),
-                 (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]
-        
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
-                if field.autoincrement:
-                    _columnType += ' AUTO_INCREMENT'
-                return _columnType
-        raise Exception('Too many digits specified.')
-    
-    def encodeINT(self, value, field):
+                break
+        else:
+            raise Exception('Too big precision specified.')
+        columnStr = '%s(%s)' % (_columnType, column.precision)
+        if column.unsigned:
+            columnStr += ' UNSIGNED'
+        if not column.nullable:
+            columnStr += ' NOT'
+        columnStr += ' NULL'
+        if column.nullable or column.default is not None:
+            columnStr += ' DEFAULT ' + cls._render(column.default, None)
+        if column.autoincrement:
+            columnStr += ' AUTO_INCREMENT'
+        if column.comment:
+            columnStr += ' COMMENT ' + cls._render(column.comment, None)
+        return columnStr
+
+    @classmethod
+    def _encodeINT(cls, value, column):
         return str(int(value))
 
-    def _CHAR(self, field):
+    @classmethod
+    def _CHAR(cls, column):
         """CHAR, VARCHAR"""
-        return 'VARCHAR (%i)' % field.maxLength
-            
-    def _DECIMAL(self, field):
+        return 'VARCHAR (%i)' % column.precision
+
+    @classmethod
+    def _decodeCHAR(cls, value, column):
+        if isinstance(value, bytes):
+            return value.decode()
+        return str(value)
+
+    @classmethod
+    def _DECIMAL(cls, column):
         """The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
         It has a range of 0 to 30 and must be no larger than M."""
-        return 'DECIMAL (%s, %s)' % (field.maxDigits, field.fractionDigits)
-    
-    def encodeBLOB(self, value, field):
+        return 'DECIMAL (%s, %s)' % (column.precision, column.scale)
+
+    @classmethod
+    def _DATE(cls, column):
+        return 'DATE'
+
+    @classmethod
+    def _DATETIME(cls, column):
+        return 'INTEGER'
+
+    @classmethod
+    def _encodeDATETIME(cls, value, column):
+        if isinstance(value, str):
+            value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+        if isinstance(value, DateTime):
+            return int(time.mktime(value.timetuple()) * 1000000) + value.microsecond # in microseconds since the UNIX epoch  
+        raise SyntaxError('Expected datetime.datetime.')
+
+    @classmethod
+    def _decodeDATETIME(cls, value, column):
+        return DateTime.fromtimestamp(value / 1000000)
+
+    @classmethod
+    def _encodeBLOB(cls, value, column):
         return "'%s'" % base64.b64encode(value)
 
-    def getExpressionTables(self, expression):
+    @classmethod
+    def getExpressionTables(cls, expression):
         """Get tables involved in WHERE expression."""
         tables = set()
         if orm.isModel(expression):
@@ -317,13 +401,13 @@ class GenericAdapter():
         elif isinstance(expression, orm.Field):
             tables.add(expression.table)
         elif isinstance(expression, orm.Expression):
-            tables |= self.getExpressionTables(expression.left)
-            tables |= self.getExpressionTables(expression.right)
+            tables |= cls.getExpressionTables(expression.left)
+            tables |= cls.getExpressionTables(expression.right)
         return tables
 
     def lastInsertId(self):
-        return None
-    
+        """Last insert ID."""
+
     def _insert(self, *fields):
         """Create and return INSERT query.
         INSERT INTO table_name [ ( col_name1, col_name2, ... ) ]
@@ -341,13 +425,13 @@ class GenericAdapter():
         keys = ', '.join(field.name for field, value in fields)
         values = ', '.join(self.render(value, field) for field, value in fields)
         return 'INSERT INTO %s (%s) VALUES (%s);' % (table, keys, values)
-    
+
     def insert(self, *fields):
         query = self._insert(*fields)
         result = self.execute(query)
         self._autocommit()
         return result
-    
+
     def _update(self, *fields, where=None, limit=None):
         """UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
           [ WHERE expression ] [ LIMIT limit_amount ]"""
@@ -387,7 +471,7 @@ class GenericAdapter():
           [ GROUP BY expression1, expression2, ... ]
           [ HAVING having_expression ]
           [ ORDER BY order_column_expr1, order_column_expr2, ... ]
-        """        
+        """
         tables = self.getExpressionTables(where) # get tables involved in the query
         fields = []
         joins = []
@@ -401,14 +485,11 @@ class GenericAdapter():
             elif isinstance(arg, orm.Join):
                 joins.append(arg)
             else:
-                raise SyntaxError('Uknown argument: %r' % arg)
-                
-        if not fields: # if not fields specified take them all from the requested tables
-            raise SyntaxError('Please indicate at least one field.')
-                
-        if not tables:
-            raise SyntaxError('SELECT: no tables involved.')
-        
+                raise ValueError('Uknown argument: %r' % arg)
+
+        assert fields, 'Please indicate at least one field.'
+        assert tables, 'SELECT: no tables involved.'
+
         sql_f = ', '.join(map(self.render, fields))
         sql_w = ' WHERE ' + self.render(where) if where else ''
         sql_s = ''
@@ -432,7 +513,7 @@ class GenericAdapter():
             sql_o += ' GROUP BY %s' % self.render(groupBy)
             if having:
                 sql_o += ' HAVING %s' % having
-                
+
         if orderBy:
             orderBy = orm.listify(orderBy)
             _orderBy = []
@@ -446,11 +527,11 @@ class GenericAdapter():
                     raise SyntaxError('Orderby should receive Field or str.')
                 _orderBy.append(order)
             sql_o += ' ORDER BY %s' % ', '.join(_orderBy)
-                
+
         if limit:
             if not orderBy and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
-                
+
         return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
 
     def _selectWithLimit(self, sql_s, sql_f, sql_t, sql_w, sql_o, limit):
@@ -462,18 +543,18 @@ class GenericAdapter():
 
     def select(self, *args, where=None, **attributes):
         """Create and return SELECT query.
-        fields: one or list of fields to select;
-        where: expression for where;
-        join: one or list of tables to join, in form Table(join_on_expression);
+            @param args: tables, fields or joins;
+            @param where: expression for where;
+            @param limitBy: a tuple (start, end).
         tables are taken from fields and `where` expression;
-        limitBy: a tuple (start, end)."""
+        """
         fields, sql = self._select(*args, where=where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
         return self._parseResponse(fields, rows)
 
     def _parseResponse(self, fields, rows):
-        
+        """Post process results fetched from the DB. Return results in Rows object."""
         for i, row in enumerate(rows):
             newRow = []
             for j, field in enumerate(fields):
@@ -481,14 +562,14 @@ class GenericAdapter():
                 if value is not None and isinstance(field, orm.Field):
                     column = field.column
                     if isinstance(column, orm.fields.Column):
-                        decodeFunc = getattr(self, 'decode' + column.type.upper(), None)
-                        if hasattr(decodeFunc, '__call__'): 
-                            value = decodeFunc(value, column.field)
+                        decodeFunc = getattr(self, '_decode' + column.type.upper(), None)
+                        if hasattr(decodeFunc, '__call__'):
+                            value = decodeFunc(value, column)
                 newRow.append(value)
             rows[i] = newRow
 
         return Rows(self, fields, rows)
-    
+
 
 
 class Rows():
@@ -503,7 +584,7 @@ class Rows():
     def value(self, rowNo, field):
         columnNo = self._fields[str(field)]
         return self.rows[rowNo][columnNo]
-    
+
     def __len__(self):
         return len(self.rows)
 
@@ -512,8 +593,7 @@ class Rows():
 
     def __iter__(self):
         """Iterator over records."""
-        for row in self.rows:
-            yield row
+        return iter(self.rows)
 
 
 
@@ -521,9 +601,8 @@ class Rows():
 
 class SqliteAdapter(GenericAdapter):
     driver = globals().get('sqlite3')
-    epoch = Date(1970, 1, 1) # from this date number of days will be counted when storing DATE values in the DB
 
-    def __init__(self, uri, driverArgs= None):
+    def __init__(self, uri, driverArgs=None):
         self.driverArgs = driverArgs or {}
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
@@ -546,7 +625,8 @@ class SqliteAdapter(GenericAdapter):
     def lastInsertId(self):
         return self.cursor.lastrowid
 
-    def _getCreateTableIndexes(self, table):
+    @classmethod
+    def _getCreateTableIndexes(cls, table):
         indexes = []
         for index in table._indexes:
             if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
@@ -555,18 +635,19 @@ class SqliteAdapter(GenericAdapter):
             columns = []
             for i, field in enumerate(index.fields):
                 column = field.column.name
-                prefixLength = index.prefixLengths[i] 
+                prefixLength = index.prefixLengths[i]
                 if prefixLength:
                     column += '(%i)' % prefixLength
                 sortOrder = index.sortOrders[i]
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
-                
+
             indexes.append('%s (%s)' % (indexType, ', '.join(columns)))
-            
+
         return indexes
 
-    def _getCreateTableOther(self, table):
+    @classmethod
+    def _getCreateTableOther(cls, table):
         indexes = []
         for index in table._indexes:
             if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
@@ -586,57 +667,50 @@ class SqliteAdapter(GenericAdapter):
                 columns.append(column)
             table = index.fields[0].table
             indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, table, ', '.join(columns)))
-            
+
         return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''
 
-    def _CHAR(self, field):
+    @classmethod
+    def _CHAR(cls, column):
         return 'TEXT'
 
-    def _INT(self, field):
+    @classmethod
+    def _INT(cls, column):
         """INTEGER column type for Sqlite."""
-        maxInt = int('9' * field.maxDigits)
-#        bitsCount = len(bin(maxInt)) - 2
-#        bytesCount = math.ceil((bitsCount - 1) / 8) # add one bit for sign
+        print(column.name)
+        maxInt = int('9' * column.precision)
         bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
-
         if bytesCount > 8:
             raise Exception('Too many digits specified.')
         return 'INTEGER'
 
-    def _DATE(self, field):
+    @classmethod
+    def _DATE(cls, column):
         return 'INTEGER'
 
-    def encodeDATE(self, value, field):
+    @classmethod
+    def _encodeDATE(cls, value, column):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d').date()
         if isinstance(value, Date):
-            return (value - self.epoch).days
+            return (value - cls.epoch).days
         raise SyntaxError('Expected "YYYY-MM-DD" or datetime.date.')
 
-    def decodeDATE(self, value, field):
-        return self.epoch + TimeDelta(days= value)
+    @classmethod
+    def _decodeDATE(cls, value, column):
+        return cls.epoch + TimeDelta(days=value)
 
-    def _DATETIME(self, field):
+    @classmethod
+    def _DECIMAL(cls, column):
         return 'INTEGER'
 
-    def encodeDATETIME(self, value, field):
-        if isinstance(value, str):
-            value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
-        if isinstance(value, DateTime):
-            return int(time.mktime(value.timetuple()) * 1000000) + value.microsecond # in microseconds since the UNIX epoch  
-        raise SyntaxError('Expected datetime.datetime.')
-    
-    def decodeDATETIME(self, value, field):
-        return DateTime.fromtimestamp(value / 1000000)
-    
-    def _DECIMAL(self, field):
-        return 'INTEGER'
+    @classmethod
+    def _encodeDECIMAL(cls, value, column):
+        return Decimal(value) * (10 ** column.scale)
 
-    def encodeDECIMAL(self, value, field):
-        return Decimal(value) * (10 ** field.fractionDigits)
-
-    def decodeDECIMAL(self, value, field):
-        return Decimal(value) / (10 ** field.fractionDigits)
+    @classmethod
+    def _decodeDECIMAL(cls, value, column):
+        return Decimal(value) / (10 ** column.scale)
 
     def getTables(self):
         """"""
@@ -709,35 +783,35 @@ class SqliteAdapter(GenericAdapter):
 #    def _DATE(self, **kwargs):
 #        return 'TEXT'
 #
-#    def encodeDATE(self, value, **kwargs):
+#    def _encodeDATE(self, value, **kwargs):
 #        if isinstance(value, str):
 #            value = self.decodeDATE(value)
 #        if isinstance(value, Date):
 #            return value.strftime("'%Y-%m-%d'")
 #        raise SyntaxError('Expected "YYYY-MM-DD" or datetime.date.')
 #
-#    def decodeDATE(self, value, **kwargs):
+#    def _decodeDATE(self, value, **kwargs):
 #        return DateTime.strptime(value, '%Y-%m-%d').date()
 #
 #    def _DATETIME(self, **kwargs):
 #        return 'TEXT'
 #
-#    def encodeDATETIME(self, value, **kwargs):
+#    def _encodeDATETIME(self, value, **kwargs):
 #        if isinstance(value, DateTime):
 #            return value.strftime("'%Y-%m-%d %H:%M:%S.%f'")
 #        raise SyntaxError('Expected datetime.datetime.')
 #    
-#    def decodeDATETIME(self, value, **kwargs):
+#    def _decodeDATETIME(self, value, **kwargs):
 #        return DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
 #
 #    def _DECIMAL(self, **kwargs):
 #        return 'TEXT'
 #
-#    def encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
+#    def _encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
 #        _format = "'%% %d.%df'" % (maxDigits + 1, fractionDigits)
 #        return _format % Decimal(value)
 #
-#    def decodeDECIMAL(self, value, **kwargs):
+#    def _decodeDECIMAL(self, value, **kwargs):
 #        return Decimal(str(value))
 
 
@@ -745,52 +819,76 @@ class SqliteAdapter(GenericAdapter):
 class MysqlAdapter(GenericAdapter):
     driver = globals().get('pymysql')
 
-    def __init__(self, uri, driverArgs= None):
-        self.driverArgs = driverArgs or {}
-        self.uri = uri
-        m = re.match('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)(\?set_encoding=(?P<charset>\w+))?$', uri)
-        if not m:
-            raise SyntaxError("Invalid URI: %s" % self.uri)
+    def __init__(self, uri, driverArgs=None):
+        m = re.match('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)'
+                     '(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
+        assert m, "Invalid URI: %s" % self.uri
         user = m.group('user')
-        if not user:
-            raise SyntaxError('User required')
-        password = m.group('password')
-        if not password:
-            password = ''
+        assert user, 'User required'
+        password = m.group('password') or ''
         host = m.group('host')
-        if not host:
-            raise SyntaxError('Host name required')
-        db = m.group('db')
-        if not db:
-            raise SyntaxError('Database name required')
-        port = int(m.group('port') or '3306')
-        charset = m.group('charset') or 'utf8'
-        self.driverArgs.update(dict(db= db, user= user, passwd= password, host= host, port= port, charset= charset))
+        assert host, 'Host name required'
+        dbName = m.group('db')
+        assert dbName, 'Database name required'
+        port = int(m.group('port') or 3306)
+        self.driverArgs = driverArgs or {}
+        self.driverArgs.update(dict(db=dbName, user=user, passwd=password, host=host, port=port, charset='utf8'))
         super().__init__(uri)
+        self.uri = uri
+        self.dbName = dbName
         self.execute('SET FOREIGN_KEY_CHECKS=1;')
         self.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
-    
+
     def connect(self):
         return self.driver.connect(**self.driverArgs)
 
-    def _getCreateTableOther(self, table):
+    @classmethod
+    def _getCreateTableOther(cls, table):
         return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
-    
-    def _RANDOM(self):
+
+    @classmethod
+    def _RANDOM(cls):
         return 'RAND()'
 
     def lastInsertId(self):
         return self.cursor.lastrowid
 
     def getTables(self):
-        """"""
-        #"select table_name from information_schema.tables where table_schema = '") + QLatin1String(d->mysql->db) + QLatin1String("' and table_type = 'BASE TABLE'"
+        """Get list of tables (names) in this DB."""
+        self.execute("SHOW TABLES")
+        return [row[0] for row in self.cursor.fetchall()]
 
     def getColumns(self, tableName):
         """"""
-        #"show index from %1;"
+        self.execute("SELECT column_name, data_type, column_default, is_nullable, character_maximum_length, "
+                     "       numeric_precision, numeric_scale, column_type, extra, column_comment "
+                     "FROM information_schema.columns "
+                     "WHERE table_schema = '%s' AND table_name = '%s'" % (self.dbName, tableName))
+        columns = []
+        for row in self.cursor.fetchall():
+            type = row[1]
+            if 'int' in type:
+                type = 'int'
+            elif 'char' in type:
+                type = 'char'
+            elif 'text' in type:
+                type = 'text'
+            elif 'datetime' in type:
+                type = 'datetime'
+            elif 'date' in type:
+                type = 'date'
+            else:
+                raise Exception('Unexpected data type: %s' % type)
+            precision = row[4] or row[5]
+            nullable = row[3].upper() == 'YES'
+            autoincrement = 'auto_increment' in row[8]
+            unsigned = row[7].endswith('unsigned')
+            column = Column(type=type, field=None, name=row[0], default=row[2],
+                            precision=precision, scale=row[6], unsigned=unsigned,
+                            nullable=nullable, autoincrement=autoincrement, comment=row[9])
+            columns.append(column)
+        return columns
 
-    
 
 
 

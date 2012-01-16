@@ -1,4 +1,4 @@
-"""
+'''
 PyMySQL: A pure-Python drop-in replacement for MySQLdb.
 
 Copyright (c) 2010 PyMySQL contributors
@@ -21,15 +21,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-"""
+'''
 
-VERSION = (0, 4, None)
+VERSION = (0, 5, None)
 
 from .constants import FIELD_TYPE
 from .converters import escape_dict, escape_sequence, escape_string
 from .err import Warning, Error, InterfaceError, DataError, \
      DatabaseError, OperationalError, IntegrityError, InternalError, \
-     NotSupportedError, ProgrammingError
+     NotSupportedError, ProgrammingError, MySQLError
 from .times import Date, Time, Timestamp, \
     DateFromTicks, TimeFromTicks, TimestampFromTicks
 
@@ -121,9 +121,9 @@ __all__ = [
     'InterfaceError', 'InternalError', 'MySQLError', 'NULL', 'NUMBER',
     'NotSupportedError', 'DBAPISet', 'OperationalError', 'ProgrammingError',
     'ROWID', 'STRING', 'TIME', 'TIMESTAMP', 'Warning', 'apilevel', 'connect',
-    'connections', 'constants', 'converters', 'cursors', 'debug', 'escape',
+    'connections', 'constants', 'converters', 'cursors',
     'escape_dict', 'escape_sequence', 'escape_string', 'get_client_info',
-    'paramstyle', 'string_literal', 'threadsafety', 'version_info',
+    'paramstyle', 'threadsafety', 'version_info',
 
     "install_as_MySQLdb",
 

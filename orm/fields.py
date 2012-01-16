@@ -107,70 +107,63 @@ class Field(Expression):
 
 class CharField(Field):
     def _init(self, maxLength, defaultValue=None, index=''):
-        self.maxLength = maxLength
-        super()._init(Column('CHAR', self), defaultValue, index)
+        super()._init(Column('CHAR', self, precision=maxLength, default=defaultValue), defaultValue, index)
 
 
 class TextField(Field):
     def _init(self, defaultValue=None):
-        super()._init(Column('TEXT', self), defaultValue, None)
+        super()._init(Column('TEXT', self, default=defaultValue), defaultValue, None)
 
 
 class IntegerField(Field):
     def _init(self, maxDigits=9, defaultValue=None, autoincrement=False, index=''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
-        super()._init(Column('INT', self), defaultValue, index)
+        super()._init(Column('INT', self, precision=self.maxDigits, unsigned=True, default=defaultValue,
+                             autoincrement=autoincrement), defaultValue, index)
 
 
 class DecimalField(Field):
     def _init(self, maxDigits, fractionDigits, defaultValue=None, index=''):
-        self.maxDigits = maxDigits
-        self.fractionDigits = fractionDigits
-        super()._init(Column('DECIMAL', self), defaultValue, index)
+        super()._init(Column('DECIMAL', self, precision=maxDigits, scale=fractionDigits, default=defaultValue), defaultValue, index)
 
 
 class DateField(Field):
     def _init(self, defaultValue=None, index=''):
-        super()._init(Column('DATE', self), defaultValue, index)
+        super()._init(Column('DATE', self, default=defaultValue), defaultValue, index)
 
 
 class DateTimeField(Field):
     def _init(self, defaultValue=None, index=''):
-        super()._init(Column('DATETIME', self), defaultValue, index)
+        super()._init(Column('DATETIME', self, default=defaultValue), defaultValue, index)
 
 
 
 class IdField(Field):
     """Primary integer autoincrement key. ID - implicitly present in each table."""
     def _init(self):
-        self.maxDigits = 9 # int32 - should be enough
-        self.autoincrement = True
-        super()._init(Column('INT', self), None, 'primary')
+        super()._init(Column('INT', self, precision=9, unsigned=True, nullable=False, autoincrement=True), None, 'primary') # 9 digits - int32 - should be enough
 
 
 class BooleanField(Field):
     def _init(self, defaultValue=None, index=''):
-        self.maxDigits = 1
-        super()._init(Column('INT', self), defaultValue, index)
+        super()._init(Column('INT', self, precision=1, default=defaultValue), defaultValue, index)
 
 
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table."""
     def _init(self, referTable, index=''):
         self._referTable = referTable # foreign key - referenced type of table
-        self.maxDigits = 9 # int32 - should be enough
-        super()._init(Column('INT', self), None, index)
+        super()._init(Column('INT', self, precision=9, unsigned=True), None, index) # 9 digits - int32 - should be enough
 
-    def getReferTable(self):
+    @property
+    def referTable(self):
         referTable = self._referTable
         if orm.isModel(referTable):
             return referTable
         assert isinstance(referTable, str) # otherwise it should be path to the Model
         self._referTable = orm.getObjectByPath(referTable, self.table.__module__)
         return self._referTable
-
-    referTable = property(getReferTable)
 
     def _cast(self, value):
         """Convert a value into another value which is ok for this Field."""
@@ -183,8 +176,7 @@ class RecordIdField(Field):
 class TableIdField(Field):
     """This field stores id of a given table in this DB."""
     def _init(self, index=''):
-        self.maxDigits = 5
-        super()._init(Column('INT', self), None, index)
+        super()._init(Column('INT', self, precision=5, unsigned=True), None, index)
 
     def _cast(self, value):
         if isinstance(value, orm.Model) or orm.isModel(value):

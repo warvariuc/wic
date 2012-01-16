@@ -41,7 +41,7 @@ class Streets(CatalogModel):
 
 ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 
-fd, filePath = tempfile.mkstemp(suffix= '.sqlite')
+fd, filePath = tempfile.mkstemp(suffix='.sqlite')
 os.close(fd)
 db = orm.connect('sqlite://' + filePath, ADAPTERS)
 #db = orm.connect('mysql://root@localhost/test', ADAPTERS)
@@ -50,6 +50,8 @@ db = orm.connect('sqlite://' + filePath, ADAPTERS)
 
 #print('\nCREATE TABLE query for Authors table:')
 print(db.getCreateTableQuery(Authors))
+#print(orm.MysqlAdapter.getCreateTableQuery(Authors))
+
 for query in db.getCreateTableQuery(Authors).split('\n\n'): 
     db.execute(query)
 
