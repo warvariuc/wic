@@ -244,7 +244,7 @@ class GenericAdapter():
                 value = castField._cast(value)
                 try:
                     return cls._render(value, castField.column)
-                except:
+                except Exception:
                     print('Check %r._cast().' % castField)
                     raise
             return cls._render(value, None)
