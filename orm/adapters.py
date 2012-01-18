@@ -73,7 +73,7 @@ class Index():
         assert isinstance(prefixLengths, (list, tuple)), 'Prefix lengths must be a list.'
         assert len(fields) == len(sortOrders) == len(prefixLengths), 'Lists of fields, sort orders and prefix lengths must be the same length.'
 
-        if type == True:
+        if type is True:
             type = 'index'
 
         if name == '':
@@ -97,6 +97,7 @@ class Index():
 class GenericAdapter():
     """Generic DB adapter."""
 
+    protocol = 'generic'
     epoch = Date(1970, 1, 1) # from this date number of days will be counted when storing DATE values in the DB
 
     def __init__(self, uri='', connect=True, autocommit=True):
@@ -231,9 +232,9 @@ class GenericAdapter():
 
     @classmethod
     def render(cls, value, castField=None):
-        """Render of a value in a format suitable for operations with this DB field"""
-        if isinstance(value, orm.fields.Expression): # it's an expression
-            return value._render(cls) # render sub-expression
+        """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for operations with castField in the DB."""
+        if isinstance(value, orm.fields.Expression): # it's an Expression or Field 
+            return value.__str__(cls) # render sub-expression
         else: # it's a value for a DB column
             if value is not None and castField is not None:
                 assert isinstance(castField, orm.fields.Expression), 'Cast field must be an Expression.'
@@ -247,17 +248,27 @@ class GenericAdapter():
                 except Exception:
                     print('Check %r._cast().' % castField)
                     raise
-            return cls._render(value, None)
+            return cls._render(value)
 
     @classmethod
-    def _render(cls, value, column):
+    def _render(cls, value, column=None):
+        """Render a simple value to the format needed for the given column.
+        For example, _render a datetime to the format acceptable for datetime columns in this kind of DB.
+        If there is no column - present the value as string.
+        Values are always passed to queries as quoted strings. I.e. even integers like 123 are put like '123'."""
         if value is None:
             return cls._NULL()
-        if isinstance(column, Column):
+        if column:
+            assert isinstance(column, Column), 'It must be a Column instance.'
             encodeFunc = getattr(cls, '_encode' + column.type.upper(), None)
             if hasattr(encodeFunc, '__call__'):
                 return str(encodeFunc(value, column))
-        return "'%s'" % str(value).replace("'", "''") # escaping single quotes  
+        return cls.escape(value)
+
+    @classmethod
+    def escape(cls, value):
+        """Convert a value to string, escape single quotes and enclose it in single quotes."""
+        return "'%s'" % str(value).replace("'", "''") # escaping single quotes
 
     @classmethod
     def IntegrityError(cls):
@@ -269,6 +280,7 @@ class GenericAdapter():
 
     @classmethod
     def _getCreateTableColumns(cls, table):
+        """Get columns declarations for CREATE TABLE statement."""
         columns = []
         for field in table:
             column = field.column
@@ -278,6 +290,7 @@ class GenericAdapter():
 
     @classmethod
     def _getCreateTableIndexes(cls, table):
+        """Get indexes declarations for CREATE TABLE statement."""
         indexes = []
         for index in table._indexes:
             if index.type == 'primary':
@@ -306,7 +319,7 @@ class GenericAdapter():
 
     @classmethod
     def getCreateTableQuery(cls, table):
-        """Get CREATE TABLE statement for this database"""
+        """Get CREATE TABLE statement for the given table in this DB."""
         assert orm.isModel(table), 'Provide a Table subclass.'
 
         columns = cls._getCreateTableColumns(table)
@@ -320,7 +333,7 @@ class GenericAdapter():
 
     @classmethod
     def _INT(cls, column, intMap=[(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]):
-        """INT column type.
+        """Render declaration of INT column type.
         `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s rating from store'
         """
         maxInt = int('9' * column.precision)
@@ -346,6 +359,7 @@ class GenericAdapter():
 
     @classmethod
     def _encodeINT(cls, value, column):
+        """Encode a value for insertion in a column of INT type."""
         return str(int(value))
 
     @classmethod
@@ -366,7 +380,7 @@ class GenericAdapter():
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
         It has a range of 0 to 30 and must be no larger than M."""
-        return 'DECIMAL (%s, %s)' % (column.precision, column.scale)
+        return 'DECIMAL(%s, %s)' % (column.precision, column.scale)
 
     @classmethod
     def _DATE(cls, column):
@@ -378,6 +392,8 @@ class GenericAdapter():
 
     @classmethod
     def _encodeDATETIME(cls, value, column):
+        """Not all DBs have microsecond precision in DATETIME columns.
+        So, generic implementation stores datetimes as integer number of microseconds since the Epoch."""
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         if isinstance(value, DateTime):
@@ -389,8 +405,20 @@ class GenericAdapter():
         return DateTime.fromtimestamp(value / 1000000)
 
     @classmethod
+    def _TEXT(cls, column):
+        return 'TEXT'
+
+    @classmethod
+    def _BLOB(cls, column):
+        return 'BLOB'
+
+    @classmethod
     def _encodeBLOB(cls, value, column):
         return "'%s'" % base64.b64encode(value)
+
+    @classmethod
+    def _decodeBLOB(cls, value, column):
+        return base64.b64decode(value)
 
     @classmethod
     def getExpressionTables(cls, expression):
@@ -409,7 +437,7 @@ class GenericAdapter():
         """Last insert ID."""
 
     def _insert(self, *fields):
-        """Create and return INSERT query.
+        """Get INSERT query.
         INSERT INTO table_name [ ( col_name1, col_name2, ... ) ]
           VALUES ( expression1_1, expression1_2, ... ),
             ( expression2_1, expression2_2, ... ), ... 
@@ -427,6 +455,9 @@ class GenericAdapter():
         return 'INSERT INTO %s (%s) VALUES (%s);' % (table, keys, values)
 
     def insert(self, *fields):
+        """Insert records in the db.
+        @param *args: tuples in form (Field, value)
+        """
         query = self._insert(*fields)
         result = self.execute(query)
         self._autocommit()
@@ -448,6 +479,11 @@ class GenericAdapter():
         return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
 
     def update(self, *fields, where=None, limit=None):
+        """Update records
+        @param *args: tuples in form (Field, value)
+        @param where: an Expression or string for WHERE part of the DELETE query
+        @param limit: a tuple in form (start, end) which specifies the range dor deletion.
+        """
         sql = self._update(*fields, where=where)
         self.execute(sql)
         return self.cursor.rowcount
@@ -459,6 +495,10 @@ class GenericAdapter():
         return 'DELETE FROM %s%s;' % (table, sql_w)
 
     def delete(self, table, where, limit=None):
+        """Delete records from table with the given condition and limit.
+        @param talbe: a Model subclass, whose records to delete
+        @param where: an Expression or string for WHERE part of the DELETE query
+        @param limit: a tuple in form (start, end) which specifies the range dor deletion."""
         sql = self._delete(table, where)
         self.execute(sql)
         return self.cursor.rowcount
@@ -600,6 +640,9 @@ class Rows():
 
 
 class SqliteAdapter(GenericAdapter):
+    """Adapter for Sqlite databases"""
+
+    protocol = 'sqlite'
     driver = globals().get('sqlite3')
 
     def __init__(self, uri, driverArgs=None):
@@ -677,7 +720,6 @@ class SqliteAdapter(GenericAdapter):
     @classmethod
     def _INT(cls, column):
         """INTEGER column type for Sqlite."""
-        print(column.name)
         maxInt = int('9' * column.precision)
         bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
         if bytesCount > 8:
@@ -686,6 +728,8 @@ class SqliteAdapter(GenericAdapter):
 
     @classmethod
     def _DATE(cls, column):
+        """Sqlite db does have native DATE data type.
+        We will stores dates in it as integer number of days since the Epoch."""
         return 'INTEGER'
 
     @classmethod
@@ -702,6 +746,8 @@ class SqliteAdapter(GenericAdapter):
 
     @classmethod
     def _DECIMAL(cls, column):
+        """In Sqlite there is a special DECIMAL, which we won't use.
+        We will store decimals as integers."""
         return 'INTEGER'
 
     @classmethod
@@ -713,70 +759,32 @@ class SqliteAdapter(GenericAdapter):
         return Decimal(value) / (10 ** column.scale)
 
     def getTables(self):
-        """"""
-#        QStringList QSQLiteDriver::tables(QSql::TableType type) const
-#        {
-#            QStringList res;
-#            if (!isOpen())
-#                return res;
-#        
-#            QSqlQuery q(createResult());
-#            q.setForwardOnly(true);
-#        
-#            QString sql = QLatin1String("SELECT name FROM sqlite_master WHERE %1 "
-#                                        "UNION ALL SELECT name FROM sqlite_temp_master WHERE %1");
-#            if ((type & QSql::Tables) && (type & QSql::Views))
-#                sql = sql.arg(QLatin1String("type='table' OR type='view'"));
-#            else if (type & QSql::Tables)
-#                sql = sql.arg(QLatin1String("type='table'"));
-#            else if (type & QSql::Views)
-#                sql = sql.arg(QLatin1String("type='view'"));
-#            else
-#                sql.clear();
-#        
-#            if (!sql.isEmpty() && q.exec(sql)) {
-#                while(q.next())
-#                    res.append(q.value(0).toString());
-#            }
-#        
-#            if (type & QSql::SystemTables) {
-#                // there are no internal tables beside this one:
-#                res.append(QLatin1String("sqlite_master"));
-#            }
-#        
-#            return res;
-#        }
+        """Get list of tables (names) in this DB."""
+        self.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        return [row[0] for row in self.cursor.fetchall()]
 
     def getColumns(self, tableName):
-        """"""
-#        static QSqlIndex qGetTableInfo(QSqlQuery &q, const QString &tableName, bool onlyPIndex = false)
-#        {
-#            QString schema;
-#            QString table(tableName);
-#            int indexOfSeparator = tableName.indexOf(QLatin1Char('.'));
-#            if (indexOfSeparator > -1) {
-#                schema = tableName.left(indexOfSeparator).append(QLatin1Char('.'));
-#                table = tableName.mid(indexOfSeparator + 1);
-#            }
-#            q.exec(QLatin1String("PRAGMA ") + schema + QLatin1String("table_info (") + _q_escapeIdentifier(table) + QLatin1String(")"));
-#        
-#            QSqlIndex ind;
-#            while (q.next()) {
-#                bool isPk = q.value(5).toInt();
-#                if (onlyPIndex && !isPk)
-#                    continue;
-#                QString typeName = q.value(2).toString().toLower();
-#                QSqlField fld(q.value(1).toString(), qGetColumnType(typeName));
-#                if (isPk && (typeName == QLatin1String("integer")))
-#                    // INTEGER PRIMARY KEY fields are auto-generated in sqlite
-#                    // INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
-#                    fld.setAutoValue(true);
-#                fld.setRequired(q.value(3).toInt() != 0);
-#                fld.setDefaultValue(q.value(4));
-#                ind.append(fld);
-#            }
-#            return ind;
-#        }
+        """Get columns of a table"""
+        self.execute("PRAGMA table_info('%s')" % tableName) # name, type, notnull, dflt_value, pk
+        columns = []
+        for row in self.cursor.fetchall():
+            print(row)
+            type = row[2].lower()
+            # INTEGER PRIMARY KEY fields are auto-generated in sqlite
+            # INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
+            autoincrement = bool(type == 'integer' and row[5])
+            if 'int' in type:
+                type = 'int'
+            elif 'text' in type:
+                type = 'text'
+            elif 'blob' in type:
+                type = 'blob'
+            else:
+                raise Exception('Unexpected data type: %s' % type)
+            column = Column(type=type, field=None, name=row[1], default=row[4],
+                            precision = 19, nullable = (not row[3]), autoincrement = autoincrement)
+            columns.append(column)
+        return columns
 
 
 # alternative store format - using strings
@@ -817,11 +825,14 @@ class SqliteAdapter(GenericAdapter):
 
 
 class MysqlAdapter(GenericAdapter):
+    """Adapter for MySql databases."""
+
+    protocol = 'mysql'
     driver = globals().get('pymysql')
 
     def __init__(self, uri, driverArgs=None):
-        m = re.match('^(?P<user>[^:@]+)(\:(?P<password>[^@]*))?@(?P<host>[^\:/]+)'
-                     '(\:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
+        m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
+                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
         assert m, "Invalid URI: %s" % self.uri
         user = m.group('user')
         assert user, 'User required'
@@ -859,14 +870,14 @@ class MysqlAdapter(GenericAdapter):
         return [row[0] for row in self.cursor.fetchall()]
 
     def getColumns(self, tableName):
-        """"""
+        """Get columns of a table"""
         self.execute("SELECT column_name, data_type, column_default, is_nullable, character_maximum_length, "
                      "       numeric_precision, numeric_scale, column_type, extra, column_comment "
                      "FROM information_schema.columns "
                      "WHERE table_schema = '%s' AND table_name = '%s'" % (self.dbName, tableName))
         columns = []
         for row in self.cursor.fetchall():
-            type = row[1]
+            type = row[1].lower()
             if 'int' in type:
                 type = 'int'
             elif 'char' in type:
@@ -880,9 +891,9 @@ class MysqlAdapter(GenericAdapter):
             else:
                 raise Exception('Unexpected data type: %s' % type)
             precision = row[4] or row[5]
-            nullable = row[3].upper() == 'YES'
-            autoincrement = 'auto_increment' in row[8]
-            unsigned = row[7].endswith('unsigned')
+            nullable = row[3].lower() == 'yes'
+            autoincrement = 'auto_increment' in row[8].lower()
+            unsigned = row[7].lower().endswith('unsigned')
             column = Column(type=type, field=None, name=row[0], default=row[2],
                             precision=precision, scale=row[6], unsigned=unsigned,
                             nullable=nullable, autoincrement=autoincrement, comment=row[9])

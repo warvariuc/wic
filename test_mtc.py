@@ -33,11 +33,8 @@ class Persons(orm.Model):
         pass
 
 
-ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 
-
-dbAdapter = orm.connect('sqlite://papp/databases/mtc.sqlite', ADAPTERS)
-db = dbAdapter
+db = orm.connect('sqlite://papp/databases/mtc.sqlite')
 
 #print('\nRegions table fields:')
 #for field in Regions:
@@ -50,13 +47,13 @@ db = dbAdapter
 #pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
 #print(dbAdapter.getLastQuery(), '\n')
 
-rows = dbAdapter.select(Persons.last_name, Persons.first_name, Locations.location_name, Regions.region_name, 
+rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name, Regions.region_name,
               LeftJoin(Locations, Locations.id == Persons.location_id), 
               Join(Regions, Regions.id == Locations.region_id), 
               where= Persons.phone_number == '763533', 
               limit= (0, 10))
 pprint(list(zip(rows.fields, rows)))
-print(dbAdapter.getLastQuery(), '\n')
+print(db.getLastQuery(), '\n')
 
 #pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
 #print(dbAdapter.getLastQuery(), '\n')
