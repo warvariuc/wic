@@ -155,14 +155,16 @@ class CatalogForm(WForm):
     _uiFilePath = None
     _formTitle = 'Catalog'
     _iconPath = ':/icons/fugue/cards-stack.png'
-    _catalogModel = None
     _toolbarVisible = True
+
+    _catalogModel = None
+    _fields = None # which fields are shown in form 'field_name1+100,100 field2,+field3 250,field4 -,field5'
 
     itemSelected = QtCore.pyqtSignal(int)
     _type = 0 # 0: selection causes opening item form, 1: send itemSelected signal and close the form, 2: send signal but do not close the form (for multiple selection) 
 
-    def __init__(self, catalogModel, db, type=0):
-        super().__init__(_catalogModel=catalogModel, _db=db, _type=type)
+    def __init__(self, catalogModel, db, type=0, **kwargs):
+        super().__init__(_catalogModel=catalogModel, _db=db, _type=type, **kwargs)
 
     def setupUi(self):
         """Initial setting up of the form.
