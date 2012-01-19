@@ -25,8 +25,7 @@ def getObjectByPath(objectPath, packagePath= None):
     return getattr(module, objectName)
     
 def isModel(obj):
-    #return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)
-    return isinstance(obj, ModelMeta)
+    return isinstance(obj, ModelMeta) # return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)
 
 def listify(obj):
     """Assure that obj is a list."""
@@ -57,18 +56,19 @@ class Nil():
 
 
 from .exceptions import *
-from .adapters import Column, Index, SqliteAdapter, MysqlAdapter, GenericAdapter
+from .adapters import Column, Index, GenericAdapter, SqliteAdapter, MysqlAdapter
 from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, \
                     DateTimeField, BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
 from .models import Model, Join, LeftJoin, ModelMeta
 
-#defaultAdapter = _Adapter(connect=False)
 
-def connect(uri, adapters):
+_adapters = [GenericAdapter, SqliteAdapter, MysqlAdapter]
+
+def connect(uri):
     """Search for suitable adapter by protocol"""
-    for dbType, dbAdapterClass in adapters.items(): 
-        uriStart = dbType + '://'
+    for AdapterClass in _adapters:
+        uriStart = AdapterClass.protocol + '://'
         if uri.startswith(uriStart):
-            dbAdapter = dbAdapterClass(uri[len(uriStart):])
+            dbAdapter = AdapterClass(uri[len(uriStart):])
             return dbAdapter
     raise Exception('Could not find a suitable adapter for the URI ""%s' % uri)

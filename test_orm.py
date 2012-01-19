@@ -39,23 +39,21 @@ class CatalogModel(orm.Model):
 class Streets(CatalogModel):
     street_name = orm.CharField(maxLength= 50)
 
-ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 
-fd, filePath = tempfile.mkstemp(suffix='.sqlite')
-os.close(fd)
-db = orm.connect('sqlite://' + filePath, ADAPTERS)
-#db = orm.connect('mysql://root@localhost/test', ADAPTERS)
-#db.execute('DROP TABLE IF EXISTS authors')
-#db.execute('DROP TABLE IF EXISTS books')
+#fd, filePath = tempfile.mkstemp(suffix='.sqlite')
+#os.close(fd)
+#db = orm.connect('sqlite://' + filePath)
+db = orm.connect('mysql://root@localhost/test')
+db.execute('DROP TABLE IF EXISTS authors')
+db.execute('DROP TABLE IF EXISTS books')
 
-#print('\nCREATE TABLE query for Authors table:')
+print('\nCREATE TABLE query for Authors table:')
 print(db.getCreateTableQuery(Authors))
-#print(orm.MysqlAdapter.getCreateTableQuery(Authors))
 
 for query in db.getCreateTableQuery(Authors).split('\n\n'): 
     db.execute(query)
 
-#print('\nCREATE TABLE query for Books table:')
+print('\nCREATE TABLE query for Books table:')
 print(db.getCreateTableQuery(Books))
 for query in db.getCreateTableQuery(Books).split('\n\n'): 
     db.execute(query)
@@ -101,5 +99,9 @@ pprint(db.select(Books, where= (Books.price > '14'), limit= (0, 10)))
 book = Books.getOne(db, where= (Books.price > 14))
 print(book)
 
+print('\nUPDATE query:')
+print(db._update(Books.name('_' + book.name), Books.price(Books.price + 1), where=(Books.id == book.id)))
+db.update(Books.name('A new title with raised price'), Books.price(Books.price + 1), where=(Books.id == book.id))
+print(Books.getOne(db, where=(Books.id == book.id)))
 
 #os.unlink(filePath) # delete the temporary db file

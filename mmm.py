@@ -3,12 +3,17 @@ from pprint import pprint
 import orm
 
 
-ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
 
 
-db = orm.connect('mysql://root@localhost/test', ADAPTERS)
+#db = orm.connect('mysql://root@localhost/test')
+#pprint(db.getTables())
+#columns = db.getColumns('authors')
+#print(columns)
+#pprint(list(map(str, columns)))
 
+
+db = orm.connect('sqlite:///tmp/tmpwd1jj9.sqlite')
 pprint(db.getTables())
-columns = db.getColumns('authors')
+columns = db.getColumns('books')
 print(columns)
 pprint(list(map(str, columns)))

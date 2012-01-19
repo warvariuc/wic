@@ -9,7 +9,12 @@ class Expression():
 
     sort = 'ASC' # default sorting
 
-    def __init__(self, operation, left=Nil, right=Nil, type=None, **kwargs): # FIXME: type parameter not needed?
+    def __init__(self, operation, left=Nil, right=Nil, type=None, **kwargs):
+        """Create an expression.
+            @param operation: string with the name of DB operation
+            @param left: left operand
+            @param right: right operand 
+        """
         if left is not Nil and not type:
             if isinstance(left, Field):
                 self.type = left
@@ -58,12 +63,13 @@ class Expression():
         """The IN clause."""
         return Expression('_IN', self, items)
 
-    def _render(self, adapter):
+    def __str__(self, db=None):
         """Construct the text of the WHERE clause from this Expression.
-        adapter - db adapter to use for rendering. If None - use default."""
-        operation = getattr(adapter, self.operation)
-        args = [arg for arg in (self.left, self.right) if arg is not Nil]
-        return operation(*args)
+        @param db: GenericAdapter subclass to use for rendering."""
+        db = db or orm.GenericAdapter
+        operation = getattr(db, self.operation) # get the operation function from adapter
+        args = [arg for arg in (self.left, self.right) if arg is not Nil] # filter nil operands
+        return operation(*args) # execute the operation
 
     def _cast(self, value):
         """Converts a value to Field's comparable type. Default implementation."""
@@ -93,11 +99,9 @@ class Field(Expression):
         if index:
             self.table._indexes.append(orm.Index([self], index))
 
-    def _render(self, adapter):
+    def __str__(self, db=None):
+        #db = db or orm.GenericAdapter # we do not use adapter here
         return '%s.%s' % (self.table, self.column.name)
-
-    def __str__(self):
-        return '{}.{}'.format(self.table, self.name)
 
     def __call__(self, value):
         """You can use Field()(value) to return a tuple for INSERT."""
@@ -153,6 +157,10 @@ class BooleanField(Field):
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table."""
     def _init(self, referTable, index=''):
+        """
+        @param referTable: a model class of which record is referenced
+        @param index: True if simple index, otherwise string with index type ('index', 'unique')
+        """
         self._referTable = referTable # foreign key - referenced type of table
         super()._init(Column('INT', self, precision=9, unsigned=True), None, index) # 9 digits - int32 - should be enough
 
@@ -161,7 +169,7 @@ class RecordIdField(Field):
         referTable = self._referTable
         if orm.isModel(referTable):
             return referTable
-        assert isinstance(referTable, str) # otherwise it should be path to the Model
+        assert isinstance(referTable, str), 'Otherwise it should be path to the Model'
         self._referTable = orm.getObjectByPath(referTable, self.table.__module__)
         return self._referTable
 
@@ -181,7 +189,10 @@ class TableIdField(Field):
     def _cast(self, value):
         if isinstance(value, orm.Model) or orm.isModel(value):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
-        return int(value)
+        try:
+            return int(value)
+        except ValueError:
+            raise SyntaxError('Table ID must be an integer.')
 
 
 #class AnyRecordField(Field):
