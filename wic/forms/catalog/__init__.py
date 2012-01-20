@@ -68,7 +68,7 @@ class CatalogItemForm(WForm):
 
     def onReset(self):
         self.fillFormFromItem()
-    
+
     def fillFormFromItem(self):
         """Automatically fill the form fields using values from the catalog item fields."""
         catalogItem = self._catalogItem
@@ -158,7 +158,7 @@ class CatalogForm(WForm):
     _toolbarVisible = True
 
     _catalogModel = None
-    _fields = None # which fields are shown in form 'field_name1+100,100 field2,+field3 250,field4 -,field5'
+    _columns = None # which columns are shown in form 'field_name1+100,100 field2,+field3 250,field4 -,field5'
 
     itemSelected = QtCore.pyqtSignal(int)
     _type = 0 # 0: selection causes opening item form, 1: send itemSelected signal and close the form, 2: send signal but do not close the form (for multiple selection) 
@@ -210,7 +210,7 @@ class CatalogForm(WForm):
 
     def setupTableView(self, tableView):
         assert isinstance(tableView, QtGui.QTableView)
-        tableView.setSelectionBehavior(tableView.SelectRows)
+        tableView.setSelectionBehavior(tableView.SelectItems)
         tableView.setSelectionMode(tableView.SingleSelection)
         #self.tableView.verticalHeader().hide()
         tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
@@ -232,7 +232,7 @@ class CatalogForm(WForm):
         catalogProxyModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
         catalogProxyModel.modelReset.connect(self.onModelReset)
 
-        tableView.verticalScrollBar().valueChanged.connect(self.onScrollBarValueChanged)
+        tableView.verticalScrollBar().valueChanged.connect(self.ensureSelectedItemVisible)
 
     def eventFilter(self, tableView, event): # target - tableView
         #print('eventFilter', event)
@@ -261,29 +261,34 @@ class CatalogForm(WForm):
 
         return super().eventFilter(tableView, event) # standard event processing        
 
-    def onScrollBarValueChanged(self, value):
-        "Ensure that selected row moves when scrolling - it must be always visible."
+    def ensureSelectedItemVisible(self, *args):
+        "Ensure that selected item moves when scrolling - it must be always visible."
         tableView = self.tableView
-        currentRow = tableView.selectionModel().currentIndex().row()
+        currentIndex = tableView.selectionModel().currentIndex()
+        rowNo = currentIndex.row()
+        colNo = currentIndex.column()
         rect = tableView.viewport().rect()
-        topRow = tableView.indexAt(rect.topLeft()).row()
-        if currentRow < topRow:
-            tableView.selectRow(topRow + 1)
+        topRowNo = tableView.indexAt(rect.topLeft()).row()
+        if rowNo < topRowNo:
+            tableView.selectRow(topRowNo + 1)
         else:
             bottomRow = tableView.indexAt(rect.bottomLeft()).row()
-            if currentRow > bottomRow:
-                tableView.selectRow(bottomRow - 1)
+            if rowNo > bottomRow:
+                tableView.selectItem(bottomRow - 1, 0)
 
     def onModelAboutToBeReset(self):
-        "Remember the selected row when the model is reset."
+        "Remember the selected row when the model is about to be reset."
         currentIndex = self.tableView.selectionModel().currentIndex()
-        self._lastSelectedRow = currentIndex.row()
+        self._lastSelectedItem = (currentIndex.row(), currentIndex.column())
 
     def onModelReset(self):
-        "Restore the selected row after the model was reset."
-        #self.tableView.resizeColumnsToContents()
-        rowNo = min(self._lastSelectedRow, self.tableView.model().rowCount(None) - 1)
-        self.tableView.selectRow(rowNo)
+        "Restore the selected item after the model was reset."
+        rowNo, colNo = self._lastSelectedItem
+        rowNo = min(rowNo, self.tableView.model().rowCount(None) - 1)
+        colNo = min(colNo, self.tableView.model().columnCount(None) - 1)
+        index = self.tableView.model().index(rowNo, colNo)
+        selection = QtGui.QItemSelection(index, index)
+        self.tableView.selectionModel().select(selection, QtGui.QItemSelectionModel.Select)
 
     def onSelectionChanged(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
