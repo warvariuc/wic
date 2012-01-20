@@ -158,7 +158,7 @@ class CatalogForm(WForm):
     _toolbarVisible = True
 
     _catalogModel = None
-    _columns = None # which columns are shown in form 'field_name1+100,100 field2,+field3 250,field4 -,field5'
+    _columns = None # which columns to show in form 'field_name1+100,100 field2,+field3 250,field4 -,field5'
 
     itemSelected = QtCore.pyqtSignal(int)
     _type = 0 # 0: selection causes opening item form, 1: send itemSelected signal and close the form, 2: send signal but do not close the form (for multiple selection) 
@@ -233,6 +233,7 @@ class CatalogForm(WForm):
         catalogProxyModel.modelReset.connect(self.onModelReset)
 
         tableView.verticalScrollBar().valueChanged.connect(self.ensureSelectedItemVisible)
+        tableView.horizontalScrollBar().valueChanged.connect(self.ensureSelectedItemVisible)
 
     def eventFilter(self, tableView, event): # target - tableView
         #print('eventFilter', event)
@@ -264,17 +265,33 @@ class CatalogForm(WForm):
     def ensureSelectedItemVisible(self, *args):
         "Ensure that selected item moves when scrolling - it must be always visible."
         tableView = self.tableView
-        currentIndex = tableView.selectionModel().currentIndex()
-        rowNo = currentIndex.row()
-        colNo = currentIndex.column()
+        selectionModel = tableView.selectionModel()
+        currentIndex = selectionModel.currentIndex()
+        print(tableView.visualRect(currentIndex))
+        row = _row = currentIndex.row()
+        col = _col = currentIndex.column()
         rect = tableView.viewport().rect()
-        topRowNo = tableView.indexAt(rect.topLeft()).row()
-        if rowNo < topRowNo:
-            tableView.selectRow(topRowNo + 1)
+        topRow = tableView.indexAt(rect.topLeft()).row()
+        if row < topRow:
+            row = topRow
         else:
             bottomRow = tableView.indexAt(rect.bottomLeft()).row()
-            if rowNo > bottomRow:
-                tableView.selectItem(bottomRow - 1, 0)
+            if row > bottomRow:
+                row = bottomRow
+        leftCol = tableView.indexAt(rect.topLeft()).column()
+        if col < leftCol:
+            col = leftCol
+        else:
+            rightCol = tableView.indexAt(rect.topRight()).column()
+            if col > rightCol:
+                col = rightCol
+        if col != _col or row != _row:
+            index = tableView.model().index(row, col)
+            #selection = QtGui.QItemSelection(index, index)
+            #selectionModel.select(selection, selectionModel.ClearAndSelect)
+            #print(tableView.visualRect(index))
+            indexRect = tableView.visualRect(index)
+            selectionModel.setCurrentIndex(index, selectionModel.ClearAndSelect)
 
     def onModelAboutToBeReset(self):
         "Remember the selected row when the model is about to be reset."
@@ -287,8 +304,9 @@ class CatalogForm(WForm):
         rowNo = min(rowNo, self.tableView.model().rowCount(None) - 1)
         colNo = min(colNo, self.tableView.model().columnCount(None) - 1)
         index = self.tableView.model().index(rowNo, colNo)
-        selection = QtGui.QItemSelection(index, index)
-        self.tableView.selectionModel().select(selection, QtGui.QItemSelectionModel.Select)
+        #selection = QtGui.QItemSelection(index, index)
+        #self.tableView.selectionModel().select(selection, QtGui.QItemSelectionModel.ClearAndSelect)
+        self.tableView.selectionModel().setCurrentIndex(index, QtGui.QItemSelectionModel.ClearAndSelect)
 
     def onSelectionChanged(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
