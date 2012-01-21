@@ -37,7 +37,6 @@ class WMainWindow(QtGui.QMainWindow):
         tabBar.setDrawBase(True)
         #tabBar.setShape(tabBar.TriangularSouth)
         #tabBar.setIconSize(QtCore.QSize(16, 16))
-        tabBar.tabCloseRequested.connect(self.onTabCloseRequested)
         self.tabBar = tabBar
 
         tabBarEventFilter = TabBarEventFilter(self)
@@ -68,10 +67,6 @@ class WMainWindow(QtGui.QMainWindow):
             subWindow.showNormal()
         else:
             subWindow.showMaximized()
-
-    def onTabCloseRequested(self, windowIndex):
-        subWindow = self.mdiArea.subWindowList()[windowIndex]
-        subWindow.close()
 
     def closeEvent(self, event):
         self.mdiArea.closeAllSubWindows() # Passes a close event from main window to all subwindows.

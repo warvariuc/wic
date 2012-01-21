@@ -129,7 +129,7 @@ class CatalogItemForm(WForm):
         assert isinstance(field, orm.Field) and isinstance(widget, QtGui.QWidget)
         if isinstance(field, orm.CharField):
             if isinstance(widget, QtGui.QLineEdit):
-                widget.setMaxLength(field.maxLength)
+                widget.setMaxLength(field.column.precision)
         elif isinstance(field, orm.IdField):
             if isinstance(widget, QtGui.QLineEdit):
                 widget.setValidator(QtGui.QIntValidator())
@@ -138,8 +138,8 @@ class CatalogItemForm(WForm):
                 widget.setInputMask('9999-99-99 99:99:99.999999')
         elif isinstance(field, orm.DecimalField):
             if isinstance(widget, w_decimal_edit.WDecimalEdit):
-                widget.setMaxDigits(field.maxDigits)
-                widget.setFractionDigits(field.fractionDigits)
+                widget.setMaxDigits(field.column.precision)
+                widget.setFractionDigits(field.column.scale)
         elif isinstance(field, orm.RecordIdField):
             if isinstance(widget, w_record_id_widget.WCatalogItemIdWidget):
                 catalogModel = field.referTable
@@ -229,11 +229,13 @@ class CatalogForm(WForm):
         tableView.setModel(catalogProxyModel)
         tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
 
+        tableView.selectionModel().setCurrentIndex(tableView.model().index(0, 0), QtGui.QItemSelectionModel.ClearAndSelect)
+
         catalogProxyModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
         catalogProxyModel.modelReset.connect(self.onModelReset)
 
-        tableView.verticalScrollBar().valueChanged.connect(self.ensureSelectedItemVisible)
-        tableView.horizontalScrollBar().valueChanged.connect(self.ensureSelectedItemVisible)
+        tableView.verticalScrollBar().valueChanged.connect(self.ensureSelectionVisible)
+        tableView.horizontalScrollBar().valueChanged.connect(self.ensureSelectionVisible)
 
     def eventFilter(self, tableView, event): # target - tableView
         #print('eventFilter', event)
@@ -262,35 +264,37 @@ class CatalogForm(WForm):
 
         return super().eventFilter(tableView, event) # standard event processing        
 
-    def ensureSelectedItemVisible(self, *args):
-        "Ensure that selected item moves when scrolling - it must be always visible."
+    def ensureSelectionVisible(self, *args):
+        "Ensure that selection moves when scrolling - it must be always visible."
         tableView = self.tableView
         selectionModel = tableView.selectionModel()
         currentIndex = selectionModel.currentIndex()
-        print(tableView.visualRect(currentIndex))
+        viewRect = tableView.viewport().rect()
+
         row = _row = currentIndex.row()
-        col = _col = currentIndex.column()
-        rect = tableView.viewport().rect()
-        topRow = tableView.indexAt(rect.topLeft()).row()
+        column = _column = currentIndex.column()
+        topRow = tableView.indexAt(viewRect.topLeft()).row()
         if row < topRow:
             row = topRow
         else:
-            bottomRow = tableView.indexAt(rect.bottomLeft()).row()
-            if row > bottomRow:
-                row = bottomRow
-        leftCol = tableView.indexAt(rect.topLeft()).column()
-        if col < leftCol:
-            col = leftCol
+            row = min(row, tableView.indexAt(viewRect.bottomLeft()).row())
+        leftColumn = tableView.indexAt(viewRect.topLeft()).column()
+        if column < leftColumn:
+            column = leftColumn
         else:
-            rightCol = tableView.indexAt(rect.topRight()).column()
-            if col > rightCol:
-                col = rightCol
-        if col != _col or row != _row:
-            index = tableView.model().index(row, col)
-            #selection = QtGui.QItemSelection(index, index)
-            #selectionModel.select(selection, selectionModel.ClearAndSelect)
-            #print(tableView.visualRect(index))
-            indexRect = tableView.visualRect(index)
+            column = min(column, tableView.indexAt(viewRect.topRight()).column())
+        index = tableView.model().index(row, column)
+        itemRect = tableView.visualRect(index)
+        if itemRect.top() < viewRect.top():
+            row += 1
+        elif itemRect.bottom() > viewRect.bottom():
+            row -= 1
+        if itemRect.left() < viewRect.left():
+            column += 1
+        elif itemRect.right() > viewRect.right():
+            column -= 1
+        if column != _column or row != _row:
+            index = tableView.model().index(row, column)
             selectionModel.setCurrentIndex(index, selectionModel.ClearAndSelect)
 
     def onModelAboutToBeReset(self):
@@ -304,8 +308,6 @@ class CatalogForm(WForm):
         rowNo = min(rowNo, self.tableView.model().rowCount(None) - 1)
         colNo = min(colNo, self.tableView.model().columnCount(None) - 1)
         index = self.tableView.model().index(rowNo, colNo)
-        #selection = QtGui.QItemSelection(index, index)
-        #self.tableView.selectionModel().select(selection, QtGui.QItemSelectionModel.ClearAndSelect)
         self.tableView.selectionModel().setCurrentIndex(index, QtGui.QItemSelectionModel.ClearAndSelect)
 
     def onSelectionChanged(self):
