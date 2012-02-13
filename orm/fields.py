@@ -220,8 +220,8 @@ class TableIdField(Field):
 #                  Expression('EQ', self._fields['itemId'], other.id))
 
 
-def COUNT(expression, distinct=False):
-    assert isinstance(expression, Expression) or orm.isModel(expression), 'Argument must be a Field, an Expression or a Table.'
+def COUNT(expression=None, distinct=False):
+    assert expression is None or isinstance(expression, Expression) or orm.isModel(expression), 'Argument must be a Field, an Expression or a Table.'
     return Expression('_COUNT', expression, distinct=distinct)
 
 def MAX(expression):

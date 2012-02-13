@@ -7,7 +7,7 @@ import os, sys, base64
 import time, re, math
 from datetime import date as Date, datetime as DateTime, timedelta as TimeDelta
 from decimal import Decimal
-from pprint import pprint
+import pprint
 
 import orm
 
@@ -199,7 +199,7 @@ class GenericAdapter():
 
     @classmethod
     def _COUNT(cls, expression):
-        expression = '*' if orm.isModel(expression) else cls.render(expression)
+        expression = '*' if orm.isModel(expression) or expression is None else cls.render(expression)
         distinct = getattr(expression, 'distinct', False)
         if distinct:
             return 'COUNT(DISTINCT %s)' % expression
@@ -503,8 +503,8 @@ class GenericAdapter():
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _select(self, *args, where=None, orderBy=False, limit=False,
-                distinct=False, groupBy=False, having=False):
+    def _select(self, *args, where=None, order=False, limit=False,
+                distinct = False, group = False, having = False):
         """SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
           [ FROM from_clause ]
           [ WHERE where_expression ]
@@ -548,28 +548,28 @@ class GenericAdapter():
             sql_t = ', '.join(map(str, tables))
 
         sql_o = ''
-        if groupBy:
-            groupBy = xorify(groupBy)
-            sql_o += ' GROUP BY %s' % self.render(groupBy)
+        if group:
+            group = xorify(group)
+            sql_o += ' GROUP BY %s' % self.render(group)
             if having:
                 sql_o += ' HAVING %s' % having
 
-        if orderBy:
-            orderBy = orm.listify(orderBy)
-            _orderBy = []
-            for order in orderBy:
-                if isinstance(order, orm.Expression):
-                    order = self.render(order) + ' ' + order.sort
-                elif isinstance(order, str):
-                    if order == '<random>':
-                        order = self.RANDOM()
+        if order:
+            order = orm.listify(order)
+            orderBy = []
+            for _order in order:
+                if isinstance(_order, orm.Expression):
+                    _order = self.render(_order) + ' ' + _order.sort
+                elif isinstance(_order, str):
+                    if _order == '<random>':
+                        _order = self.RANDOM()
                 else:
                     raise SyntaxError('Orderby should receive Field or str.')
-                _orderBy.append(order)
-            sql_o += ' ORDER BY %s' % ', '.join(_orderBy)
+                orderBy.append(_order)
+            sql_o += ' ORDER BY %s' % ', '.join(orderBy)
 
         if limit:
-            if not orderBy and tables:
+            if not order and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
 
         return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
@@ -585,7 +585,9 @@ class GenericAdapter():
         """Create and return SELECT query.
             @param args: tables, fields or joins;
             @param where: expression for where;
-            @param limitBy: a tuple (start, end).
+            @param limit: a tuple (start, end).
+            @param order:
+            @param group:
         tables are taken from fields and `where` expression;
         """
         fields, sql = self._select(*args, where=where, **attributes)
@@ -634,6 +636,9 @@ class Rows():
     def __iter__(self):
         """Iterator over records."""
         return iter(self.rows)
+
+    def __str__(self):
+        return pprint.pformat(self.rows)
 
 
 

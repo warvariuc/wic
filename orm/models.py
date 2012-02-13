@@ -165,10 +165,10 @@ class Model(metaclass=ModelMeta):
         return cls.getOne(db, cls.id == id)
 
     @classmethod
-    def get(cls, db, where, orderBy=False, limit=False):
+    def get(cls, db, where, order=False, limit=False):
         """Get records from this table which fall under the given condition."""
-        orderBy = orderBy or cls._ordering # use default table ordering if no ordering passed
-        rows = db.select(cls, where=where, orderBy=orderBy, limit=limit)
+        order = order or cls._ordering # use default table ordering if no ordering passed
+        rows = db.select(cls, where=where, order=order, limit=limit)
         for row in rows:
             yield cls(db, *zip(rows.fields, row))
 
@@ -191,16 +191,21 @@ class Model(metaclass=ModelMeta):
                 raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, id=%s' % (table, self.id))
         db.commit()
 
-        signals.post_save.send(sender=table, record=self, isNnew=isNew)
+        signals.post_save.send(sender=table, record=self, isNew=isNew)
 
     def __str__(self):
-        """How the record is presented."""
+        """Human readable presentation of the record."""
         return '%s(%s)' % (self.__class__.__name__,
             ', '.join("%s= '%s'" % (field.name, getattr(self, field.name))
                        for field in self.__class__))
 
     @classmethod
-    def count(cls, db, where=None):
+    def count(cls, where=None):
+        """Get COUNT expression for this table."""
+        return orm.COUNT(where or cls) # COUNT expression
+
+    @classmethod
+    def getCount(cls, db, where=None):
         """Request number of records in this table."""
-        count = orm.COUNT(where or cls) # COUNT expression
+        count = cls.count(where)
         return db.select(count).value(0, count)
