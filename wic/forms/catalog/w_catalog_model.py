@@ -203,7 +203,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
     def rowCount(self, parent):
         _rowsCount = self._rowsCount
         if _rowsCount is None:
-            _rowsCount = self._rowsCount = self.catalogModel.count(self.db)
+            _rowsCount = self._rowsCount = self.catalogModel.getCount(self.db)
             #print('rowCount', _rowsCount)
         return _rowsCount
 

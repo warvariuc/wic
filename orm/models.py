@@ -200,12 +200,12 @@ class Model(metaclass=ModelMeta):
                        for field in self.__class__))
 
     @classmethod
-    def count(cls, where=None):
+    def _count(cls, where=None):
         """Get COUNT expression for this table."""
         return orm.COUNT(where or cls) # COUNT expression
 
     @classmethod
     def getCount(cls, db, where=None):
         """Request number of records in this table."""
-        count = cls.count(where)
+        count = cls._count(where)
         return db.select(count).value(0, count)
