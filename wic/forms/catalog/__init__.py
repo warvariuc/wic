@@ -246,12 +246,12 @@ class CatalogForm(WForm):
                     self.menu.editItem.trigger()
                     return True
                 elif key == QtCore.Qt.Key_End:
-                    event = QtGui.QKeyEvent(QtCore.QEvent.KeyPress, QtCore.Qt.Key_End, QtCore.Qt.ControlModifier)
-                    QtCore.QCoreApplication.sendEvent(tableView, event)
+                    currentIndex = tableView.selectionModel().currentIndex()
+                    tableView.setCurrentIndex(tableView.model().index(tableView.model().rowCount(None) - 1, currentIndex.column()))
                     return True
                 elif key == QtCore.Qt.Key_Home:
-                    event = QtGui.QKeyEvent(QtCore.QEvent.KeyPress, QtCore.Qt.Key_Home, QtCore.Qt.ControlModifier)
-                    QtCore.QCoreApplication.sendEvent(tableView, event)
+                    currentIndex = tableView.selectionModel().currentIndex()
+                    tableView.setCurrentIndex(tableView.model().index(0, currentIndex.column()))
                     return True
         elif event.type() == QtCore.QEvent.MouseButtonDblClick:
             if event.button() == QtCore.Qt.LeftButton:
@@ -267,8 +267,7 @@ class CatalogForm(WForm):
     def ensureSelectionVisible(self, *args):
         "Ensure that selection moves when scrolling - it must be always visible."
         tableView = self.tableView
-        selectionModel = tableView.selectionModel()
-        currentIndex = selectionModel.currentIndex()
+        currentIndex = tableView.selectionModel().currentIndex()
         viewRect = tableView.viewport().rect()
 
         row = _row = currentIndex.row()
@@ -294,8 +293,7 @@ class CatalogForm(WForm):
         elif itemRect.right() > viewRect.right():
             column -= 1
         if column != _column or row != _row:
-            index = tableView.model().index(row, column)
-            selectionModel.setCurrentIndex(index, selectionModel.ClearAndSelect)
+            tableView.setCurrentIndex(tableView.model().index(row, column))
 
     def onModelAboutToBeReset(self):
         "Remember the selected row when the model is about to be reset."
@@ -308,7 +306,8 @@ class CatalogForm(WForm):
         rowNo = min(rowNo, self.tableView.model().rowCount(None) - 1)
         colNo = min(colNo, self.tableView.model().columnCount(None) - 1)
         index = self.tableView.model().index(rowNo, colNo)
-        self.tableView.selectionModel().setCurrentIndex(index, QtGui.QItemSelectionModel.ClearAndSelect)
+        #self.tableView.selectionModel().setCurrentIndex(index, QtGui.QItemSelectionModel.ClearAndSelect)
+        self.tableView.setCurrentIndex(index)
 
     def onSelectionChanged(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
@@ -326,6 +325,7 @@ class CatalogForm(WForm):
 
     def editItem(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
+        #currentIndex = self.tableView.currentIndex()
         id = self.tableView.model().getRowId(currentIndex.row())
         if self._type == 0:
             catalogItem = self._catalogModel.getOneById(self._db, id)
