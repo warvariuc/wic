@@ -111,10 +111,15 @@ class GenericAdapter():
             self.connection = None
             self.cursor = None
         self.autocommit = autocommit
+        self._id = orm._dbCount
+        orm._dbCount += 1
 
     def connect(self):
         """Connect to the DB and return the connection"""
         return None # DB connection
+
+    def disconnect(self):
+        return self.connection.close()
 
     def commit(self):
         return self.connection.commit()
@@ -127,10 +132,7 @@ class GenericAdapter():
     def rollback(self):
         return self.connection.rollback()
 
-    def disconnect(self):
-        return self.connection.close()
-
-    def logExecute(self, *a, **b):
+    def _execute(self, *a, **b):
         lastQuery = a[0]
         t0 = time.time()
         try:
@@ -143,7 +145,7 @@ class GenericAdapter():
 
     def execute(self, *args, **kwargs):
         """Execute a query."""
-        return self.logExecute(*args, **kwargs)
+        return self._execute(*args, **kwargs)
 
     def getLastQuery(self):
         return self._timings[-1]
@@ -421,7 +423,7 @@ class GenericAdapter():
         return base64.b64decode(value)
 
     @classmethod
-    def getExpressionTables(cls, expression):
+    def _getExpressionTables(cls, expression):
         """Get tables involved in WHERE expression."""
         tables = set()
         if orm.isModel(expression):
@@ -429,8 +431,8 @@ class GenericAdapter():
         elif isinstance(expression, orm.Field):
             tables.add(expression.table)
         elif isinstance(expression, orm.Expression):
-            tables |= cls.getExpressionTables(expression.left)
-            tables |= cls.getExpressionTables(expression.right)
+            tables |= cls._getExpressionTables(expression.left)
+            tables |= cls._getExpressionTables(expression.right)
         return tables
 
     def lastInsertId(self):
@@ -512,7 +514,7 @@ class GenericAdapter():
           [ HAVING having_expression ]
           [ ORDER BY order_column_expr1, order_column_expr2, ... ]
         """
-        tables = self.getExpressionTables(where) # get tables involved in the query
+        tables = self._getExpressionTables(where) # get tables involved in the query
         fields = []
         joins = []
         for arg in args:
@@ -521,7 +523,7 @@ class GenericAdapter():
                 tables.add(arg)
             elif isinstance(arg, orm.Expression):
                 fields.append(arg)
-                tables |= self.getExpressionTables(arg)
+                tables |= self._getExpressionTables(arg)
             elif isinstance(arg, orm.Join):
                 joins.append(arg)
             else:

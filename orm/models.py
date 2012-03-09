@@ -101,6 +101,8 @@ class Model(metaclass=ModelMeta):
     _indexes = [] # each table subclass will have its own (metaclass will assure this)
     _ordering = [] # default order for select when not specified
 
+    _checkedDbs = set() # ids of database adapters this model was successfully checked against
+
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
         Pass arguments: tuples (Field, value) 
@@ -209,3 +211,16 @@ class Model(metaclass=ModelMeta):
         """Request number of records in this table."""
         count = cls._count(where)
         return db.select(count).value(0, count)
+
+    @classmethod
+    def checkTable(cls, db):
+        """Check if corresponding table for this model exists in the db and has all necessary columns."""
+        assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
+        if db._id in cls._checkedDbs: # this db was already checked 
+            return
+        tableName = ''
+        if tableName not in db.getTables():
+            raise Exception('Table `%s` does not exist in database')
+        dbColumns = db.getColumns(tableName)
+        cls._checkedDbs.add(db._id)
+        # TODO: add checkTable call in very model method that uses a db

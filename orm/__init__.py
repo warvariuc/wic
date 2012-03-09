@@ -12,6 +12,7 @@ import logging, inspect, importlib
 logger = logging.getLogger('wic.orm')
 
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
+_dbCount = 0 # to track connected databases
 
 def getObjectByPath(objectPath, packagePath= None):
     """Given the path in form 'some.module.object' return the object.
