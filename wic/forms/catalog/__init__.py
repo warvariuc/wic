@@ -23,7 +23,7 @@ class CatalogItemForm(WForm):
 
     def __init__(self, catalogItem, **kwargs):
         assert isinstance(catalogItem, CatalogModel), 'Must be a catalog item (CatalogModel instance)'
-        super().__init__(_catalogItem=catalogItem, **kwargs)
+        super().__init__(_catalogItem = catalogItem, **kwargs)
 
     def setupUi(self):
         """Initial setting up of the form. Reimplemented.
@@ -163,8 +163,8 @@ class CatalogForm(WForm):
     itemSelected = QtCore.pyqtSignal(int)
     _type = 0 # 0: selection causes opening item form, 1: send itemSelected signal and close the form, 2: send signal but do not close the form (for multiple selection) 
 
-    def __init__(self, catalogModel, db, type=0, **kwargs):
-        super().__init__(_catalogModel=catalogModel, _db=db, _type=type, **kwargs)
+    def __init__(self, catalogModel, db, type = 0, **kwargs):
+        super().__init__(_catalogModel = catalogModel, _db = db, _type = type, **kwargs)
 
     def setupUi(self):
         """Initial setting up of the form.
@@ -346,7 +346,7 @@ class CatalogForm(WForm):
 
 
 
-def openCatalogItemForm(catalogItem, FormClass=None, **kwargs):
+def openCatalogItemForm(catalogItem, FormClass = None, **kwargs):
     assert isinstance(catalogItem, orm.Model), 'Pass an item (model instance).'
     if FormClass is None:
         formModulePath = catalogItem.__class__.__module__
@@ -365,7 +365,7 @@ def openCatalogItemForm(catalogItem, FormClass=None, **kwargs):
     return openForm(FormClass, **kwargs)
 
 
-def openCatalogForm(catalogModel, db, FormClass=None, **kwargs):
+def openCatalogForm(catalogModel, db, FormClass = None, **kwargs):
     assert orm.isModel(catalogModel), 'Pass a model class.'
     if not FormClass:
         formModulePath = catalogModel.__module__

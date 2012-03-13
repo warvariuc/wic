@@ -9,7 +9,7 @@ class Expression():
 
     sort = 'ASC' # default sorting
 
-    def __init__(self, operation, left=Nil, right=Nil, type=None, **kwargs):
+    def __init__(self, operation, left = Nil, right = Nil, type = None, **kwargs):
         """Create an expression.
             @param operation: string with the name of DB operation
             @param left: left operand
@@ -63,7 +63,7 @@ class Expression():
         """The IN clause."""
         return Expression('_IN', self, items)
 
-    def __str__(self, db=None):
+    def __str__(self, db = None):
         """Construct the text of the WHERE clause from this Expression.
         @param db: GenericAdapter subclass to use for rendering."""
         db = db or orm.GenericAdapter
@@ -89,7 +89,7 @@ class Field(Expression):
         orm._fieldsCount += 1 # tracking creation order
         self._orderNo = orm._fieldsCount
 
-    def _init(self, column, defaultValue, index=''):
+    def _init(self, column, defaultValue, index = ''):
         """This is called by the metaclass to initialize the Field after a Table subclass is created."""
         #del self._initArgs, self._initKwargs
         self.column = column
@@ -99,7 +99,7 @@ class Field(Expression):
         if index:
             self.table._indexes.append(orm.Index([self], index))
 
-    def __str__(self, db=None):
+    def __str__(self, db = None):
         #db = db or orm.GenericAdapter # we do not use adapter here
         return '%s.%s' % (self.table, self.column.name)
 
@@ -110,59 +110,59 @@ class Field(Expression):
 
 
 class CharField(Field):
-    def _init(self, maxLength, defaultValue=None, index=''):
-        super()._init(Column('CHAR', self, precision=maxLength, default=defaultValue), defaultValue, index)
+    def _init(self, maxLength, defaultValue = None, index = ''):
+        super()._init(Column('CHAR', self, precision = maxLength, default = defaultValue), defaultValue, index)
 
 
 class TextField(Field):
-    def _init(self, defaultValue=None):
-        super()._init(Column('TEXT', self, default=defaultValue), defaultValue, None)
+    def _init(self, defaultValue = None):
+        super()._init(Column('TEXT', self, default = defaultValue), defaultValue, None)
 
 
 class IntegerField(Field):
-    def _init(self, maxDigits=9, defaultValue=None, autoincrement=False, index=''):
+    def _init(self, maxDigits = 9, defaultValue = None, autoincrement = False, index = ''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
-        super()._init(Column('INT', self, precision=self.maxDigits, unsigned=True, default=defaultValue,
-                             autoincrement=autoincrement), defaultValue, index)
+        super()._init(Column('INT', self, precision = self.maxDigits, unsigned = True, default = defaultValue,
+                             autoincrement = autoincrement), defaultValue, index)
 
 
 class DecimalField(Field):
-    def _init(self, maxDigits, fractionDigits, defaultValue=None, index=''):
-        super()._init(Column('DECIMAL', self, precision=maxDigits, scale=fractionDigits, default=defaultValue), defaultValue, index)
+    def _init(self, maxDigits, fractionDigits, defaultValue = None, index = ''):
+        super()._init(Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits, default = defaultValue), defaultValue, index)
 
 
 class DateField(Field):
-    def _init(self, defaultValue=None, index=''):
-        super()._init(Column('DATE', self, default=defaultValue), defaultValue, index)
+    def _init(self, defaultValue = None, index = ''):
+        super()._init(Column('DATE', self, default = defaultValue), defaultValue, index)
 
 
 class DateTimeField(Field):
-    def _init(self, defaultValue=None, index=''):
-        super()._init(Column('DATETIME', self, default=defaultValue), defaultValue, index)
+    def _init(self, defaultValue = None, index = ''):
+        super()._init(Column('DATETIME', self, default = defaultValue), defaultValue, index)
 
 
 
 class IdField(Field):
     """Primary integer autoincrement key. ID - implicitly present in each table."""
     def _init(self):
-        super()._init(Column('INT', self, precision=9, unsigned=True, nullable=False, autoincrement=True), None, 'primary') # 9 digits - int32 - should be enough
+        super()._init(Column('INT', self, precision = 9, unsigned = True, nullable = False, autoincrement = True), None, 'primary') # 9 digits - int32 - should be enough
 
 
 class BooleanField(Field):
-    def _init(self, defaultValue=None, index=''):
-        super()._init(Column('INT', self, precision=1, default=defaultValue), defaultValue, index)
+    def _init(self, defaultValue = None, index = ''):
+        super()._init(Column('INT', self, precision = 1, default = defaultValue), defaultValue, index)
 
 
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table."""
-    def _init(self, referTable, index=''):
+    def _init(self, referTable, index = ''):
         """
         @param referTable: a model class of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
         self._referTable = referTable # foreign key - referenced type of table
-        super()._init(Column('INT', self, precision=9, unsigned=True), None, index) # 9 digits - int32 - should be enough
+        super()._init(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - should be enough
 
     @property
     def referTable(self):
@@ -183,8 +183,8 @@ class RecordIdField(Field):
 
 class TableIdField(Field):
     """This field stores id of a given table in this DB."""
-    def _init(self, index=''):
-        super()._init(Column('INT', self, precision=5, unsigned=True), None, index)
+    def _init(self, index = ''):
+        super()._init(Column('INT', self, precision = 5, unsigned = True), None, index)
 
     def _cast(self, value):
         if isinstance(value, orm.Model) or orm.isModel(value):
@@ -220,9 +220,9 @@ class TableIdField(Field):
 #                  Expression('EQ', self._fields['itemId'], other.id))
 
 
-def COUNT(expression=None, distinct=False):
+def COUNT(expression = None, distinct = False):
     assert expression is None or isinstance(expression, Expression) or orm.isModel(expression), 'Argument must be a Field, an Expression or a Table.'
-    return Expression('_COUNT', expression, distinct=distinct)
+    return Expression('_COUNT', expression, distinct = distinct)
 
 def MAX(expression):
     assert isinstance(expression, Expression), 'Argument must be a Field or an Expression.'

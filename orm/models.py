@@ -3,12 +3,12 @@
 import inspect
 from datetime import datetime as DateTime
 import orm
-from orm import signals, Index
+from orm import signals
 
 
 class Join():
     """Object holding parameters for a join."""
-    def __init__(self, model, on, type=''):
+    def __init__(self, model, on, type = ''):
         assert isinstance(model, orm.ModelMeta), 'Pass a model class.'
         assert isinstance(on, orm.fields.Expression), 'WHERE should be an Expression.'
         self.model = model # table to join
@@ -31,25 +31,26 @@ class ModelMeta(type):
     def __new__(cls, name, bases, attrs):
         NewClass = type.__new__(cls, name, bases, attrs)
 
-        try: # we need only Model subclasses
-            Model
-        except NameError: # if Model is not defined: __new__ is called for Model itself
+        if 'Model' not in globals(): # we need only Model subclasses; if Model is not defined: __new__ is called for Model itself
             return NewClass # return wihout any processing
 
-        NewClass._indexes = list(NewClass._indexes) # assure each class has its own attribute
+#        NewClass._indexes = list(NewClass._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
         for index in NewClass._indexes :
-            assert isinstance(index, Index), 'Found a non Index in the _indexes.'
+            if not isinstance(index, orm.Index):
+                raise orm.ModelError('Found a non Index in the _indexes.')
+#        NewClass._ordering = list(NewClass._ordering)
+#        NewClass._checkedDbs = set(NewClass._checkedDbs)
 
         fields = []
         for fieldName, field in inspect.getmembers(NewClass):
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field))
 
-        fields.sort(key=lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
+        fields.sort(key = lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
         for fieldName, field in fields:
             if not fieldName.islower() or fieldName.startswith('_'):
-                raise Exception('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
-            field_ = field.__class__(name=fieldName, table=NewClass, label=field.label) # recreate the field - to handle correctly inheritance of Tables
+                raise orm.ModelError('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
+            field_ = field.__class__(name = fieldName, table = NewClass, label = field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
                 field_._init(*field._initArgs, **field._initKwargs) # and initialize it
             except Exception:
@@ -74,7 +75,7 @@ class ModelMeta(type):
                 fields.append(self[attrName])
             except KeyError:
                 pass
-        fields.sort(key=lambda field: field._orderNo) # sort by creation order - because __dict__ is unordered
+        fields.sort(key = lambda field: field._orderNo) # sort by creation order - because __dict__ is unordered
         for field in fields:
             yield field
 
@@ -85,28 +86,31 @@ class ModelMeta(type):
         return getattr(self, '_name', '') or self.__name__.lower()
 
     def delete(self, db, where):
-        """Delete records from this table which fall under the given condition."""
-        db.delete(self, where=where)
+        """Delete records in this table which fall under the given condition."""
+        self.checkTable(db)
+        db.delete(self, where = where)
         db.commit()
 
 
 
-class Model(metaclass=ModelMeta):
+class Model(metaclass = ModelMeta):
     """Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields."""
 
-    id = orm.fields.IdField() # this field is present in all tables
-    timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
-
-    _indexes = [] # each table subclass will have its own (metaclass will assure this)
-    _ordering = [] # default order for select when not specified
-
+    _indexes = [] # each table subclass will have its own - i.e. it's not inherited by subclasses (metaclass will assure this)
+    _ordering = [] # default order for select when not specified - overriden
     _checkedDbs = set() # ids of database adapters this model was successfully checked against
+
+    # default fields
+    id = orm.fields.IdField() # row id. This field is present in all tables
+    timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
 
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
-        Pass arguments: tuples (Field, value) 
-        and keyword arguments: fieldName= value."""
+        @param db: db adapter in which to create the table record 
+        @param *args: tuples (Field, value) 
+        @param **kwargs: fieldName=value.
+        """
         self._db = db
 
         table = None
@@ -143,17 +147,19 @@ class Model(metaclass=ModelMeta):
     def delete(self):
         """Delete this record."""
         db = self._db
+        self.checkTable(db)
         table = self.__class__
-        signals.post_delete.send(sender=table, record=self)
-        db.delete(table, where=(table.id == self.id))
+        signals.post_delete.send(sender = table, record = self)
+        db.delete(table, where = (table.id == self.id))
         db.commit()
         self.id = None
-        signals.post_delete.send(sender=table, record=self)
+        signals.post_delete.send(sender = table, record = self)
 
     @classmethod
     def getOne(cls, db, where):
         """Get a single record which falls under the given condition."""
-        records = list(cls.get(db, where, limit=(0, 2)))
+        cls.checkTable(db)
+        records = list(cls.get(db, where, limit = (0, 2)))
         if not records: # not found
             raise orm.RecordNotFound(where._render(db))
         if len(records) == 1:
@@ -167,33 +173,37 @@ class Model(metaclass=ModelMeta):
         return cls.getOne(db, cls.id == id)
 
     @classmethod
-    def get(cls, db, where, order=False, limit=False):
+    def get(cls, db, where, order = False, limit = False):
         """Get records from this table which fall under the given condition."""
+        cls.checkTable(db)
         order = order or cls._ordering # use default table ordering if no ordering passed
-        rows = db.select(cls, where=where, order=order, limit=limit)
+        rows = db.select(cls, where = where, order = order, limit = limit)
         for row in rows:
             yield cls(db, *zip(rows.fields, row))
 
     def save(self):
         db = self._db
+        self.checkTable(db)
         table = self.__class__
         values = [] # list of tuples (Field, value)
         self.timestamp = DateTime.now()
         for field in table:
             value = self[field]
             values.append((field, value))
+
+        signals.pre_save.send(sender = table, record = self)
+
         isNew = not self.id
-        signals.pre_save.send(sender=table, record=self)
         if isNew: # new record
             db.insert(*values)
             self.id = db.lastInsertId()
         else: # existing record
-            rowsCount = db.update(*values, where=(table.id == self.id))
+            rowsCount = db.update(*values, where = (table.id == self.id))
             if not rowsCount:
                 raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, id=%s' % (table, self.id))
         db.commit()
 
-        signals.post_save.send(sender=table, record=self, isNew=isNew)
+        signals.post_save.send(sender = table, record = self, isNew = isNew)
 
     def __str__(self):
         """Human readable presentation of the record."""
@@ -202,13 +212,14 @@ class Model(metaclass=ModelMeta):
                        for field in self.__class__))
 
     @classmethod
-    def _count(cls, where=None):
+    def _count(cls, where = None):
         """Get COUNT expression for this table."""
         return orm.COUNT(where or cls) # COUNT expression
 
     @classmethod
-    def getCount(cls, db, where=None):
+    def getCount(cls, db, where = None):
         """Request number of records in this table."""
+        cls.checkTable(db)
         count = cls._count(where)
         return db.select(count).value(0, count)
 
@@ -218,9 +229,11 @@ class Model(metaclass=ModelMeta):
         assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
         if db._id in cls._checkedDbs: # this db was already checked 
             return
-        tableName = ''
+        tableName = cls.__name__.lower()
         if tableName not in db.getTables():
-            raise Exception('Table `%s` does not exist in database')
+            raise Exception('Table `%s` does not exist in database' % tableName)
         dbColumns = db.getColumns(tableName)
+        print(dbColumns)
         cls._checkedDbs.add(db._id)
+        print(db.getCreateTableQuery(cls))
         # TODO: add checkTable call in very model method that uses a db

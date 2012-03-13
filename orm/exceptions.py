@@ -15,3 +15,6 @@ class TooManyRecords(OrmError):
 
 class SaveError(OrmError):
     """Record save error."""
+
+class ModelError(OrmError):
+    """A problem with a model."""

@@ -16,7 +16,7 @@ class CatalogModel(orm.Model):
 class WItemStyle():
     """Common style for representation of an ItemView item"""
 
-    def __init__(self, roles={}, **kwargs):
+    def __init__(self, roles = {}, **kwargs):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
         }
@@ -25,7 +25,7 @@ class WItemStyle():
         self.__dict__.update(kwargs)
 
 
-    def data(self, role, value=None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
+    def data(self, role, value = None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
         data = self.roles.get(role)
         return data(value) if hasattr(data, '__call__') else data
 
@@ -39,11 +39,11 @@ class WItemStyle():
 class WDecimalItemStyle(WItemStyle):
     """Style for items with Decimal values."""
 
-    def __init__(self, roles={}, format=''):
+    def __init__(self, roles = {}, format = ''):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight,
                       QtCore.Qt.DisplayRole: self.displayRole}
         _roles.update(roles)
-        super().__init__(roles=_roles, format=format)
+        super().__init__(roles = _roles, format = format)
 
     def displayRole(self, value):
         format_ = self.format
@@ -58,32 +58,32 @@ class WDecimalItemStyle(WItemStyle):
 class WDateItemStyle(WItemStyle):
     """Style for items with Date values."""
 
-    def __init__(self, roles={}):
+    def __init__(self, roles = {}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                   QtCore.Qt.DisplayRole: formatDate}
         _roles.update(roles)
-        super().__init__(roles=_roles)
+        super().__init__(roles = _roles)
 
 
 class WBoolItemStyle(WItemStyle):
     """Style for items with bool values."""
 
-    def __init__(self, roles={}):
+    def __init__(self, roles = {}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                   QtCore.Qt.DisplayRole: None,
                   QtCore.Qt.CheckStateRole: lambda value: QtCore.Qt.Checked if value else QtCore.Qt.Unchecked}
         _roles.update(roles)
-        super().__init__(roles=_roles)
+        super().__init__(roles = _roles)
 
 
 class WVHeaderStyle(WItemStyle):
     """Style for vertical headers."""
 
-    def __init__(self, roles={}, title='', width=None):
+    def __init__(self, roles = {}, title = '', width = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                   QtCore.Qt.DisplayRole: title}
         _roles.update(roles)
-        super().__init__(roles=_roles, title=title, width=width)
+        super().__init__(roles = _roles, title = title, width = width)
 
     def displayRole(self, value):
         format_ = self.format
@@ -97,11 +97,11 @@ class WVHeaderStyle(WItemStyle):
 class WHHeaderStyle(WItemStyle):
     """Style for horizontal headers."""
 
-    def __init__(self, roles={}, height=None):
+    def __init__(self, roles = {}, height = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                   QtCore.Qt.DisplayRole: lambda value: value}
         _roles.update(roles)
-        super().__init__(roles=_roles, height=height)
+        super().__init__(roles = _roles, height = height)
 
     def displayRole(self, value):
         format_ = self.format
@@ -116,7 +116,7 @@ class WHHeaderStyle(WItemStyle):
 def createStyleForField(field):
     assert isinstance(field, orm.Field)
     if isinstance(field, orm.DecimalField):
-        return WDecimalItemStyle(format=',.%if ' % field.fractionDigits)
+        return WDecimalItemStyle(format = ',.%if ' % field.fractionDigits)
     elif isinstance(field, orm.DateField):
         return WDateItemStyle()
     elif isinstance(field, orm.BooleanField):
@@ -130,7 +130,7 @@ def createStyleForField(field):
 class WCatalogProxyModel(QtCore.QAbstractTableModel):
     """Model for showing list of catalog items."""
 
-    def __init__(self, db, catalogModel, where=None):
+    def __init__(self, db, catalogModel, where = None):
         assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'
         super().__init__(None) # no parent
         self._hHeaderStyle = WHHeaderStyle()
@@ -144,7 +144,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
                 referTable = field.referTable
                 _join.append(orm.Join(referTable, field == referTable.id))
                 #_join.append(referTable)
-            self._vHeaderStyles.append(WVHeaderStyle(title=field.label))
+            self._vHeaderStyles.append(WVHeaderStyle(title = field.label))
             self._columnStyles.append(createStyleForField(field))
 
         self.db = db
@@ -173,28 +173,28 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self._rowsCount = None
         self.endResetModel()
         self.timer.start(self.updateTime * 1000)
-    
+
     def row(self, rowNo):
         """Request from DB and fill cache """
         try:
             return self._cache[rowNo]
         except KeyError:
             self.timer.stop()
-            rangeStart = max(rowNo - self.fetchCount // 3, 0) 
+            rangeStart = max(rowNo - self.fetchCount // 3, 0)
             rangeEnd = rangeStart + self.fetchCount
             #print('cache fetch', (rangeStart, rangeEnd))
-            rows = self.db.select(*self.fields, where=self.where, limit=(rangeStart, rangeEnd))
+            rows = self.db.select(*self.fields, where = self.where, limit = (rangeStart, rangeEnd))
             now = time.time()
             expiredTime = now - self.updateTime
             # clean cache of expired rows
-            cache = {_rowNo: row for _rowNo, row in self._cache.items() 
+            cache = {_rowNo: row for _rowNo, row in self._cache.items()
                         if row[-1] > expiredTime}
             for i, row in enumerate(rows):
                 cache[rangeStart + i] = tuple(row) + (now,)
             self._cache = cache
             self.timer.start(self.updateTime * 1000)
             return cache[rowNo]
-        
+
     def data(self, index, role):
         if index.isValid():
             value = self.row(index.row())[index.column()]

@@ -31,8 +31,8 @@ except ImportError:
 class Column():
     """A database table column."""
 
-    def __init__(self, type, field, name='', default=None, precision=None, scale=None, unsigned=None,
-                 nullable=True, autoincrement=False, comment=''):
+    def __init__(self, type, field, name = '', default = None, precision = None, scale = None, unsigned = None,
+                 nullable = True, autoincrement = False, comment = ''):
         self.name = name or field.name # column name
         self.type = type # string with the name of data type (decimal, varchar, bigint...)
         self.field = field # model field related to this column
@@ -40,12 +40,12 @@ class Column():
         self.precision = precision # char max length or decimal/int max digits
         self.scale = scale # for decimals
         self.unsigned = unsigned # for decimals, integers
-        assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
+        # assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
         self.nullable = nullable # can contain NULL values?
         self.autoincrement = autoincrement # for primary integer
         self.comment = comment
 
-    def __str__(self, db=None):
+    def __str__(self, db = None):
         db = db or GenericAdapter
         assert isinstance(db, GenericAdapter) or (isinstance(db, type) and issubclass(db, GenericAdapter)), 'Must be GenericAdapter class or instance'
         colFunc = getattr(db, '_' + self.type.upper())
@@ -55,12 +55,15 @@ class Column():
 
 
 class Index():
-    """A database table index.
-    type: index, unique, fulltext, spatial
-    sort: asc, desc
-    method: btree, hash, gist, and gin"""
+    """A database table index."""
 
-    def __init__(self, fields, type='index', name='', sortOrders=None, prefixLengths=None, method='', **kwargs):
+    def __init__(self, fields, type = 'index', name = '', sortOrders = None, prefixLengths = None, method = '', **kwargs):
+        """
+        @param type: index, unique, fulltext, spatial
+        @param sort: asc, desc
+        @param prefixLengths: list of ints which specify which first bytes/chars of TEXT, BLOB to use for index
+        @param method: btree, hash, gist, and gin
+        """
         assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
         assert fields, 'You did not indicate which fields to index.'
         table = fields[0].table
@@ -100,7 +103,7 @@ class GenericAdapter():
     protocol = 'generic'
     epoch = Date(1970, 1, 1) # from this date number of days will be counted when storing DATE values in the DB
 
-    def __init__(self, uri='', connect=True, autocommit=True):
+    def __init__(self, uri = '', connect = True, autocommit = True):
         """URI is already without protocol."""
         print('Creating adapter for "%s"' % uri)
         self._timings = []
@@ -233,7 +236,7 @@ class GenericAdapter():
         return 'RANDOM()'
 
     @classmethod
-    def render(cls, value, castField=None):
+    def render(cls, value, castField = None):
         """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for operations with castField in the DB."""
         if isinstance(value, orm.fields.Expression): # it's an Expression or Field 
             return value.__str__(cls) # render sub-expression
@@ -253,7 +256,7 @@ class GenericAdapter():
             return cls._render(value)
 
     @classmethod
-    def _render(cls, value, column=None):
+    def _render(cls, value, column = None):
         """Render a simple value to the format needed for the given column.
         For example, _render a datetime to the format acceptable for datetime columns in this kind of DB.
         If there is no column - present the value as string.
@@ -334,7 +337,7 @@ class GenericAdapter():
         return query
 
     @classmethod
-    def _INT(cls, column, intMap=[(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]):
+    def _INT(cls, column, intMap = [(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]):
         """Render declaration of INT column type.
         `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s rating from store'
         """
@@ -465,7 +468,7 @@ class GenericAdapter():
         self._autocommit()
         return result
 
-    def _update(self, *fields, where=None, limit=None):
+    def _update(self, *fields, where = None, limit = None):
         """UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
           [ WHERE expression ] [ LIMIT limit_amount ]"""
         table = None
@@ -480,23 +483,23 @@ class GenericAdapter():
         sql_v = ', '.join(['%s= %s' % (field.name, self.render(value, field)) for (field, value) in fields])
         return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
 
-    def update(self, *fields, where=None, limit=None):
+    def update(self, *fields, where = None, limit = None):
         """Update records
         @param *args: tuples in form (Field, value)
         @param where: an Expression or string for WHERE part of the DELETE query
         @param limit: a tuple in form (start, end) which specifies the range dor deletion.
         """
-        sql = self._update(*fields, where=where)
+        sql = self._update(*fields, where = where)
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _delete(self, table, where, limit=None):
+    def _delete(self, table, where, limit = None):
         """DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]"""
         assert orm.isModel(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
         return 'DELETE FROM %s%s;' % (table, sql_w)
 
-    def delete(self, table, where, limit=None):
+    def delete(self, table, where, limit = None):
         """Delete records from table with the given condition and limit.
         @param talbe: a Model subclass, whose records to delete
         @param where: an Expression or string for WHERE part of the DELETE query
@@ -505,7 +508,7 @@ class GenericAdapter():
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _select(self, *args, where=None, order=False, limit=False,
+    def _select(self, *args, where = None, order = False, limit = False,
                 distinct = False, group = False, having = False):
         """SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
           [ FROM from_clause ]
@@ -583,7 +586,7 @@ class GenericAdapter():
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
-    def select(self, *args, where=None, **attributes):
+    def select(self, *args, where = None, **attributes):
         """Create and return SELECT query.
             @param args: tables, fields or joins;
             @param where: expression for where;
@@ -592,7 +595,7 @@ class GenericAdapter():
             @param group:
         tables are taken from fields and `where` expression;
         """
-        fields, sql = self._select(*args, where=where, **attributes)
+        fields, sql = self._select(*args, where = where, **attributes)
         self.execute(sql)
         rows = list(self.cursor.fetchall())
         return self._parseResponse(fields, rows)
@@ -652,7 +655,7 @@ class SqliteAdapter(GenericAdapter):
     protocol = 'sqlite'
     driver = globals().get('sqlite3')
 
-    def __init__(self, uri, driverArgs=None):
+    def __init__(self, uri, driverArgs = None):
         self.driverArgs = driverArgs or {}
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
@@ -667,7 +670,7 @@ class SqliteAdapter(GenericAdapter):
             raise orm.ConnectionError('"%s" is not a file.\nFor a new database create an empty file.' % dbPath)
         return self.driver.Connection(self.dbPath, **self.driverArgs)
 
-    def _truncate(self, table, mode=''):
+    def _truncate(self, table, mode = ''):
         tableName = str(table)
         return ['DELETE FROM %s;' % tableName,
                 "DELETE FROM sqlite_sequence WHERE name='%s';" % tableName]
@@ -678,6 +681,7 @@ class SqliteAdapter(GenericAdapter):
     @classmethod
     def _getCreateTableIndexes(cls, table):
         indexes = []
+        print(list(map(str, table._indexes)))
         for index in table._indexes:
             if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
@@ -749,7 +753,7 @@ class SqliteAdapter(GenericAdapter):
 
     @classmethod
     def _decodeDATE(cls, value, column):
-        return cls.epoch + TimeDelta(days=value)
+        return cls.epoch + TimeDelta(days = value)
 
     @classmethod
     def _DECIMAL(cls, column):
@@ -775,22 +779,19 @@ class SqliteAdapter(GenericAdapter):
         self.execute("PRAGMA table_info('%s')" % tableName) # name, type, notnull, dflt_value, pk
         columns = []
         for row in self.cursor.fetchall():
-            print(row)
-            type = row[2].lower()
+            print('Found table column:', tableName, row)
+            typeName = row[2].lower()
             # INTEGER PRIMARY KEY fields are auto-generated in sqlite
             # INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
-            autoincrement = bool(type == 'integer' and row[5])
-            if 'int' in type:
-                type = 'int'
-            elif 'text' in type:
-                type = 'text'
-            elif 'blob' in type:
-                type = 'blob'
-            else:
-                raise Exception('Unexpected data type: %s' % type)
-            column = Column(type=type, field=None, name=row[1], default=row[4],
+            autoincrement = bool(typeName == 'integer' and row[5])
+            if 'int' in typeName or 'bool' in typeName: # booleans are sotred as ints in sqlite
+                typeName = 'int'
+            elif typeName not in ('blob', 'text'):
+                raise TypeError('Unexpected data type: %s' % typeName)
+            column = Column(type = typeName, field = None, name = row[1], default = row[4],
                             precision = 19, nullable = (not row[3]), autoincrement = autoincrement)
             columns.append(column)
+            print('Reproduced table column:', tableName, column)
         return columns
 
 
@@ -837,7 +838,7 @@ class MysqlAdapter(GenericAdapter):
     protocol = 'mysql'
     driver = globals().get('pymysql')
 
-    def __init__(self, uri, driverArgs=None):
+    def __init__(self, uri, driverArgs = None):
         m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
                      '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
         assert m, "Invalid URI: %s" % self.uri
@@ -850,7 +851,7 @@ class MysqlAdapter(GenericAdapter):
         assert dbName, 'Database name required'
         port = int(m.group('port') or 3306)
         self.driverArgs = driverArgs or {}
-        self.driverArgs.update(dict(db=dbName, user=user, passwd=password, host=host, port=port, charset='utf8'))
+        self.driverArgs.update(dict(db = dbName, user = user, passwd = password, host = host, port = port, charset = 'utf8'))
         super().__init__(uri)
         self.uri = uri
         self.dbName = dbName
@@ -884,26 +885,20 @@ class MysqlAdapter(GenericAdapter):
                      "WHERE table_schema = '%s' AND table_name = '%s'" % (self.dbName, tableName))
         columns = []
         for row in self.cursor.fetchall():
-            type = row[1].lower()
-            if 'int' in type:
-                type = 'int'
-            elif 'char' in type:
-                type = 'char'
-            elif 'text' in type:
-                type = 'text'
-            elif 'datetime' in type:
-                type = 'datetime'
-            elif 'date' in type:
-                type = 'date'
-            else:
-                raise Exception('Unexpected data type: %s' % type)
+            typeName = row[1].lower()
+            if 'int' in typeName:
+                typeName = 'int'
+            elif 'char' in typeName:
+                typeName = 'char'
+            elif typeName not in ('text', 'datetime', 'date'):
+                raise Exception('Unexpected data type: %s' % typeName)
             precision = row[4] or row[5]
             nullable = row[3].lower() == 'yes'
             autoincrement = 'auto_increment' in row[8].lower()
             unsigned = row[7].lower().endswith('unsigned')
-            column = Column(type=type, field=None, name=row[0], default=row[2],
-                            precision=precision, scale=row[6], unsigned=unsigned,
-                            nullable=nullable, autoincrement=autoincrement, comment=row[9])
+            column = Column(type = typeName, field = None, name = row[0], default = row[2],
+                            precision = precision, scale = row[6], unsigned = unsigned,
+                            nullable = nullable, autoincrement = autoincrement, comment = row[9])
             columns.append(column)
         return columns
 
