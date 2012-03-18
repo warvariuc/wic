@@ -1,6 +1,6 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
-import inspect
+import inspect, copy
 from datetime import datetime as DateTime
 import orm
 from orm import signals
@@ -34,7 +34,8 @@ class ModelMeta(type):
         if 'Model' not in globals(): # we need only Model subclasses; if Model is not defined: __new__ is called for Model itself
             return NewClass # return wihout any processing
 
-#        NewClass._indexes = list(NewClass._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
+        NewClass._indexes = list(NewClass._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
+        # TODO: filter duplicate indexes
         for index in NewClass._indexes :
             if not isinstance(index, orm.Index):
                 raise orm.ModelError('Found a non Index in the _indexes.')
@@ -52,7 +53,7 @@ class ModelMeta(type):
                 raise orm.ModelError('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
             field_ = field.__class__(name = fieldName, table = NewClass, label = field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
-                field_._init(*field._initArgs, **field._initKwargs) # and initialize it
+                field_._init_(*field._initArgs, **field._initKwargs) # and initialize it
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
@@ -97,7 +98,7 @@ class Model(metaclass = ModelMeta):
     """Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields."""
 
-    _indexes = [] # each table subclass will have its own - i.e. it's not inherited by subclasses (metaclass will assure this)
+    _indexes = [] # list of db table indexes; each model will have its own - i.e. it's not inherited by subclasses (metaclass will assure this)
     _ordering = [] # default order for select when not specified - overriden
     _checkedDbs = set() # ids of database adapters this model was successfully checked against
 
@@ -124,7 +125,7 @@ class Model(metaclass = ModelMeta):
             kwargs[field.name] = value
 
         for field in self.__class__: # make values for fields
-            setattr(self, field.name, kwargs.pop(field.name, field.defaultValue))
+            setattr(self, field.name, kwargs.pop(field.name, field.default))
 
         if kwargs:
             raise NameError('Got unknown field names: %s' % ', '.join(kwargs))
@@ -212,7 +213,7 @@ class Model(metaclass = ModelMeta):
                        for field in self.__class__))
 
     @classmethod
-    def _count(cls, where = None):
+    def COUNT(cls, where = None):
         """Get COUNT expression for this table."""
         return orm.COUNT(where or cls) # COUNT expression
 
@@ -220,7 +221,7 @@ class Model(metaclass = ModelMeta):
     def getCount(cls, db, where = None):
         """Request number of records in this table."""
         cls.checkTable(db)
-        count = cls._count(where)
+        count = cls.COUNT(where)
         return db.select(count).value(0, count)
 
     @classmethod

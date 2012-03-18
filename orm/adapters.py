@@ -29,7 +29,7 @@ except ImportError:
 
 
 class Column():
-    """A database table column."""
+    """A generic database table column."""
 
     def __init__(self, type, field, name = '', default = None, precision = None, scale = None, unsigned = None,
                  nullable = True, autoincrement = False, comment = ''):
@@ -54,46 +54,51 @@ class Column():
 
 
 
+class IndexField():
+    """Helper class for defining a field for index"""
+
+    def __init__(self, field, sortOrder = 'asc', prefixLength = None):
+        assert isinstance(field, orm.fields.Field), 'Pass Field instances.'
+        assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
+        assert isinstance(prefixLength, (int, type(None))), 'Index prefix length must None or int.'
+        self.field = field
+        self.sortOrder = sortOrder
+        self.prefixLength = prefixLength
+
+
 class Index():
     """A database table index."""
 
-    def __init__(self, fields, type = 'index', name = '', sortOrders = None, prefixLengths = None, method = '', **kwargs):
+    def __init__(self, indexFields, type = 'index', name = '', method = '', **kwargs):
         """
-        @param type: index, unique, fulltext, spatial
-        @param sort: asc, desc
-        @param prefixLengths: list of ints which specify which first bytes/chars of TEXT, BLOB to use for index
-        @param method: btree, hash, gist, and gin
+        @param indexFields: list of IndexField instances
+        @param type: index, primary, unique, fulltext, spatial - specific fot the db
+        @param method: btree, hash, gist, gin - specific fot the db
         """
-        assert isinstance(fields, (list, tuple)), 'Pass a list of indexed fields.'
-        assert fields, 'You did not indicate which fields to index.'
-        table = fields[0].table
-        for field in fields:
-            assert isinstance(field, orm.fields.Field)
-            assert field.table is table, 'Indexed fields should be from the same table!'
-        sortOrders = sortOrders or ['asc'] * len(fields)
-        prefixLengths = prefixLengths or [0] * (len(fields))
-        assert isinstance(sortOrders, (list, tuple)), 'Sort orders must be a list.'
-        assert isinstance(prefixLengths, (list, tuple)), 'Prefix lengths must be a list.'
-        assert len(fields) == len(sortOrders) == len(prefixLengths), 'Lists of fields, sort orders and prefix lengths must be the same length.'
+        assert isinstance(indexFields, (list, tuple)) and indexFields, 'Pass a list of indexed fields.'
+        table = None
+        for indexField in indexFields:
+            assert isinstance(indexField, IndexField), 'Pass IndexField instances.'
+            table = table or indexField.field.table
+            assert indexField.field.table is table, 'Indexed fields should be from the same table!'
 
         if type is True:
             type = 'index'
 
-        if name == '':
-            for field in fields:
-                name += field.name + '_'
-            name += type
+        if name == '': # if name was not given compose it from the names of all fields involved in the index
+            for indexField in indexFields:
+                name += indexField.field.name + '_'
+            name += type # and add index type at the end
         self.name = name
-        self.fields = fields # fields involved in this index
+
+        self.indexFields = indexFields # fields involved in this index
         self.type = type # index type: unique, primary, etc.
-        self.prefixLengths = prefixLengths # prefix lengths
-        self.sortOrders = sortOrders # sort direction: asc, desc
         self.method = method # if empty - will be used default for this type of DB
         self.other = kwargs # other parameters for a specific DB adapter
 
     def __str__(self):
         return '{} `{}` ON ({}) {}'.format(self.type, self.name,
-                            ', '.join(map(str, self.fields)), self.method)
+                            ', '.join(str(indexField.field) for indexField in self.indexFields), self.method)
 
 
 
@@ -623,13 +628,18 @@ class Rows():
     """Keeps results of a SELECT and has methods for convenient access."""
 
     def __init__(self, db, fields, rows):
+        """
+        @param fields: list of queried fields
+        @param rows: list of tuples with query result
+        """
         self.db = db
         self.fields = tuple(fields)
         self.rows = rows
-        self._fields = dict((str(field), i) for i, field in enumerate(fields)) # {field_str: field_order}
+        self._fieldsStr = tuple(str(field) for field in fields)
+        self._fieldsOrder = dict((fieldStr, i) for i, fieldStr in enumerate(self._fieldsStr)) # {field_str: field_order}
 
     def value(self, rowNo, field):
-        columnNo = self._fields[str(field)]
+        columnNo = self._fieldsOrder[str(field)]
         return self.rows[rowNo][columnNo]
 
     def __len__(self):
@@ -645,6 +655,13 @@ class Rows():
     def __str__(self):
         return pprint.pformat(self.rows)
 
+    def dictresult(self): # TODO:
+        """Iterator of the result which return row by row in form 
+        {'field1_name': field1_value, 'field2_name': field2_value, ...}
+        """
+        for row in self.rows:
+            yield {self._fieldsStr[i]: value for i, value in enumerate(row)}
+
 
 
 
@@ -659,7 +676,7 @@ class SqliteAdapter(GenericAdapter):
         self.driverArgs = driverArgs or {}
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         dbPath = uri
-        if dbPath != ':memory:' and dbPath[0] != '/':
+        if dbPath != ':memory:' and not os.path.isabs(dbPath):
             dbPath = os.path.abspath(os.path.join(os.getcwd(), dbPath))
         self.dbPath = dbPath
         super().__init__(dbPath)
@@ -687,12 +704,12 @@ class SqliteAdapter(GenericAdapter):
                 continue
             indexType = 'PRIMARY KEY'
             columns = []
-            for i, field in enumerate(index.fields):
-                column = field.column.name
-                prefixLength = index.prefixLengths[i]
+            for indexField in index.indexFields:
+                column = indexField.field.column.name
+                prefixLength = indexField.prefixLength
                 if prefixLength:
                     column += '(%i)' % prefixLength
-                sortOrder = index.sortOrders[i]
+                sortOrder = indexField.sortOrder
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
 
@@ -711,15 +728,15 @@ class SqliteAdapter(GenericAdapter):
             else:
                 indexType = 'INDEX'
             columns = []
-            for i, field in enumerate(index.fields):
-                column = field.column.name
+            for indexField in index.indexFields:
+                column = indexField.field.column.name
 #                prefixLength = index.prefixLengths[i] 
 #                if prefixLength:
 #                    column += '(%i)' % prefixLength
-                sortOrder = index.sortOrders[i]
+                sortOrder = indexField.sortOrder
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
-            table = index.fields[0].table
+            table = index.indexFields[0].field.table # al fields are checked to have the same table, so take the first one
             indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, table, ', '.join(columns)))
 
         return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''

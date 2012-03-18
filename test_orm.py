@@ -1,6 +1,6 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
-from pprint import pprint
+import pprint
 from decimal import Decimal
 import tempfile, os
 
@@ -12,19 +12,19 @@ class Authors(orm.Model):
     """Authors catalog"""
     _tableId = 1
     # id field is already present 
-    first_name = orm.CharField(maxLength=100)
-    last_name = orm.CharField(maxLength=100)
+    first_name = orm.CharField(maxLength = 100)
+    last_name = orm.CharField(maxLength = 100)
 
 
 class Books(orm.Model):
     """Books catalog"""
     _tableId = 2
     # id field is already present 
-    name = orm.CharField(maxLength=100, defaultValue='a very good book!!!')
-    price = orm.fields.DecimalField(maxDigits=10, fractionDigits=2, defaultValue='0.00', index=True) # 2 decimal places
-    author_id = orm.RecordIdField('Authors', index=True)
-    publication_date = orm.fields.DateField(defaultValue=None)
-    timestamp = orm.fields.DateTimeField(defaultValue=None)
+    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
+    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00', index = True) # 2 decimal places
+    author_id = orm.RecordIdField('Authors', index = True)
+    publication_date = orm.fields.DateField()
+    timestamp = orm.fields.DateTimeField()
 #    fan = orm.AnyRecordField(index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
@@ -37,7 +37,7 @@ class CatalogModel(orm.Model):
     deleted = orm.BooleanField()
 
 class Streets(CatalogModel):
-    street_name = orm.CharField(maxLength=50)
+    street_name = orm.CharField(maxLength = 50)
 
 
 #fd, filePath = tempfile.mkstemp(suffix='.sqlite')
@@ -64,33 +64,33 @@ for query in db.getCreateTableQuery(Books).split('\n\n'):
 
 print('\nInserting authors:')
 authorsData = (
-    dict(first_name='Linus', last_name='Torvalds'),
-    dict(first_name='Sam', last_name='Williams'),
-    dict(first_name='Steven', last_name='Levy'),
-    dict(first_name='Richard', last_name='Stallman')
+    dict(first_name = 'Linus', last_name = 'Torvalds'),
+    dict(first_name = 'Sam', last_name = 'Williams'),
+    dict(first_name = 'Steven', last_name = 'Levy'),
+    dict(first_name = 'Richard', last_name = 'Stallman')
 )
 authors = []
 for data in authorsData:
-    author = Authors(db=db, **data)
+    author = Authors(db = db, **data)
     author.save()
     print(author)
     authors.append(author)
 
 print('\nInserting books:')
 booksData = (
-    dict(name="Free as in Freedom: Richard Stallman's Crusade for Free Software",
-         author_id=authors[1].id, price='9.55', publication_date='2002-03-08'),
-    dict(name="Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
-         author_id=authors[2].id, price='14.95', publication_date='2010-03-27'),
-    dict(name="In The Plex: How Google Thinks, Works, and Shapes Our Lives",
-         author_id=authors[2].id, price='13.98', publication_date='2011-04-12'),
-    dict(name="Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
-         author_id=authors[2].id, price='23.00', publication_date='2002-01-15'),
-    dict(name="Just for Fun.",
-         author_id=authors[0].id, price='11.20', publication_date='2002-12-01'),
+    dict(name = "Free as in Freedom: Richard Stallman's Crusade for Free Software",
+         author_id = authors[1].id, price = '9.55', publication_date = '2002-03-08'),
+    dict(name = "Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
+         author_id = authors[2].id, price = '14.95', publication_date = '2010-03-27'),
+    dict(name = "In The Plex: How Google Thinks, Works, and Shapes Our Lives",
+         author_id = authors[2].id, price = '13.98', publication_date = '2011-04-12'),
+    dict(name = "Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
+         author_id = authors[2].id, price = '23.00', publication_date = '2002-01-15'),
+    dict(name = "Just for Fun.",
+         author_id = authors[0].id, price = '11.20', publication_date = '2002-12-01'),
 )
 for data in booksData:
-    book = Books(db=db, **data)
+    book = Books(db = db, **data)
     book.save()
     print(book)
 
@@ -100,17 +100,19 @@ for data in booksData:
 # as it is transformed by Python into `where = (14 < Books.price) and (Books.price < '15.00')` 
 # making as result `where = (Books.price < '15.00')`
 print('\nSELECT query:')
-print(db._select(Books.id, where=(15 > Books.price > '14.00'), limit=(0, 10)))
-print(db.select(Books, where=(Books.price > '14'), limit=(0, 10)))
-book = Books.getOne(db, where=(Books.price > 14))
+print(db._select(Books.id, where = (15 > Books.price > '14.00'), limit = (0, 10)))
+print(db.select(Books, where = (Books.price > '15'), limit = (0, 10)))
+book = Books.getOne(db, where = (Books.price > 15))
 print(book)
 
 print('\nUPDATE query:')
-print(db._update(Books.name('_' + book.name), Books.price(Books.price + 1), where=(Books.id == book.id)))
-db.update(Books.name('A new title with raised price'), Books.price(Books.price + 1), where=(Books.id == book.id))
-print(Books.getOne(db, where=(Books.id == book.id)))
+print(db._update(Books.name('_' + book.name), Books.price(Books.price + 1), where = (Books.id == book.id)))
+db.update(Books.name('A new title with raised price'), Books.price(Books.price + 1), where = (Books.id == book.id))
+print(Books.getOne(db, where = (Books.id == book.id)))
 
 
-print('\nAuthors count', db.select(Authors.first_name, Authors.count()))
+print('\nAuthors count')
+pprint.pprint(list(db.select(Authors.first_name, Authors.COUNT()).dictresult()))
+pprint.pprint(list(db.select(Authors.first_name, Authors.last_name).dictresult()))
 
 #os.unlink(filePath) # delete the temporary db file

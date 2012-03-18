@@ -52,7 +52,7 @@ class Expression():
 
     def __neg__(self):
         """-Field: sort DESC"""
-        self.sort = 'DESC'
+        self.sort = 'DESC' # TODO: should return new Expression
         return self
     def __pos__(self):
         """+Field: sort ASC"""
@@ -78,7 +78,7 @@ class Expression():
 
 
 class Field(Expression):
-    """Generic ORM table field."""
+    """Abstract ORM table field."""
 
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop('name', None) # attribute name of the field
@@ -89,15 +89,15 @@ class Field(Expression):
         orm._fieldsCount += 1 # tracking creation order
         self._orderNo = orm._fieldsCount
 
-    def _init(self, column, defaultValue, index = ''):
+    def _init_(self, column, default, index = ''):
         """This is called by the metaclass to initialize the Field after a Table subclass is created."""
         #del self._initArgs, self._initKwargs
         self.column = column
-        self.defaultValue = defaultValue
+        self.default = default
         self.label = self.label or self.name.replace('_', ' ').capitalize()
 
         if index:
-            self.table._indexes.append(orm.Index([self], index))
+            self.table._indexes.append(orm.Index([orm.IndexField(self)], index))
 
     def __str__(self, db = None):
         #db = db or orm.GenericAdapter # we do not use adapter here
@@ -110,59 +110,61 @@ class Field(Expression):
 
 
 class CharField(Field):
-    def _init(self, maxLength, defaultValue = None, index = ''):
-        super()._init(Column('CHAR', self, precision = maxLength, default = defaultValue), defaultValue, index)
+    """Field for storing strings of certain length."""
+    def _init_(self, maxLength, default = None, index = ''):
+        super()._init_(Column('CHAR', self, precision = maxLength, default = default), default, index)
 
 
 class TextField(Field):
-    def _init(self, defaultValue = None):
-        super()._init(Column('TEXT', self, default = defaultValue), defaultValue, None)
+    """Field for storing strings of any length."""
+    def _init_(self, default = None):
+        super()._init_(Column('TEXT', self, default = default), default, None)
 
 
 class IntegerField(Field):
-    def _init(self, maxDigits = 9, defaultValue = None, autoincrement = False, index = ''):
+    def _init_(self, maxDigits = 9, default = None, autoincrement = False, index = ''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
-        super()._init(Column('INT', self, precision = self.maxDigits, unsigned = True, default = defaultValue,
-                             autoincrement = autoincrement), defaultValue, index)
+        super()._init_(Column('INT', self, precision = self.maxDigits, unsigned = True, default = default,
+                             autoincrement = autoincrement), default, index)
 
 
 class DecimalField(Field):
-    def _init(self, maxDigits, fractionDigits, defaultValue = None, index = ''):
-        super()._init(Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits, default = defaultValue), defaultValue, index)
+    def _init_(self, maxDigits, fractionDigits, default = None, index = ''):
+        super()._init_(Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits, default = default), default, index)
 
 
 class DateField(Field):
-    def _init(self, defaultValue = None, index = ''):
-        super()._init(Column('DATE', self, default = defaultValue), defaultValue, index)
+    def _init_(self, default = None, index = ''):
+        super()._init_(Column('DATE', self, default = default), default, index)
 
 
 class DateTimeField(Field):
-    def _init(self, defaultValue = None, index = ''):
-        super()._init(Column('DATETIME', self, default = defaultValue), defaultValue, index)
+    def _init_(self, default = None, index = ''):
+        super()._init_(Column('DATETIME', self, default = default), default, index)
 
 
 
 class IdField(Field):
     """Primary integer autoincrement key. ID - implicitly present in each table."""
-    def _init(self):
-        super()._init(Column('INT', self, precision = 9, unsigned = True, nullable = False, autoincrement = True), None, 'primary') # 9 digits - int32 - should be enough
+    def _init_(self):
+        super()._init_(Column('INT', self, precision = 9, unsigned = True, nullable = False, autoincrement = True), None, 'primary') # 9 digits - int32 - should be enough
 
 
 class BooleanField(Field):
-    def _init(self, defaultValue = None, index = ''):
-        super()._init(Column('INT', self, precision = 1, default = defaultValue), defaultValue, index)
+    def _init_(self, default = None, index = ''):
+        super()._init_(Column('INT', self, precision = 1, default = default), default, index)
 
 
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table."""
-    def _init(self, referTable, index = ''):
+    def _init_(self, referTable, index = ''):
         """
         @param referTable: a model class of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
         self._referTable = referTable # foreign key - referenced type of table
-        super()._init(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - should be enough
+        super()._init_(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - should be enough
 
     @property
     def referTable(self):
@@ -173,21 +175,21 @@ class RecordIdField(Field):
         self._referTable = orm.getObjectByPath(referTable, self.table.__module__)
         return self._referTable
 
-    def _cast(self, value):
+    def _cast(self, value): # TODO: don't start method name with '_'
         """Convert a value into another value which is ok for this Field."""
         try:
             return int(value)
         except ValueError:
-            raise SyntaxError('Record ID must be an integer.')
+            raise SyntaxError('Record ID must be an integer.') # TODO: what Exception type to raise?
 
 
 class TableIdField(Field):
     """This field stores id of a given table in this DB."""
-    def _init(self, index = ''):
-        super()._init(Column('INT', self, precision = 5, unsigned = True), None, index)
+    def _init_(self, index = ''):
+        super()._init_(Column('INT', self, precision = 5, unsigned = True), None, index)
 
     def _cast(self, value):
-        if isinstance(value, orm.Model) or orm.isModel(value):
+        if isinstance(value, (orm.Model, orm.ModelMeta)):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
         try:
             return int(value)

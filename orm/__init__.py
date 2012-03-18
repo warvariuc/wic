@@ -57,7 +57,7 @@ class Nil():
 
 
 from .exceptions import *
-from .adapters import Column, Index, GenericAdapter, SqliteAdapter, MysqlAdapter
+from .adapters import Column, IndexField, Index, GenericAdapter, SqliteAdapter, MysqlAdapter
 from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, \
                     DateTimeField, BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
 from .models import Model, Join, LeftJoin, ModelMeta
