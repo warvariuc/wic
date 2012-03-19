@@ -96,7 +96,7 @@ class Field(Expression):
         self.default = default
         self.label = self.label or self.name.replace('_', ' ').capitalize()
 
-        if index:
+        if index: # index type name is given
             self.table._indexes.append(orm.Index([orm.IndexField(self)], index))
 
     def __str__(self, db = None):

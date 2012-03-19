@@ -81,6 +81,8 @@ class Index():
             assert isinstance(indexField, IndexField), 'Pass IndexField instances.'
             table = table or indexField.field.table
             assert indexField.field.table is table, 'Indexed fields should be from the same table!'
+            
+        self.table = table
 
         if type is True:
             type = 'index'
@@ -98,7 +100,13 @@ class Index():
 
     def __str__(self):
         return '{} `{}` ON ({}) {}'.format(self.type, self.name,
-                            ', '.join(str(indexField.field) for indexField in self.indexFields), self.method)
+            ', '.join(str(indexField.field) for indexField in self.indexFields), self.method)
+        
+#    def _copy(self, model):
+#        """Create a copy of the index with copy of fields in the index with the given model."""
+#        assert isinstance(model, orm.ModelMeta), 'Pass a Model.'
+#        indexFields = [indexField for indexField in self.indexFields]
+#        return Index(indexFields, self.type, self.name, self.method, **self.other)
 
 
 

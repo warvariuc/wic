@@ -1,7 +1,8 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
-import inspect, copy
+import inspect
 from datetime import datetime as DateTime
+from collections import OrderedDict
 import orm
 from orm import signals
 
@@ -10,7 +11,7 @@ class Join():
     """Object holding parameters for a join."""
     def __init__(self, model, on, type = ''):
         assert isinstance(model, orm.ModelMeta), 'Pass a model class.'
-        assert isinstance(on, orm.fields.Expression), 'WHERE should be an Expression.'
+        assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
         self.model = model # table to join
         self.on = on # expression defining join condition
         self.type = type # join type. if empty - INNER JOIN
@@ -29,44 +30,62 @@ class ModelMeta(type):
     It has some class methods for models."""
 
     def __new__(cls, name, bases, attrs):
-        NewClass = type.__new__(cls, name, bases, attrs)
+        NewModel = type.__new__(cls, name, bases, attrs)
+        
+        NewModel._name = NewModel.__dict__.get('_name', name.lower()) # db table name
 
-        if 'Model' not in globals(): # we need only Model subclasses; if Model is not defined: __new__ is called for Model itself
-            return NewClass # return wihout any processing
+        if NewModel._name is None: # we need only Model subclasses; if db table name is None - __new__ is called for Model itself
+            return NewModel # return wihout any processing
+        
+        print('Finishing initialization of model `%s`' % NewModel)
 
-        NewClass._indexes = list(NewClass._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
-        # TODO: filter duplicate indexes
-        for index in NewClass._indexes :
-            if not isinstance(index, orm.Index):
-                raise orm.ModelError('Found a non Index in the _indexes.')
-#        NewClass._ordering = list(NewClass._ordering)
-#        NewClass._checkedDbs = set(NewClass._checkedDbs)
-
+        NewModel._indexes = list(NewModel._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
+        
         fields = []
-        for fieldName, field in inspect.getmembers(NewClass):
+        for fieldName, field in inspect.getmembers(NewModel):
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field))
 
         fields.sort(key = lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
         for fieldName, field in fields:
+            print(NewModel._indexes)
             if not fieldName.islower() or fieldName.startswith('_'):
-                raise orm.ModelError('Field `%s` in Table `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
-            field_ = field.__class__(name = fieldName, table = NewClass, label = field.label) # recreate the field - to handle correctly inheritance of Tables
+                raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
+            field_ = field.__class__(name = fieldName, table = NewModel, label = field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
                 field_._init_(*field._initArgs, **field._initKwargs) # and initialize it
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
-            setattr(NewClass, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
+            setattr(NewModel, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
 
-        return NewClass
+        indexesDict = OrderedDict() # to filter duplicate indexes by index name
+        for index in NewModel._indexes:
+            if index.table is not NewModel: # inherited index
+                if not isinstance(index, orm.Index):
+                    raise orm.ModelError('Found a non Index in the _indexes.')
+                if index.table is not NewModel: # index was inherited from parent model - recreate it with fields from new model
+                    indexFields = [orm.IndexField(NewModel[indexField.field.name], indexField.sortOrder, indexField.prefixLength) 
+                                   for indexField in index.indexFields] # replace fields by name with fields from new model
+                    index = orm.Index(indexFields, index.type, index.name, index.method, **index.other)
+                for indexField in index.indexFields:
+                    if issubclass(NewModel, indexField.field.table):
+                        indexField.field = NewModel[indexField.field.name] # to assure that field from this model, and from parent, is used
+                    else:
+                        raise orm.ModelError('Field `%s` in index is not from model `%s`.' % (indexField.field, NewModel))
+            indexesDict[index.name] = index
+        NewModel._indexes = indexesDict.values()
+#        NewClass._ordering = list(NewClass._ordering)
+#        NewClass._checkedDbs = set(NewClass._checkedDbs)
+
+        return NewModel
 
     def __getitem__(self, key):
         """Get a Table Field by name - Table['field_name']."""
         attr = getattr(self, key, None)
         if isinstance(attr, orm.fields.Field):
             return attr
-        raise KeyError('Could not find field %s in table %s' % (key, self.__name__))
+        raise KeyError('Could not find field %s in table %s' % (key, self.__class__))
 
     def __iter__(self):
         """Get Table fields."""
@@ -84,7 +103,7 @@ class ModelMeta(type):
         return len(list(self.__iter__()))
 
     def __str__(self):
-        return getattr(self, '_name', '') or self.__name__.lower()
+        return self._name
 
     def delete(self, db, where):
         """Delete records in this table which fall under the given condition."""
@@ -98,9 +117,11 @@ class Model(metaclass = ModelMeta):
     """Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields."""
 
-    _indexes = [] # list of db table indexes; each model will have its own - i.e. it's not inherited by subclasses (metaclass will assure this)
+    _indexes = [] # list of db table indexes (Index instances); each model will have its own copy - i.e. it's not inherited by subclasses (metaclass assures this)
     _ordering = [] # default order for select when not specified - overriden
     _checkedDbs = set() # ids of database adapters this model was successfully checked against
+    
+    _name = None # db table name
 
     # default fields
     id = orm.fields.IdField() # row id. This field is present in all tables
@@ -133,12 +154,12 @@ class Model(metaclass = ModelMeta):
     def __getitem__(self, field):
         """Get a Record Field value by key.
         key: either a Field instance or name of the field."""
-        table = self.__class__
+        model = self.__class__
         if isinstance(field, orm.Field):
-            assert field.table is table, 'This field is from another table.'
+            assert field.table is model, 'This field is from another model.'
             attrName = field.name
         elif isinstance(field, str):
-            field = table[field]
+            field = model[field]
             attrName = field.name
         else:
             raise TypeError('Pass either a Field or its name.')
@@ -149,12 +170,12 @@ class Model(metaclass = ModelMeta):
         """Delete this record."""
         db = self._db
         self.checkTable(db)
-        table = self.__class__
-        signals.post_delete.send(sender = table, record = self)
-        db.delete(table, where = (table.id == self.id))
+        model = self.__class__
+        signals.post_delete.send(sender = model, record = self)
+        db.delete(model, where = (model.id == self.id))
         db.commit()
         self.id = None
-        signals.post_delete.send(sender = table, record = self)
+        signals.post_delete.send(sender = model, record = self)
 
     @classmethod
     def getOne(cls, db, where):
@@ -185,30 +206,30 @@ class Model(metaclass = ModelMeta):
     def save(self):
         db = self._db
         self.checkTable(db)
-        table = self.__class__
+        model = self.__class__
         values = [] # list of tuples (Field, value)
         self.timestamp = DateTime.now()
-        for field in table:
+        for field in model:
             value = self[field]
             values.append((field, value))
 
-        signals.pre_save.send(sender = table, record = self)
+        signals.pre_save.send(sender = model, record = self)
 
         isNew = not self.id
         if isNew: # new record
             db.insert(*values)
             self.id = db.lastInsertId()
         else: # existing record
-            rowsCount = db.update(*values, where = (table.id == self.id))
+            rowsCount = db.update(*values, where = (model.id == self.id))
             if not rowsCount:
-                raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, id=%s' % (table, self.id))
+                raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, id=%s' % (model, self.id))
         db.commit()
 
-        signals.post_save.send(sender = table, record = self, isNew = isNew)
+        signals.post_save.send(sender = model, record = self, isNew = isNew)
 
     def __str__(self):
         """Human readable presentation of the record."""
-        return '%s(%s)' % (self.__class__.__name__,
+        return '%s(%s)' % (self._name,
             ', '.join("%s= '%s'" % (field.name, getattr(self, field.name))
                        for field in self.__class__))
 
@@ -226,15 +247,16 @@ class Model(metaclass = ModelMeta):
 
     @classmethod
     def checkTable(cls, db):
-        """Check if corresponding table for this model exists in the db and has all necessary columns."""
+        """Check if corresponding table for this model exists in the db and has all necessary columns.
+        Add checkTable call in very model method that uses a db.
+        """
         assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
         if db._id in cls._checkedDbs: # this db was already checked 
             return
-        tableName = cls.__name__.lower()
+        tableName = cls._name
         if tableName not in db.getTables():
             raise Exception('Table `%s` does not exist in database' % tableName)
         dbColumns = db.getColumns(tableName)
         print(dbColumns)
         cls._checkedDbs.add(db._id)
         print(db.getCreateTableQuery(cls))
-        # TODO: add checkTable call in very model method that uses a db
