@@ -9,7 +9,11 @@ if sys.version < pythonRequiredVersion:
 
 import logging, inspect, importlib
 
-logger = logging.getLogger('wic.orm')
+logger = logging.getLogger('orm')
+strm_out = logging.StreamHandler(sys.__stdout__)
+strm_out.setFormatter(logging.Formatter())
+logger.addHandler(strm_out)
+logger.setLevel(logging.DEBUG) # logging level
 
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
 _dbCount = 0 # to track connected databases

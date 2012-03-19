@@ -10,6 +10,7 @@ from decimal import Decimal
 import pprint
 
 import orm
+from orm import logger
 
 
 drivers = []
@@ -18,13 +19,13 @@ try:
     import sqlite3
     drivers.append('sqlite3')
 except ImportError:
-    orm.logger.debug('no sqlite3.dbapi2 driver')
+    logger.info('no sqlite3.dbapi2 driver')
 
 try:
     import pymysql
     drivers.append('pymysql')
 except ImportError:
-    orm.logger.debug('no pymysql driver')
+    logger.info('no pymysql driver')
 
 
 
@@ -51,6 +52,11 @@ class Column():
         colFunc = getattr(db, '_' + self.type.upper())
         columnType = colFunc(self)
         return '`%s` %s' % (self.name, columnType)
+
+    def str(self):
+        attrs = self.__dict__.copy()
+        name = attrs.pop('name')
+        return '%s(%s)' % (name, ', '.join('%s= %s' % attr for attr in attrs.items()))
 
 
 
@@ -118,7 +124,7 @@ class GenericAdapter():
 
     def __init__(self, uri = '', connect = True, autocommit = True):
         """URI is already without protocol."""
-        print('Creating adapter for "%s"' % uri)
+        logger.info('Creating adapter for "%s"' % uri)
         self._timings = []
         if connect:
             self.connection = self.connect()
@@ -154,7 +160,7 @@ class GenericAdapter():
         try:
             result = self.cursor.execute(*a, **b)
         except Exception:
-            print(lastQuery)
+            logger.warning(lastQuery)
             raise
         self._timings.append((lastQuery, round(time.time() - t0, 4)))
         return result
@@ -264,7 +270,7 @@ class GenericAdapter():
                 try:
                     return cls._render(value, castField.column)
                 except Exception:
-                    print('Check %r._cast().' % castField)
+                    logger.warning('Check %r._cast().' % castField)
                     raise
             return cls._render(value)
 
@@ -706,7 +712,6 @@ class SqliteAdapter(GenericAdapter):
     @classmethod
     def _getCreateTableIndexes(cls, table):
         indexes = []
-        print(list(map(str, table._indexes)))
         for index in table._indexes:
             if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
@@ -802,9 +807,9 @@ class SqliteAdapter(GenericAdapter):
     def getColumns(self, tableName):
         """Get columns of a table"""
         self.execute("PRAGMA table_info('%s')" % tableName) # name, type, notnull, dflt_value, pk
-        columns = []
+        columns = {}
         for row in self.cursor.fetchall():
-            print('Found table column:', tableName, row)
+            logger.debug('Found table column: %s, %s' % (tableName, row))
             typeName = row[2].lower()
             # INTEGER PRIMARY KEY fields are auto-generated in sqlite
             # INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
@@ -815,8 +820,8 @@ class SqliteAdapter(GenericAdapter):
                 raise TypeError('Unexpected data type: %s' % typeName)
             column = Column(type = typeName, field = None, name = row[1], default = row[4],
                             precision = 19, nullable = (not row[3]), autoincrement = autoincrement)
-            columns.append(column)
-            print('Reproduced table column:', tableName, column)
+            columns[column.name] = column
+            logger.debug('Reproduced table column: %s, %s' % (tableName, column))
         return columns
 
 
@@ -908,7 +913,7 @@ class MysqlAdapter(GenericAdapter):
                      "       numeric_precision, numeric_scale, column_type, extra, column_comment "
                      "FROM information_schema.columns "
                      "WHERE table_schema = '%s' AND table_name = '%s'" % (self.dbName, tableName))
-        columns = []
+        columns = {}
         for row in self.cursor.fetchall():
             typeName = row[1].lower()
             if 'int' in typeName:
@@ -924,7 +929,7 @@ class MysqlAdapter(GenericAdapter):
             column = Column(type = typeName, field = None, name = row[0], default = row[2],
                             precision = precision, scale = row[6], unsigned = unsigned,
                             nullable = nullable, autoincrement = autoincrement, comment = row[9])
-            columns.append(column)
+            columns[column.name] = column
         return columns
 
 

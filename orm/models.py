@@ -4,7 +4,8 @@ import inspect
 from datetime import datetime as DateTime
 from collections import OrderedDict
 import orm
-from orm import signals
+from orm import signals, logger
+
 
 
 class Join():
@@ -31,16 +32,16 @@ class ModelMeta(type):
 
     def __new__(cls, name, bases, attrs):
         NewModel = type.__new__(cls, name, bases, attrs)
-        
+
         NewModel._name = NewModel.__dict__.get('_name', name.lower()) # db table name
 
         if NewModel._name is None: # we need only Model subclasses; if db table name is None - __new__ is called for Model itself
             return NewModel # return wihout any processing
-        
-        print('Finishing initialization of model `%s`' % NewModel)
+
+        logger.debug('Finishing initialization of model `%s`' % NewModel)
 
         NewModel._indexes = list(NewModel._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
-        
+
         fields = []
         for fieldName, field in inspect.getmembers(NewModel):
             if isinstance(field, orm.fields.Field):
@@ -48,7 +49,6 @@ class ModelMeta(type):
 
         fields.sort(key = lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
         for fieldName, field in fields:
-            print(NewModel._indexes)
             if not fieldName.islower() or fieldName.startswith('_'):
                 raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
             field_ = field.__class__(name = fieldName, table = NewModel, label = field.label) # recreate the field - to handle correctly inheritance of Tables
@@ -65,7 +65,7 @@ class ModelMeta(type):
                 if not isinstance(index, orm.Index):
                     raise orm.ModelError('Found a non Index in the _indexes.')
                 if index.table is not NewModel: # index was inherited from parent model - recreate it with fields from new model
-                    indexFields = [orm.IndexField(NewModel[indexField.field.name], indexField.sortOrder, indexField.prefixLength) 
+                    indexFields = [orm.IndexField(NewModel[indexField.field.name], indexField.sortOrder, indexField.prefixLength)
                                    for indexField in index.indexFields] # replace fields by name with fields from new model
                     index = orm.Index(indexFields, index.type, index.name, index.method, **index.other)
                 for indexField in index.indexFields:
@@ -75,8 +75,8 @@ class ModelMeta(type):
                         raise orm.ModelError('Field `%s` in index is not from model `%s`.' % (indexField.field, NewModel))
             indexesDict[index.name] = index
         NewModel._indexes = indexesDict.values()
-#        NewClass._ordering = list(NewClass._ordering)
-#        NewClass._checkedDbs = set(NewClass._checkedDbs)
+        NewModel._ordering = list()
+        NewModel._checkedDbs = set()
 
         return NewModel
 
@@ -120,7 +120,7 @@ class Model(metaclass = ModelMeta):
     _indexes = [] # list of db table indexes (Index instances); each model will have its own copy - i.e. it's not inherited by subclasses (metaclass assures this)
     _ordering = [] # default order for select when not specified - overriden
     _checkedDbs = set() # ids of database adapters this model was successfully checked against
-    
+
     _name = None # db table name
 
     # default fields
@@ -256,7 +256,15 @@ class Model(metaclass = ModelMeta):
         tableName = cls._name
         if tableName not in db.getTables():
             raise Exception('Table `%s` does not exist in database' % tableName)
+        import pprint
+        modelColumns = {field.column.name: field.column for field in cls}
         dbColumns = db.getColumns(tableName)
-        print(dbColumns)
+#        logger.debug(pprint.pformat(list(column.str() for column in dbColumns.values())))
+#        logger.debug(pprint.pformat(list(column.str() for column in modelColumns.values())))
+        for columnName, column in modelColumns:
+            dbColumn = dbColumns.pop(columnName, None)
+            if not dbColumn: # model column is not found in the db
+                pass
+        logger.debug('CREATE TABLE query:\n%s' % db.getCreateTableQuery(cls))
         cls._checkedDbs.add(db._id)
-        print(db.getCreateTableQuery(cls))
+

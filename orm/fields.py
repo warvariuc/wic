@@ -1,7 +1,7 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import orm
-from orm import Nil, Column
+from orm import Nil, Column, logger
 
 
 class Expression():
