@@ -6,8 +6,8 @@ pythonRequiredVersion = '3.2'
 if sys.version < pythonRequiredVersion:
     sys.exit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
-try:
-    from wic.widgets import w_widgets_rc # load resources (icons, etc.)
+try: # load Qt resources (icons, etc.)
+    import wic.widgets.w_widgets_rc
 except ImportError:
     sys.exit('Looks like resources are not compiled. Please run `compile_resources.py`.')
 

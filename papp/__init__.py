@@ -53,7 +53,7 @@ class App(w_app.WApp):
         """Add actions for catalogs."""
         # http://docs.python.org/library/pkgutil.html#pkgutil.walk_packages
         from wic.menu import addActionsToMenu, createAction
-        catalogs = ('persons', 'locations', 'districts', 'regions', 'streets')
+        catalogs = ('persons', 'locations', 'districts', 'regions', 'streets', 'new')
         for catalog in catalogs:
             modelName = catalog.capitalize()
             modelPath = 'papp.catalogs.' + catalog + '.' + modelName

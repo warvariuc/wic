@@ -6,16 +6,33 @@ from wic.datetime import Date, _format as formatDate
 import traceback, time
 
 import orm
+import wic
 
 
 
 class CatalogModel(orm.Model):
     deleted = orm.BooleanField()
 
+    @classmethod
+    def _handleTableMissing(cls, db):
+        """Default implementation of situation when upon checking there was not found the table 
+        corresponding to this model in the db.
+        """
+        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?', 
+                        'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
+                        'Do you want it to be automatically created?'
+                        % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, 
+                        QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
+            db.execute(db.getCreateTableQuery(cls))
+            QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
+        else:
+            super()._handleTableMissing(db)
+
+
 
 class WItemStyle():
-    """Common style for representation of an ItemView item"""
-
+    """Common style for representation of an ItemView item
+    """
     def __init__(self, roles = {}, **kwargs):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
@@ -27,7 +44,7 @@ class WItemStyle():
 
     def data(self, role, value = None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
         data = self.roles.get(role)
-        return data(value) if hasattr(data, '__call__') else data
+        return data(value) if callable(data) else data
 
     def displayRole(self, value):
         return str(value) if value else ''
@@ -37,8 +54,8 @@ class WItemStyle():
 
 
 class WDecimalItemStyle(WItemStyle):
-    """Style for items with Decimal values."""
-
+    """Style for items with Decimal values.
+    """
     def __init__(self, roles = {}, format = ''):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight,
                       QtCore.Qt.DisplayRole: self.displayRole}
@@ -56,8 +73,8 @@ class WDecimalItemStyle(WItemStyle):
 
 
 class WDateItemStyle(WItemStyle):
-    """Style for items with Date values."""
-
+    """Style for items with Date values.
+    """
     def __init__(self, roles = {}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                   QtCore.Qt.DisplayRole: formatDate}
@@ -66,8 +83,8 @@ class WDateItemStyle(WItemStyle):
 
 
 class WBoolItemStyle(WItemStyle):
-    """Style for items with bool values."""
-
+    """Style for items with bool values.
+    """
     def __init__(self, roles = {}):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
                   QtCore.Qt.DisplayRole: None,
@@ -77,8 +94,8 @@ class WBoolItemStyle(WItemStyle):
 
 
 class WVHeaderStyle(WItemStyle):
-    """Style for vertical headers."""
-
+    """Style for vertical headers.
+    """
     def __init__(self, roles = {}, title = '', width = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                   QtCore.Qt.DisplayRole: title}
@@ -95,8 +112,8 @@ class WVHeaderStyle(WItemStyle):
             return format(value, format_)
 
 class WHHeaderStyle(WItemStyle):
-    """Style for horizontal headers."""
-
+    """Style for horizontal headers.
+    """
     def __init__(self, roles = {}, height = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                   QtCore.Qt.DisplayRole: lambda value: value}
@@ -128,8 +145,8 @@ def createStyleForField(field):
 
 
 class WCatalogProxyModel(QtCore.QAbstractTableModel):
-    """Model for showing list of catalog items."""
-
+    """Model for showing list of catalog items.
+    """
     def __init__(self, db, catalogModel, where = None):
         assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'
         super().__init__(None) # no parent
@@ -162,7 +179,8 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
 
 
     def getRowId(self, rowNo):
-        """Id field value of the given row."""
+        """Id field value of the given row.
+        """
         return self.row(rowNo)[0] # id is always 0
 
     def resetCache(self, **kwargs):
@@ -175,7 +193,8 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.timer.start(self.updateTime * 1000)
 
     def row(self, rowNo):
-        """Request from DB and fill cache """
+        """Request from DB and fill cache 
+        """
         try:
             return self._cache[rowNo]
         except KeyError:

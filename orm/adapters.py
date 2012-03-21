@@ -124,6 +124,7 @@ class GenericAdapter():
 
     def __init__(self, uri = '', connect = True, autocommit = True):
         """URI is already without protocol."""
+        self.uri = uri
         logger.info('Creating adapter for "%s"' % uri)
         self._timings = []
         if connect:
@@ -133,11 +134,9 @@ class GenericAdapter():
             self.connection = None
             self.cursor = None
         self.autocommit = autocommit
-        self._id = orm._dbCount
-        orm._dbCount += 1
 
     def connect(self):
-        """Connect to the DB and return the connection"""
+        """Connect to the DB and return the connection. To be overridden in subclasses."""
         return None # DB connection
 
     def disconnect(self):
@@ -285,7 +284,7 @@ class GenericAdapter():
         if column:
             assert isinstance(column, Column), 'It must be a Column instance.'
             encodeFunc = getattr(cls, '_encode' + column.type.upper(), None)
-            if hasattr(encodeFunc, '__call__'):
+            if callable(encodeFunc):
                 return str(encodeFunc(value, column))
         return cls.escape(value)
 
@@ -342,14 +341,14 @@ class GenericAdapter():
         return ''
 
     @classmethod
-    def getCreateTableQuery(cls, table):
-        """Get CREATE TABLE statement for the given table in this DB."""
-        assert orm.isModel(table), 'Provide a Table subclass.'
+    def getCreateTableQuery(cls, model):
+        """Get CREATE TABLE statement for the given model in this DB."""
+        assert orm.isModel(model), 'Provide a Table subclass.'
 
-        columns = cls._getCreateTableColumns(table)
-        indexes = cls._getCreateTableIndexes(table)
-        other = cls._getCreateTableOther(table)
-        query = 'CREATE TABLE %s (' % str(table)
+        columns = cls._getCreateTableColumns(model)
+        indexes = cls._getCreateTableIndexes(model)
+        other = cls._getCreateTableOther(model)
+        query = 'CREATE TABLE %s (' % str(model)
         query += '\n  ' + ',\n  '.join(columns)
         query += ',\n  ' + ',\n  '.join(indexes)
         query += '\n) ' + other + ';'
@@ -629,7 +628,7 @@ class GenericAdapter():
                     column = field.column
                     if isinstance(column, orm.fields.Column):
                         decodeFunc = getattr(self, '_decode' + column.type.upper(), None)
-                        if hasattr(decodeFunc, '__call__'):
+                        if callable(decodeFunc):
                             value = decodeFunc(value, column)
                 newRow.append(value)
             rows[i] = newRow
@@ -686,12 +685,11 @@ class SqliteAdapter(GenericAdapter):
     protocol = 'sqlite'
     driver = globals().get('sqlite3')
 
-    def __init__(self, uri, driverArgs = None):
-        self.driverArgs = driverArgs or {}
+    def __init__(self, dbPath, **kwargs):
+        self.driverArgs = kwargs
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
-        dbPath = uri
         if dbPath != ':memory:' and not os.path.isabs(dbPath):
-            dbPath = os.path.abspath(os.path.join(os.getcwd(), dbPath))
+            dbPath = os.path.abspath(os.path.join(os.getcwd(), dbPath)) # convert relative path to be absolute
         self.dbPath = dbPath
         super().__init__(dbPath)
 
@@ -868,28 +866,27 @@ class MysqlAdapter(GenericAdapter):
     protocol = 'mysql'
     driver = globals().get('pymysql')
 
-    def __init__(self, uri, driverArgs = None):
+    def __init__(self, uri, **kwargs):
         m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
                      '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
-        assert m, "Invalid URI: %s" % self.uri
-        user = m.group('user')
-        assert user, 'User required'
-        password = m.group('password') or ''
-        host = m.group('host')
-        assert host, 'Host name required'
-        dbName = m.group('db')
-        assert dbName, 'Database name required'
-        port = int(m.group('port') or 3306)
-        self.driverArgs = driverArgs or {}
-        self.driverArgs.update(dict(db = dbName, user = user, passwd = password, host = host, port = port, charset = 'utf8'))
+        assert m, "Invalid database URI: %s" % self.uri
+        kwargs['user'] = m.group('user')
+        assert kwargs['user'], 'User required'
+        kwargs['passwd'] = m.group('password') or ''
+        kwargs['host'] = m.group('host')
+        assert kwargs['host'], 'Host name required'
+        kwargs['db'] = m.group('db')
+        assert kwargs['db'], 'Database name required'
+        kwargs['port'] = int(m.group('port') or 3306)
+        kwargs['charset'] = 'utf8'
+        self.driverArgs = kwargs
         super().__init__(uri)
-        self.uri = uri
-        self.dbName = dbName
-        self.execute('SET FOREIGN_KEY_CHECKS=1;')
-        self.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
 
     def connect(self):
-        return self.driver.connect(**self.driverArgs)
+        connection = self.driver.connect(**self.driverArgs)
+        connection.execute('SET FOREIGN_KEY_CHECKS=1;')
+        connection.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
+        return connection
 
     @classmethod
     def _getCreateTableOther(cls, table):
@@ -912,7 +909,7 @@ class MysqlAdapter(GenericAdapter):
         self.execute("SELECT column_name, data_type, column_default, is_nullable, character_maximum_length, "
                      "       numeric_precision, numeric_scale, column_type, extra, column_comment "
                      "FROM information_schema.columns "
-                     "WHERE table_schema = '%s' AND table_name = '%s'" % (self.dbName, tableName))
+                     "WHERE table_schema = '%s' AND table_name = '%s'" % (self.driverArgs['db'], tableName))
         columns = {}
         for row in self.cursor.fetchall():
             typeName = row[1].lower()

@@ -4,7 +4,7 @@ import inspect
 from datetime import datetime as DateTime
 from collections import OrderedDict
 import orm
-from orm import signals, logger
+from orm import signals, logger, exceptions
 
 
 
@@ -246,25 +246,32 @@ class Model(metaclass = ModelMeta):
         return db.select(count).value(0, count)
 
     @classmethod
+    def _handleTableMissing(cls, db):
+        """Default implementation of situation when upon checking
+        there was not found the table corresponding to this model in the db."""
+        raise exceptions.TableMissing(db, cls)
+    
+    @classmethod
     def checkTable(cls, db):
         """Check if corresponding table for this model exists in the db and has all necessary columns.
         Add checkTable call in very model method that uses a db.
         """
         assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
-        if db._id in cls._checkedDbs: # this db was already checked 
+        if db.uri in cls._checkedDbs: # this db was already checked 
             return
         tableName = cls._name
         if tableName not in db.getTables():
-            raise Exception('Table `%s` does not exist in database' % tableName)
-        import pprint
+            cls._handleTableMissing(db)
+#            if tableName not in db.getTables():
+#                raise exceptions.TableMissing(db, cls)
+#        import pprint
         modelColumns = {field.column.name: field.column for field in cls}
         dbColumns = db.getColumns(tableName)
 #        logger.debug(pprint.pformat(list(column.str() for column in dbColumns.values())))
 #        logger.debug(pprint.pformat(list(column.str() for column in modelColumns.values())))
-        for columnName, column in modelColumns:
+        for columnName, column in modelColumns.items():
             dbColumn = dbColumns.pop(columnName, None)
             if not dbColumn: # model column is not found in the db
-                pass
+                print('Column in the db not found: %s' % column.str())
         logger.debug('CREATE TABLE query:\n%s' % db.getCreateTableQuery(cls))
-        cls._checkedDbs.add(db._id)
-
+        cls._checkedDbs.add(db.uri)

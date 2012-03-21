@@ -16,11 +16,11 @@ logger.addHandler(strm_out)
 logger.setLevel(logging.DEBUG) # logging level
 
 _fieldsCount = 0 # will be used to track the original definition order of the fields 
-_dbCount = 0 # to track connected databases
 
 def getObjectByPath(objectPath, packagePath= None):
     """Given the path in form 'some.module.object' return the object.
-    If path is relative or only object name in the path is given, modulePath should be given."""
+    If path is relative or only object name in the path is given, modulePath should be given.
+    """
     modulePath, sep, objectName = objectPath.rpartition('.')
     if not sep: # '.' not present - only object name is given in the path
         assert packagePath, "You've given the object name, but haven't specified the module in which i can find it. " + objectPath
@@ -41,7 +41,8 @@ def listify(obj):
 class metamethod():
     """A descriptor you can use to decorate a method. 
     When calling the method on an instance - calls its implemetation in the class.
-    When calling the method on a class -calls its implemetation in the metaclass."""
+    When calling the method on a class - calls its implemetation in the metaclass.
+    """
     def __init__(self, method):
         self.method = method
 
@@ -61,19 +62,20 @@ class Nil():
 
 
 from .exceptions import *
-from .adapters import Column, IndexField, Index, GenericAdapter, SqliteAdapter, MysqlAdapter
-from .fields import Expression, Field, IdField, IntegerField, CharField, TextField, DecimalField, DateField, \
-                    DateTimeField, BooleanField, RecordIdField, COUNT, MAX, MIN, UPPER, LOWER
-from .models import Model, Join, LeftJoin, ModelMeta
+from .adapters import *
+from .fields import *
+from .models import *
 
-
-_adapters = [GenericAdapter, SqliteAdapter, MysqlAdapter]
 
 def connect(uri):
     """Search for suitable adapter by protocol"""
-    for AdapterClass in _adapters:
-        uriStart = AdapterClass.protocol + '://'
-        if uri.startswith(uriStart):
-            dbAdapter = AdapterClass(uri[len(uriStart):])
-            return dbAdapter
-    raise Exception('Could not find a suitable adapter for the URI ""%s' % uri)
+    from . import adapters
+    for AdapterClass in adapters.__dict__.values():
+        if isinstance(AdapterClass, type) \
+                and issubclass(AdapterClass, GenericAdapter) \
+                and AdapterClass is not GenericAdapter: 
+            uriStart = AdapterClass.protocol + '://'
+            if uri.startswith(uriStart):
+                dbAdapter = AdapterClass(uri[len(uriStart):])
+                return dbAdapter
+    raise AdapterNotFound('Could not find a suitable adapter for the URI ""%s' % uri)
