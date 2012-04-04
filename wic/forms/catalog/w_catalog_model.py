@@ -5,29 +5,7 @@ from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
 import traceback, time
 
-import orm
-import wic
-
-
-
-class CatalogModel(orm.Model):
-    deleted = orm.BooleanField()
-
-    @classmethod
-    def _handleTableMissing(cls, db):
-        """Default implementation of situation when upon checking there was not found the table 
-        corresponding to this model in the db.
-        """
-        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?', 
-                        'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
-                        'Do you want it to be automatically created?'
-                        % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, 
-                        QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
-            db.execute(db.getCreateTableQuery(cls))
-            QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
-        else:
-            super()._handleTableMissing(db)
-
+import orm, wic
 
 
 class WItemStyle():
@@ -144,8 +122,29 @@ def createStyleForField(field):
 
 
 
+class CatalogModel(orm.Model):
+    """Base model for all catalogs.
+    """
+    deleted = orm.BooleanField()
+
+    @classmethod
+    def _handleTableMissing(cls, db):
+        """Default implementation of situation when upon checking there was not found the table 
+        corresponding to this model in the db.
+        """
+        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?', 
+                        'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
+                        'Do you want it to be automatically created?'
+                        % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, 
+                        QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
+            db.execute(db.getCreateTableQuery(cls))
+            QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
+        else:
+            super()._handleTableMissing(db)
+
+
 class WCatalogProxyModel(QtCore.QAbstractTableModel):
-    """Model for showing list of catalog items.
+    """Qt table model for showing list of catalog items.
     """
     def __init__(self, db, catalogModel, where = None):
         assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'

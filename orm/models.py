@@ -9,7 +9,8 @@ from orm import signals, logger, exceptions
 
 
 class Join():
-    """Object holding parameters for a join."""
+    """Object holding parameters for a join.
+    """
     def __init__(self, model, on, type = ''):
         assert isinstance(model, orm.ModelMeta), 'Pass a model class.'
         assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
@@ -19,7 +20,8 @@ class Join():
 
 
 class LeftJoin(Join):
-    """Left join parameters."""
+    """Left join parameters.
+    """
     def __init__(self, table, on):
         super().__init__(table, on, 'left')
 
@@ -28,8 +30,8 @@ class LeftJoin(Join):
 class ModelMeta(type):
     """Metaclass for all tables (models).
     It gives names to all fields and makes instances for fields for each of the models. 
-    It has some class methods for models."""
-
+    It has some class methods for models.
+    """
     def __new__(cls, name, bases, attrs):
         NewModel = type.__new__(cls, name, bases, attrs)
 
@@ -42,15 +44,27 @@ class ModelMeta(type):
 
         NewModel._indexes = list(NewModel._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
 
+        attrs = OrderedDict(inspect.getmembers(NewModel))
         fields = []
-        for fieldName, field in inspect.getmembers(NewModel):
+        for fieldName, field in attrs.items():
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field))
+        
+        fields = OrderedDict(sorted(fields, key = lambda f: f[1]._orderNo)) # sort by definition order (as __dict__ is unsorted) - for field recreation order
 
-        fields.sort(key = lambda f: f[1]._orderNo) # sort by definition order (as __dict__ is unsorted) - for field recreation order
-        for fieldName, field in fields:
+        for fieldName, field in fields.items():
             if not fieldName.islower() or fieldName.startswith('_'):
                 raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
+                        
+            if isinstance(field, orm.RecordIdField):
+                if not fieldName.endswith('_id'):
+                    raise orm.ModelError('RecordIdField name should end with `_id` (`%s.%s`)' % (name, fieldName))
+                else:
+                    _fieldName = fieldName[:-3] # name with '_id' stripped 
+                    if _fieldName in attrs:
+                        raise orm.ModelError('There is an attribute with name `%s` which clashes with RecordIdField name `%s.%s`.'
+                                             'That name is reserved for the record referenced by that record id.' % (_fieldName, name, fieldName))
+
             field_ = field.__class__(name = fieldName, table = NewModel, label = field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
                 field_._init_(*field._initArgs, **field._initKwargs) # and initialize it
@@ -81,14 +95,16 @@ class ModelMeta(type):
         return NewModel
 
     def __getitem__(self, key):
-        """Get a Table Field by name - Table['field_name']."""
+        """Get a Table Field by name - Table['field_name'].
+        """
         attr = getattr(self, key, None)
         if isinstance(attr, orm.fields.Field):
             return attr
         raise KeyError('Could not find field %s in table %s' % (key, self.__class__))
 
     def __iter__(self):
-        """Get Table fields."""
+        """Get Table fields.
+        """
         fields = []
         for attrName in self.__dict__:
             try:
@@ -106,7 +122,8 @@ class ModelMeta(type):
         return self._name
 
     def delete(self, db, where):
-        """Delete records in this table which fall under the given condition."""
+        """Delete records in this table which fall under the given condition.
+        """
         self.checkTable(db)
         db.delete(self, where = where)
         db.commit()
@@ -115,8 +132,8 @@ class ModelMeta(type):
 
 class Model(metaclass = ModelMeta):
     """Base class for all tables. Class attributes - the fields. 
-    Instance attributes - the values for the corresponding table fields."""
-
+    Instance attributes - the values for the corresponding table fields.
+    """
     _indexes = [] # list of db table indexes (Index instances); each model will have its own copy - i.e. it's not inherited by subclasses (metaclass assures this)
     _ordering = [] # default order for select when not specified - overriden
     _checkedDbs = set() # ids of database adapters this model was successfully checked against
@@ -153,7 +170,8 @@ class Model(metaclass = ModelMeta):
 
     def __getitem__(self, field):
         """Get a Record Field value by key.
-        key: either a Field instance or name of the field."""
+        key: either a Field instance or name of the field.
+        """
         model = self.__class__
         if isinstance(field, orm.Field):
             assert field.table is model, 'This field is from another model.'
@@ -167,7 +185,8 @@ class Model(metaclass = ModelMeta):
 
     @orm.metamethod
     def delete(self):
-        """Delete this record."""
+        """Delete this record.
+        """
         db = self._db
         self.checkTable(db)
         model = self.__class__
@@ -179,7 +198,8 @@ class Model(metaclass = ModelMeta):
 
     @classmethod
     def getOne(cls, db, where):
-        """Get a single record which falls under the given condition."""
+        """Get a single record which falls under the given condition.
+        """
         cls.checkTable(db)
         records = list(cls.get(db, where, limit = (0, 2)))
         if not records: # not found
@@ -191,12 +211,14 @@ class Model(metaclass = ModelMeta):
 
     @classmethod
     def getOneById(cls, db, id):
-        """Get one record by id."""
+        """Get one record by id.
+        """
         return cls.getOne(db, cls.id == id)
 
     @classmethod
     def get(cls, db, where, order = False, limit = False):
-        """Get records from this table which fall under the given condition."""
+        """Get records from this table which fall under the given condition.
+        """
         cls.checkTable(db)
         order = order or cls._ordering # use default table ordering if no ordering passed
         rows = db.select(cls, where = where, order = order, limit = limit)
@@ -228,19 +250,22 @@ class Model(metaclass = ModelMeta):
         signals.post_save.send(sender = model, record = self, isNew = isNew)
 
     def __str__(self):
-        """Human readable presentation of the record."""
+        """Human readable presentation of the record.
+        """
         return '%s(%s)' % (self._name,
             ', '.join("%s= '%s'" % (field.name, getattr(self, field.name))
                        for field in self.__class__))
 
     @classmethod
     def COUNT(cls, where = None):
-        """Get COUNT expression for this table."""
+        """Get COUNT expression for this table.
+        """
         return orm.COUNT(where or cls) # COUNT expression
 
     @classmethod
     def getCount(cls, db, where = None):
-        """Request number of records in this table."""
+        """Request number of records in this table.
+        """
         cls.checkTable(db)
         count = cls.COUNT(where)
         return db.select(count).value(0, count)
@@ -248,7 +273,8 @@ class Model(metaclass = ModelMeta):
     @classmethod
     def _handleTableMissing(cls, db):
         """Default implementation of situation when upon checking
-        there was not found the table corresponding to this model in the db."""
+        there was not found the table corresponding to this model in the db.
+        """
         raise exceptions.TableMissing(db, cls)
     
     @classmethod

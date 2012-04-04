@@ -15,7 +15,6 @@ strm_out.setFormatter(logging.Formatter())
 logger.addHandler(strm_out)
 logger.setLevel(logging.DEBUG) # logging level
 
-_fieldsCount = 0 # will be used to track the original definition order of the fields 
 
 def getObjectByPath(objectPath, packagePath= None):
     """Given the path in form 'some.module.object' return the object.
@@ -38,23 +37,34 @@ def listify(obj):
         return list(obj)
     return [obj]
 
-class metamethod():
-    """A descriptor you can use to decorate a method. 
+#class metamethod(): # old way
+#    """A descriptor you can use to decorate a method. 
+#    When calling the method on an instance - calls its implemetation in the class.
+#    When calling the method on a class - calls its implemetation in the metaclass.
+#    """
+#    def __init__(self, method):
+#        self.method = method
+#
+#    def __get__(self, obj, objtype):
+#        if obj is None:
+#            obj = objtype
+#        def wrapped(*args, **kwargs):
+#            method = self.method
+#            if isinstance(obj, type): # is a class
+#                method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
+#            return method(obj, *args, **kwargs)
+#        return wrapped        
+def metamethod(method):
+    """A decorator for Model methods. 
     When calling the method on an instance - calls its implemetation in the class.
-    When calling the method on a class - calls its implemetation in the metaclass.
+    When calling the method on a class - calls the method in metaclass with the same name.
     """
-    def __init__(self, method):
-        self.method = method
+    def wrapped(obj, *args, **kwargs):
+        if isinstance(obj, type): # is a class
+            method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
+        return method(obj, *args, **kwargs)
+    return wrapped        
 
-    def __get__(self, obj, objtype):
-        if obj is None:
-            obj = objtype
-        def wrapped(*args, **kwargs):
-            method = self.method
-            if isinstance(obj, type): # is a class
-                method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
-            return method(obj, *args, **kwargs)
-        return wrapped        
 
 
 class Nil():

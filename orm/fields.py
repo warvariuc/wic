@@ -78,7 +78,9 @@ class Expression():
 
 
 class Field(Expression):
-    """Abstract ORM table field."""
+    """Abstract ORM table field.
+    """
+    _fieldsCount = 0 # will be used to track the original definition order of the fields 
 
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop('name', None) # attribute name of the field
@@ -86,8 +88,8 @@ class Field(Expression):
         self.label = kwargs.pop('label', None) # label (textual name) of this field
         self._initArgs = args # field will be initalized using these params later, when the class is created
         self._initKwargs = kwargs # for later _init
-        orm._fieldsCount += 1 # tracking creation order
-        self._orderNo = orm._fieldsCount
+        Field._fieldsCount += 1 # tracking creation order
+        self._orderNo = Field._fieldsCount
 
     def _init_(self, column, default, index = ''):
         """This is called by the metaclass to initialize the Field after a Table subclass is created."""
