@@ -4,12 +4,12 @@ import sys, os
 
 pythonRequiredVersion = '3.2'
 if sys.version < pythonRequiredVersion:
-    sys.exit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
+    raise SystemExit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
 try: # load Qt resources (icons, etc.)
     import wic.widgets.w_widgets_rc
 except ImportError:
-    sys.exit('Looks like resources are not compiled. Please run `compile_resources.py`.')
+    raise SystemExit('Looks like resources are not compiled. Please run `compile_resources.py`.')
 
 try: # monkeypatch: use cdecimal instead of decimal, if present - it is faster
     import cdecimal
@@ -24,12 +24,14 @@ class Bunch(): # Alex Martelli's recipe
         self.__dict__.update(kwargs)
 
 
+from . import forms, menus, widgets
+
 wicDir = os.path.dirname(os.path.abspath(__file__))
 
 app = None
 
-import orm
-getObjectByPath = orm.getObjectByPath
+from orm import getObjectByPath
+
 
 #import errno
 #

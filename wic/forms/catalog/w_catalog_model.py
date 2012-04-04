@@ -192,24 +192,27 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.timer.start(self.updateTime * 1000)
 
     def row(self, rowNo):
-        """Request from DB and fill cache 
+        """Get a row from the cache. If it's not in the cache, request a range from DB and update the cache. 
         """
-        try:
+        try: # find the row in the cache
             return self._cache[rowNo]
-        except KeyError:
+        except KeyError: # fill the cache
             self.timer.stop()
             rangeStart = max(rowNo - self.fetchCount // 3, 0)
             rangeEnd = rangeStart + self.fetchCount
-            #print('cache fetch', (rangeStart, rangeEnd))
+            #print('db fetch', (rangeStart, rangeEnd)) # debug
             rows = self.db.select(*self.fields, where = self.where, limit = (rangeStart, rangeEnd))
             now = time.time()
             expiredTime = now - self.updateTime
-            # clean cache of expired rows
-            cache = {_rowNo: row for _rowNo, row in self._cache.items()
-                        if row[-1] > expiredTime}
+            cache = self._cache
+            # clean the cache of expired rows
+            for rowNo in tuple(cache.keys()):
+                if cache[rowNo][-1] <= expiredTime:
+                    cache.pop(rowNo)
+#            cache = {_rowNo: row for _rowNo, row in self._cache.items()
+#                        if row[-1] > expiredTime}
             for i, row in enumerate(rows):
                 cache[rangeStart + i] = tuple(row) + (now,)
-            self._cache = cache
             self.timer.start(self.updateTime * 1000)
             return cache[rowNo]
 

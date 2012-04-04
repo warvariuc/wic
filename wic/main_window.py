@@ -48,8 +48,8 @@ class WMainWindow(QtGui.QMainWindow):
         self.messagesWindow = MessagesWindow(self)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow)
 
-        from wic import menu
-        self.menu = menu.MainMenu(self)
+        from wic import menus
+        self.menu = menus.MainMenu(self)
 
         self.setWindowTitle('wic')
 
