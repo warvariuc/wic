@@ -149,9 +149,9 @@ class WForm(QtGui.QDialog):
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
 
     def onContextMenuRequested(self, coord):
-        from wic.menu import createAction, addActionsToMenu
+        from wic import menus
         menu = QtGui.QMenu(self)
-        addActionsToMenu(menu, (createAction(menu, 'Save this form into a *.ui file.', self.saveFormToUi),))
+        menus.addActionsToMenu(menu, (menus.createAction(menu, 'Save this form into a *.ui file.', self.saveFormToUi),))
         menu.popup(self.mapToGlobal(coord))
 
     def saveFormToUi(self):

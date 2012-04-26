@@ -1,11 +1,12 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com"
 
 import sys
 from PyQt4 import QtGui, QtCore
 
 import orm
 
-#from wic import forms, widgets, menus, Bunch # doesn't work (NameError)
+#from wic import forms, widgets, menus, Bunch # doesn't work (NameError) - http://bugs.python.org/issue992389
 # workaround because of circular imports
 import wic.forms, wic.widgets, wic.menus
 forms = sys.modules['wic.forms']

@@ -27,6 +27,43 @@ class LeftJoin(Join):
 
 
 
+class ReferredItem():
+    """Descriptor for proxying access to a referred record.
+    """
+    def __init__(self, idField):
+        """
+        @param idField: IdField instance for hooking
+        """
+        assert isinstance(idField, orm.RecordIdField), 'orm.IdField instance is expected'
+        print('Creating descriptor for', idField.name)
+        self._idField = idField
+
+    def __get__(self, record, model = None):
+        #assert model is not None, 'This attribute is accessible only for records, not models'
+        if record is None:
+            return
+        assert isinstance(record, Model), 'This descriptor is only for Model classes!'
+        idField = self._idField
+        recordId = getattr(record, idField.name) # id in the record
+        if recordId is None:
+            return None
+        referRecordAttrName = '_' + idField.name[:-3] # name of the attribute which keeps referred record
+        referRecord = getattr(record, referRecordAttrName, None) # the referenced record
+        assert referRecord is None or isinstance(referRecord, idField.referTable), 'This should not have happened: private attribute is not a record of required model'
+        if referRecord is None or recordId != referRecord.id: # if record id has changed - retrieve the new record
+            referRecord = idField.referTable.getOneById(record._db, recordId)
+            setattr(record, referRecordAttrName, referRecord)
+        return referRecord
+
+    def __set__(self, record, value):
+        """When replacing refered record, its id is replacing the id kept in this record"""
+        assert isinstance(record, Model), 'This descriptor is only for Model classes!'
+        idField = self._idField
+        assert isinstance(value, idField.referTable), 'You can assign only records of model `%s`' % idField.referTable
+        setattr(record, idField.name, value.id) # set id to refer to the just assigned record
+
+
+
 class ModelMeta(type):
     """Metaclass for all tables (models).
     It gives names to all fields and makes instances for fields for each of the models. 
@@ -38,7 +75,7 @@ class ModelMeta(type):
         NewModel._name = NewModel.__dict__.get('_name', name.lower()) # db table name
 
         if NewModel._name is None: # we need only Model subclasses; if db table name is None - __new__ is called for Model itself
-            return NewModel # return wihout any processing
+            return NewModel # return without any processing
 
         logger.debug('Finishing initialization of model `%s`' % NewModel)
 
@@ -49,29 +86,31 @@ class ModelMeta(type):
         for fieldName, field in attrs.items():
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field))
-        
+
         fields = OrderedDict(sorted(fields, key = lambda f: f[1]._orderNo)) # sort by definition order (as __dict__ is unsorted) - for field recreation order
 
         for fieldName, field in fields.items():
             if not fieldName.islower() or fieldName.startswith('_'):
                 raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
-                        
-            if isinstance(field, orm.RecordIdField):
-                if not fieldName.endswith('_id'):
-                    raise orm.ModelError('RecordIdField name should end with `_id` (`%s.%s`)' % (name, fieldName))
-                else:
-                    _fieldName = fieldName[:-3] # name with '_id' stripped 
-                    if _fieldName in attrs:
-                        raise orm.ModelError('There is an attribute with name `%s` which clashes with RecordIdField name `%s.%s`.'
-                                             'That name is reserved for the record referenced by that record id.' % (_fieldName, name, fieldName))
 
-            field_ = field.__class__(name = fieldName, table = NewModel, label = field.label) # recreate the field - to handle correctly inheritance of Tables
+            newField = field.__class__(name = fieldName, table = NewModel, label = field.label) # recreate the field - to handle correctly inheritance of Tables
             try:
-                field_._init_(*field._initArgs, **field._initKwargs) # and initialize it
+                newField._init_(*field._initArgs, **field._initKwargs) # and initialize it
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
-            setattr(NewModel, fieldName, field_) # each class has its own field object. Inherited and parent tables do not share field attributes
+            setattr(NewModel, fieldName, newField) # each class has its own field object. Inherited and parent tables do not share field attributes
+            
+            if isinstance(newField, orm.RecordIdField):
+                if not fieldName.endswith('_id'):
+                    raise orm.ModelError('RecordIdField name should end with `_id` (`%s.%s`)' % (name, fieldName))
+                else:
+                    recordName = fieldName[:-3] # name with '_id' stripped 
+                    if recordName in attrs:
+                        raise orm.ModelError('There is an attribute with name `%s` which clashes with RecordIdField name `%s.%s`.'
+                                             'That name is reserved for the record referenced by that record id.' % (recordName, name, fieldName))
+                # create the proxy descriptor for the record referenced by the id field
+                setattr(NewModel, recordName, ReferredItem(newField))
 
         indexesDict = OrderedDict() # to filter duplicate indexes by index name
         for index in NewModel._indexes:
@@ -107,7 +146,7 @@ class ModelMeta(type):
         """
         fields = []
         for attrName in self.__dict__:
-            try:
+            try: # there maybe non Field attributes as well
                 fields.append(self[attrName])
             except KeyError:
                 pass
@@ -141,13 +180,13 @@ class Model(metaclass = ModelMeta):
     _name = None # db table name
 
     # default fields
-    id = orm.fields.IdField() # row id. This field is present in all tables
+    id = orm.IdField() # row id. This field is present in all tables
     timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
 
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
         @param db: db adapter in which to create the table record 
-        @param *args: tuples (Field, value) 
+        @param *args: tuples (Field or field_name, value) 
         @param **kwargs: fieldName=value.
         """
         self._db = db
@@ -156,6 +195,8 @@ class Model(metaclass = ModelMeta):
         for arg in args:
             assert hasattr(arg, '__iter__') and len(arg) == 2, 'Pass tuples with 2 items: (field, value).'
             field, value = arg
+            if isinstance(field, str):
+                field = self.__class__[field]
             assert isinstance(field, orm.Field), 'First arg must be a Field.'
             _table = field.table
             table = table or _table
@@ -183,7 +224,7 @@ class Model(metaclass = ModelMeta):
             raise TypeError('Pass either a Field or its name.')
         return getattr(self, attrName)
 
-    @orm.metamethod
+    @orm.meta_method
     def delete(self):
         """Delete this record.
         """
@@ -216,12 +257,17 @@ class Model(metaclass = ModelMeta):
         return cls.getOne(db, cls.id == id)
 
     @classmethod
-    def get(cls, db, where, order = False, limit = False):
+    def get(cls, db, where, orderby = False, limit = False, select_related = False):
         """Get records from this table which fall under the given condition.
+        @param db: adapter to use
+        @param where: condition to filter
+        @param order: list of field to sort by
+        @param limit: tuple (from, to)
+        @param select_related: whether to retrieve objects related by foreign keys 
         """
         cls.checkTable(db)
-        order = order or cls._ordering # use default table ordering if no ordering passed
-        rows = db.select(cls, where = where, order = order, limit = limit)
+        orderby = orderby or cls._ordering # use default table ordering if no ordering passed
+        rows = db.select(cls, where = where, orderby = orderby, limit = limit)
         for row in rows:
             yield cls(db, *zip(rows.fields, row))
 
@@ -276,7 +322,7 @@ class Model(metaclass = ModelMeta):
         there was not found the table corresponding to this model in the db.
         """
         raise exceptions.TableMissing(db, cls)
-    
+
     @classmethod
     def checkTable(cls, db):
         """Check if corresponding table for this model exists in the db and has all necessary columns.

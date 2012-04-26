@@ -113,12 +113,12 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
     def contextMenuEvent(self, qContextMenuEvent):
         menu = getattr(self, 'menu', None)
         if not menu:
-            from wic.menu import createAction, addActionsToMenu
+            from wic import menus
             menu = QtGui.QMenu(self) # context menu
-            addActionsToMenu(menu, (
-                createAction(menu, 'Select', self.selectItem, 'Insert', ':/icons/fugue/cards-stack.png'),
-                createAction(menu, 'Open', self.openItem, 'Space', ':/icons/fugue/card-address.png'),
-                createAction(menu, 'Clear', self.clear, 'Delete', ':/icons/fugue/eraser.png'),
+            menus.addActionsToMenu(menu, (
+                menus.createAction(menu, 'Select', self.selectItem, 'Insert', ':/icons/fugue/cards-stack.png'),
+                menus.createAction(menu, 'Open', self.openItem, 'Space', ':/icons/fugue/card-address.png'),
+                menus.createAction(menu, 'Clear', self.clear, 'Delete', ':/icons/fugue/eraser.png'),
             ))
             self.menu = menu
         menu.popup(qContextMenuEvent.globalPos())

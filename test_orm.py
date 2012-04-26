@@ -64,7 +64,6 @@ for query in db.getCreateTableQuery(Books).split('\n\n'):
 
 print('\nInserting authors:')
 authorsData = (
-    dict(first_name = 'Linus', last_name = 'Torvalds'),
     dict(first_name = 'Sam', last_name = 'Williams'),
     dict(first_name = 'Steven', last_name = 'Levy'),
     dict(first_name = 'Richard', last_name = 'Stallman')
@@ -79,15 +78,13 @@ for data in authorsData:
 print('\nInserting books:')
 booksData = (
     dict(name = "Free as in Freedom: Richard Stallman's Crusade for Free Software",
-         author_id = authors[1].id, price = '9.55', publication_date = '2002-03-08'),
+         author_id = authors[0].id, price = '9.55', publication_date = '2002-03-08'),
     dict(name = "Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
-         author_id = authors[2].id, price = '14.95', publication_date = '2010-03-27'),
+         author_id = authors[1].id, price = '14.95', publication_date = '2010-03-27'),
     dict(name = "In The Plex: How Google Thinks, Works, and Shapes Our Lives",
-         author_id = authors[2].id, price = '13.98', publication_date = '2011-04-12'),
+         author_id = authors[1].id, price = '13.98', publication_date = '2011-04-12'),
     dict(name = "Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
-         author_id = authors[2].id, price = '23.00', publication_date = '2002-01-15'),
-    dict(name = "Just for Fun.",
-         author_id = authors[0].id, price = '11.20', publication_date = '2002-12-01'),
+         author_id = authors[1].id, price = '23.00', publication_date = '2002-01-15'),
 )
 for data in booksData:
     book = Books(db = db, **data)
@@ -103,7 +100,8 @@ print('\nSELECT query:')
 print(db._select(Books.id, where = (15 > Books.price > '14.00'), limit = (0, 10)))
 print(db.select(Books, where = (Books.price > '15'), limit = (0, 10)))
 book = Books.getOne(db, where = (Books.price > 15))
-print(book)
+print("print(book, book.author)")
+print(book, book.author)
 
 print('\nUPDATE query:')
 print(db._update(Books.name('_' + book.name), Books.price(Books.price + 1), where = (Books.id == book.id)))
@@ -114,5 +112,15 @@ print(Books.getOne(db, where = (Books.id == book.id)))
 print('\nAuthors count')
 pprint.pprint(list(db.select(Authors.first_name, Authors.COUNT()).dictresult()))
 pprint.pprint(list(db.select(Authors.first_name, Authors.last_name).dictresult()))
+
+
+book = Books(db, ('name', "Just for Fun."), ('author_id', authors[0].id), ('price', '11.20'),
+             ('publication_date','2002-12-01'))
+print(author)
+book.save()
+print(author)
+
+author = Authors(db, **dict(first_name = 'Linus', last_name = 'Torvalds'))
+book.author = author
 
 #os.unlink(filePath) # delete the temporary db file

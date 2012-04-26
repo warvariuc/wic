@@ -18,13 +18,13 @@ logger.setLevel(logging.DEBUG) # logging level
 
 def getObjectByPath(objectPath, packagePath= None):
     """Given the path in form 'some.module.object' return the object.
-    If path is relative or only object name in the path is given, modulePath should be given.
+    @param objectPath: path to an object
+    @param packagePath: if objectPath is relative or only object name in it is given, packagePath should be given.
     """
     modulePath, sep, objectName = objectPath.rpartition('.')
     if not sep: # '.' not present - only object name is given in the path
         assert packagePath, "You've given the object name, but haven't specified the module in which i can find it. " + objectPath
-        objectName = objectPath
-        objectPath = packagePath
+        (objectName, modulePath, packagePath) = (objectPath, packagePath, None)
     module = importlib.import_module(modulePath, packagePath)
     return getattr(module, objectName)
     
@@ -54,7 +54,7 @@ def listify(obj):
 #                method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
 #            return method(obj, *args, **kwargs)
 #        return wrapped        
-def metamethod(method):
+def meta_method(method):
     """A decorator for Model methods. 
     When calling the method on an instance - calls its implemetation in the class.
     When calling the method on a class - calls the method in metaclass with the same name.

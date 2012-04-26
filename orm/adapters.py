@@ -1,7 +1,6 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
-
 """This module contains database adapters, which incapsulate all operations specific to a certain database.
 All other ORM modules should be database agnostic."""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com" 
 
 import os, sys, base64
 import time, re, math
@@ -30,8 +29,8 @@ except ImportError:
 
 
 class Column():
-    """A generic database table column."""
-
+    """A generic database table column.
+    """
     def __init__(self, type, field, name = '', default = None, precision = None, scale = None, unsigned = None,
                  nullable = True, autoincrement = False, comment = ''):
         self.name = name or field.name # column name
@@ -61,8 +60,8 @@ class Column():
 
 
 class IndexField():
-    """Helper class for defining a field for index"""
-
+    """Helper class for defining a field for index
+    """
     def __init__(self, field, sortOrder = 'asc', prefixLength = None):
         assert isinstance(field, orm.fields.Field), 'Pass Field instances.'
         assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
@@ -73,8 +72,8 @@ class IndexField():
 
 
 class Index():
-    """A database table index."""
-
+    """A database table index.
+    """
     def __init__(self, indexFields, type = 'index', name = '', method = '', **kwargs):
         """
         @param indexFields: list of IndexField instances
@@ -117,8 +116,8 @@ class Index():
 
 
 class GenericAdapter():
-    """Generic DB adapter."""
-
+    """Generic DB adapter.
+    """
     protocol = 'generic'
     epoch = Date(1970, 1, 1) # from this date number of days will be counted when storing DATE values in the DB
 
@@ -136,7 +135,8 @@ class GenericAdapter():
         self.autocommit = autocommit
 
     def connect(self):
-        """Connect to the DB and return the connection. To be overridden in subclasses."""
+        """Connect to the DB and return the connection. To be overridden in subclasses.
+        """
         return None # DB connection
 
     def disconnect(self):
@@ -255,7 +255,8 @@ class GenericAdapter():
 
     @classmethod
     def render(cls, value, castField = None):
-        """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for operations with castField in the DB."""
+        """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for operations with castField in the DB.
+        """
         if isinstance(value, orm.fields.Expression): # it's an Expression or Field 
             return value.__str__(cls) # render sub-expression
         else: # it's a value for a DB column
@@ -278,7 +279,8 @@ class GenericAdapter():
         """Render a simple value to the format needed for the given column.
         For example, _render a datetime to the format acceptable for datetime columns in this kind of DB.
         If there is no column - present the value as string.
-        Values are always passed to queries as quoted strings. I.e. even integers like 123 are put like '123'."""
+        Values are always passed to queries as quoted strings. I.e. even integers like 123 are put like '123'.
+        """
         if value is None:
             return cls._NULL()
         if column:
@@ -290,7 +292,8 @@ class GenericAdapter():
 
     @classmethod
     def escape(cls, value):
-        """Convert a value to string, escape single quotes and enclose it in single quotes."""
+        """Convert a value to string, escape single quotes and enclose it in single quotes.
+        """
         return "'%s'" % str(value).replace("'", "''") # escaping single quotes
 
     @classmethod
@@ -303,7 +306,8 @@ class GenericAdapter():
 
     @classmethod
     def _getCreateTableColumns(cls, table):
-        """Get columns declarations for CREATE TABLE statement."""
+        """Get columns declarations for CREATE TABLE statement.
+        """
         columns = []
         for field in table:
             column = field.column
@@ -313,7 +317,8 @@ class GenericAdapter():
 
     @classmethod
     def _getCreateTableIndexes(cls, table):
-        """Get indexes declarations for CREATE TABLE statement."""
+        """Get indexes declarations for CREATE TABLE statement.
+        """
         indexes = []
         for index in table._indexes:
             if index.type == 'primary':
@@ -342,7 +347,8 @@ class GenericAdapter():
 
     @classmethod
     def getCreateTableQuery(cls, model):
-        """Get CREATE TABLE statement for the given model in this DB."""
+        """Get CREATE TABLE statement for the given model in this DB.
+        """
         assert orm.isModel(model), 'Provide a Table subclass.'
 
         columns = cls._getCreateTableColumns(model)
@@ -382,12 +388,14 @@ class GenericAdapter():
 
     @classmethod
     def _encodeINT(cls, value, column):
-        """Encode a value for insertion in a column of INT type."""
+        """Encode a value for insertion in a column of INT type.
+        """
         return str(int(value))
 
     @classmethod
     def _CHAR(cls, column):
-        """CHAR, VARCHAR"""
+        """CHAR, VARCHAR
+        """
         return 'VARCHAR (%i)' % column.precision
 
     @classmethod
@@ -402,7 +410,8 @@ class GenericAdapter():
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
-        It has a range of 0 to 30 and must be no larger than M."""
+        It has a range of 0 to 30 and must be no larger than M.
+        """
         return 'DECIMAL(%s, %s)' % (column.precision, column.scale)
 
     @classmethod
@@ -416,7 +425,8 @@ class GenericAdapter():
     @classmethod
     def _encodeDATETIME(cls, value, column):
         """Not all DBs have microsecond precision in DATETIME columns.
-        So, generic implementation stores datetimes as integer number of microseconds since the Epoch."""
+        So, generic implementation stores datetimes as integer number of microseconds since the Epoch.
+        """
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         if isinstance(value, DateTime):
@@ -445,7 +455,8 @@ class GenericAdapter():
 
     @classmethod
     def _getExpressionTables(cls, expression):
-        """Get tables involved in WHERE expression."""
+        """Get tables involved in WHERE expression.
+        """
         tables = set()
         if orm.isModel(expression):
             tables.add(expression)
@@ -488,7 +499,8 @@ class GenericAdapter():
 
     def _update(self, *fields, where = None, limit = None):
         """UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
-          [ WHERE expression ] [ LIMIT limit_amount ]"""
+          [ WHERE expression ] [ LIMIT limit_amount ]
+          """
         table = None
         for item in fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
@@ -521,18 +533,19 @@ class GenericAdapter():
         """Delete records from table with the given condition and limit.
         @param talbe: a Model subclass, whose records to delete
         @param where: an Expression or string for WHERE part of the DELETE query
-        @param limit: a tuple in form (start, end) which specifies the range dor deletion."""
+        @param limit: a tuple in form (start, end) which specifies the range dor deletion.
+        """
         sql = self._delete(table, where)
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _select(self, *args, where = None, order = False, limit = False,
-                distinct = False, group = False, having = False):
+    def _select(self, *args, where = None, orderby = False, limit = False,
+                distinct = False, groupby = False, having = ''):
         """SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
           [ FROM from_clause ]
           [ WHERE where_expression ]
-          [ GROUP BY expression1, expression2, ... ]
-          [ HAVING having_expression ]
+          [ GROUP BY expression1, expression2, ...
+          [ HAVING having_expression ]]
           [ ORDER BY order_column_expr1, order_column_expr2, ... ]
         """
         tables = self._getExpressionTables(where) # get tables involved in the query
@@ -571,16 +584,16 @@ class GenericAdapter():
             sql_t = ', '.join(map(str, tables))
 
         sql_o = ''
-        if group:
-            group = xorify(group)
-            sql_o += ' GROUP BY %s' % self.render(group)
+        if groupby:
+            groupby = xorify(groupby)
+            sql_o += ' GROUP BY %s' % self.render(groupby)
             if having:
                 sql_o += ' HAVING %s' % having
 
-        if order:
-            order = orm.listify(order)
-            orderBy = []
-            for _order in order:
+        if orderby:
+            orderby = orm.listify(orderby)
+            _orderby = []
+            for _order in orderby:
                 if isinstance(_order, orm.Expression):
                     _order = self.render(_order) + ' ' + _order.sort
                 elif isinstance(_order, str):
@@ -588,33 +601,34 @@ class GenericAdapter():
                         _order = self.RANDOM()
                 else:
                     raise SyntaxError('Orderby should receive Field or str.')
-                orderBy.append(_order)
-            sql_o += ' ORDER BY %s' % ', '.join(orderBy)
+                _orderby.append(_order)
+            sql_o += ' ORDER BY %s' % ', '.join(_orderby)
 
         if limit:
-            if not order and tables:
+            if not orderby and tables:
                 sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
 
         return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
 
     def _selectWithLimit(self, sql_s, sql_f, sql_t, sql_w, sql_o, limit):
-        """The syntax may differ in other dbs."""
+        """The syntax may differ in other dbs.
+        """
         if limit:
-            (lmin, lmax) = limit
+            lmin, lmax = limit
             sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
         return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
 
     def select(self, *args, where = None, **attributes):
         """Create and return SELECT query.
-            @param args: tables, fields or joins;
-            @param where: expression for where;
-            @param limit: a tuple (start, end).
-            @param order:
-            @param group:
+        @param args: tables, fields or joins;
+        @param where: expression for where;
+        @param limit: a tuple (start, end).
+        @param order:
+        @param group:
         tables are taken from fields and `where` expression;
         """
-        fields, sql = self._select(*args, where = where, **attributes)
-        self.execute(sql)
+        fields, query = self._select(*args, where = where, **attributes)
+        self.execute(query)
         rows = list(self.cursor.fetchall())
         return self._parseResponse(fields, rows)
 
@@ -652,7 +666,14 @@ class Rows():
         self._fieldsOrder = dict((fieldStr, i) for i, fieldStr in enumerate(self._fieldsStr)) # {field_str: field_order}
 
     def value(self, rowNo, field):
-        columnNo = self._fieldsOrder[str(field)]
+        """Get a value
+        @param rowNo: row number
+        @param field: field instance or column number
+        """
+        if isinstance(field, int):
+            columnNo = field
+        else:
+            columnNo = self._fieldsOrder[str(field)]
         return self.rows[rowNo][columnNo]
 
     def __len__(self):
@@ -668,7 +689,7 @@ class Rows():
     def __str__(self):
         return pprint.pformat(self.rows)
 
-    def dictresult(self): # TODO:
+    def dictresult(self): 
         """Iterator of the result which return row by row in form 
         {'field1_name': field1_value, 'field2_name': field2_value, ...}
         """

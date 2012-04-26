@@ -1,11 +1,12 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com"
 
 import orm
 from orm import Nil, Column, logger
 
 
 class Expression():
-    """Expression - pair of operands and operation on them."""
+    """Expression - pair of operands and operation on them.
+    """
 
     sort = 'ASC' # default sorting
 
@@ -65,14 +66,16 @@ class Expression():
 
     def __str__(self, db = None):
         """Construct the text of the WHERE clause from this Expression.
-        @param db: GenericAdapter subclass to use for rendering."""
+        @param db: GenericAdapter subclass to use for rendering.
+        """
         db = db or orm.GenericAdapter
         operation = getattr(db, self.operation) # get the operation function from adapter
         args = [arg for arg in (self.left, self.right) if arg is not Nil] # filter nil operands
         return operation(*args) # execute the operation
 
     def _cast(self, value):
-        """Converts a value to Field's comparable type. Default implementation."""
+        """Converts a value to Field's comparable type. Default implementation.
+        """
         return value
 
 
@@ -106,13 +109,15 @@ class Field(Expression):
         return '%s.%s' % (self.table, self.column.name)
 
     def __call__(self, value):
-        """You can use Field()(value) to return a tuple for INSERT."""
+        """You can use Field()(value) to return a tuple for INSERT.
+        """
         return (self, value)
 
 
 
 class CharField(Field):
-    """Field for storing strings of certain length."""
+    """Field for storing strings of certain length.
+    """
     def _init_(self, maxLength, default = None, index = ''):
         super()._init_(Column('CHAR', self, precision = maxLength, default = default), default, index)
 
@@ -148,7 +153,8 @@ class DateTimeField(Field):
 
 
 class IdField(Field):
-    """Primary integer autoincrement key. ID - implicitly present in each table."""
+    """Primary integer autoincrement key. ID - implicitly present in each table.
+    """
     def _init_(self):
         super()._init_(Column('INT', self, precision = 9, unsigned = True, nullable = False, autoincrement = True), None, 'primary') # 9 digits - int32 - should be enough
 
@@ -159,7 +165,8 @@ class BooleanField(Field):
 
 
 class RecordIdField(Field):
-    """Foreign key - stores id of a row in another table."""
+    """Foreign key - stores id of a row in another table.
+    """
     def _init_(self, referTable, index = ''):
         """
         @param referTable: a model class of which record is referenced
@@ -178,7 +185,8 @@ class RecordIdField(Field):
         return self._referTable
 
     def _cast(self, value): # TODO: don't start method name with '_'
-        """Convert a value into another value which is ok for this Field."""
+        """Convert a value into another value which is ok for this Field.
+        """
         try:
             return int(value)
         except ValueError:
