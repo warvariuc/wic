@@ -266,7 +266,7 @@ class GenericAdapter():
                     pass #
                 else: # is the Expression itself
                     castField = castField.type # expression right operand type
-                value = castField._cast(value)
+                value = castField.cast(value)
                 try:
                     return cls._render(value, castField.column)
                 except Exception:

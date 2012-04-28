@@ -1,7 +1,8 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
 
 import inspect
-from datetime import datetime as DateTime
+from datetime import datetime as DateTime, date as Date
+from decimal import Decimal
 from collections import OrderedDict
 import orm
 from orm import signals, logger, exceptions
@@ -24,43 +25,6 @@ class LeftJoin(Join):
     """
     def __init__(self, table, on):
         super().__init__(table, on, 'left')
-
-
-
-class ReferredItem():
-    """Descriptor for proxying access to a referred record.
-    """
-    def __init__(self, idField):
-        """
-        @param idField: IdField instance for hooking
-        """
-        assert isinstance(idField, orm.RecordIdField), 'orm.IdField instance is expected'
-        print('Creating descriptor for', idField.name)
-        self._idField = idField
-
-    def __get__(self, record, model = None):
-        #assert model is not None, 'This attribute is accessible only for records, not models'
-        if record is None:
-            return
-        assert isinstance(record, Model), 'This descriptor is only for Model classes!'
-        idField = self._idField
-        recordId = getattr(record, idField.name) # id in the record
-        if recordId is None:
-            return None
-        referRecordAttrName = '_' + idField.name[:-3] # name of the attribute which keeps referred record
-        referRecord = getattr(record, referRecordAttrName, None) # the referenced record
-        assert referRecord is None or isinstance(referRecord, idField.referTable), 'This should not have happened: private attribute is not a record of required model'
-        if referRecord is None or recordId != referRecord.id: # if record id has changed - retrieve the new record
-            referRecord = idField.referTable.getOneById(record._db, recordId)
-            setattr(record, referRecordAttrName, referRecord)
-        return referRecord
-
-    def __set__(self, record, value):
-        """When replacing refered record, its id is replacing the id kept in this record"""
-        assert isinstance(record, Model), 'This descriptor is only for Model classes!'
-        idField = self._idField
-        assert isinstance(value, idField.referTable), 'You can assign only records of model `%s`' % idField.referTable
-        setattr(record, idField.name, value.id) # set id to refer to the just assigned record
 
 
 
@@ -110,7 +74,7 @@ class ModelMeta(type):
                         raise orm.ModelError('There is an attribute with name `%s` which clashes with RecordIdField name `%s.%s`.'
                                              'That name is reserved for the record referenced by that record id.' % (recordName, name, fieldName))
                 # create the proxy descriptor for the record referenced by the id field
-                setattr(NewModel, recordName, ReferredItem(newField))
+                setattr(NewModel, recordName, orm.ReferredRecord(newField))
 
         indexesDict = OrderedDict() # to filter duplicate indexes by index name
         for index in NewModel._indexes:
@@ -298,9 +262,13 @@ class Model(metaclass = ModelMeta):
     def __str__(self):
         """Human readable presentation of the record.
         """
-        return '%s(%s)' % (self._name,
-            ', '.join("%s= '%s'" % (field.name, getattr(self, field.name))
-                       for field in self.__class__))
+        values = []
+        for field in self.__class__:
+            value = getattr(self, field.name)
+            if isinstance(value, (Date, DateTime, Decimal)):
+                value = str(value)
+            values.append("%s= %r" % (field.name, value))
+        return '%s(%s)' % (self._name, ', '.join(values))
 
     @classmethod
     def COUNT(cls, where = None):

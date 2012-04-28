@@ -1,5 +1,7 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com"
 
+from datetime import datetime as DateTime, date as Date
+from decimal import Decimal
 import orm
 from orm import Nil, Column, logger
 
@@ -73,7 +75,7 @@ class Expression():
         args = [arg for arg in (self.left, self.right) if arg is not Nil] # filter nil operands
         return operation(*args) # execute the operation
 
-    def _cast(self, value):
+    def cast(self, value):
         """Converts a value to Field's comparable type. Default implementation.
         """
         return value
@@ -129,27 +131,50 @@ class TextField(Field):
 
 
 class IntegerField(Field):
+
     def _init_(self, maxDigits = 9, default = None, autoincrement = False, index = ''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
         super()._init_(Column('INT', self, precision = self.maxDigits, unsigned = True, default = default,
                              autoincrement = autoincrement), default, index)
 
+    def __set__(self, record, value):
+        record.__dict__[self.name] = int(value)
+
 
 class DecimalField(Field):
+
     def _init_(self, maxDigits, fractionDigits, default = None, index = ''):
         super()._init_(Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits, default = default), default, index)
 
+    def __set__(self, record, value):
+        record.__dict__[self.name] = None if value is None else Decimal(value)
+
 
 class DateField(Field):
+
     def _init_(self, default = None, index = ''):
         super()._init_(Column('DATE', self, default = default), default, index)
 
+    def __set__(self, record, value):
+        if isinstance(value, str):
+            value = DateTime.strptime(value, '%Y-%m-%d').date()
+        elif not isinstance(value, Date) and value is not None:
+            raise ValueError('Provide a datetime.date or a string in format "%Y-%m-%d" with valid date.')
+        record.__dict__[self.name] = value
+
 
 class DateTimeField(Field):
+
     def _init_(self, default = None, index = ''):
         super()._init_(Column('DATETIME', self, default = default), default, index)
 
+    def __set__(self, record, value):
+        if isinstance(value, str):
+            value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+        elif not isinstance(value, DateTime) and value is not None:
+            raise ValueError('Provide a datetime.datetime or a string in format "%Y-%m-%d %H:%M:%S.%f" with valid date-time.')
+        record.__dict__[self.name] = value
 
 
 class IdField(Field):
@@ -160,8 +185,12 @@ class IdField(Field):
 
 
 class BooleanField(Field):
+
     def _init_(self, default = None, index = ''):
         super()._init_(Column('INT', self, precision = 1, default = default), default, index)
+
+    def __set__(self, record, value):
+        record.__dict__[self.name] = None if value is None else bool(value)
 
 
 class RecordIdField(Field):
@@ -172,19 +201,33 @@ class RecordIdField(Field):
         @param referTable: a model class of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
-        self._referTable = referTable # foreign key - referenced type of table
+        if orm.isModel(referTable):
+            self.__dict__['referTable'] = referTable # override the descriptor
+        elif not isinstance(referTable, str):
+            raise orm.ModelError('Referred model must be a Model or a string with its path.')
+        else:
+            self.__dict__['_referTable'] = referTable # path to the model
+
+        self.referRecordAttrName = '__' + self.name[:-3] # name of the attribute which keeps referred record
+
         super()._init_(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - should be enough
+
+#    def __get__(self, record, model = None):
+#        if record is None:
+#            return
+#        referRecord = record.__dict__.get(self._idField.referRecordAttrName)
+#        return referRecord and referRecord.id
+
+    def __set__(self, record, value):
+        record.__dict__[self.name] = None if value is None else int(value)
 
     @property
     def referTable(self):
-        referTable = self._referTable
-        if orm.isModel(referTable):
-            return referTable
-        assert isinstance(referTable, str), 'Otherwise it should be path to the Model'
-        self._referTable = orm.getObjectByPath(referTable, self.table.__module__)
-        return self._referTable
+        referTable = orm.getObjectByPath(self._referTable, self.table.__module__)
+        self.__dict__['referTable'] = referTable # override the descriptor
+        return referTable
 
-    def _cast(self, value): # TODO: don't start method name with '_'
+    def cast(self, value):
         """Convert a value into another value which is ok for this Field.
         """
         try:
@@ -193,12 +236,49 @@ class RecordIdField(Field):
             raise SyntaxError('Record ID must be an integer.') # TODO: what Exception type to raise?
 
 
+class ReferredRecord():
+    """Descriptor for proxying access to a referred record.
+    """
+    def __init__(self, idField):
+        """
+        @param idField: IdField instance for hooking
+        """
+        assert isinstance(idField, RecordIdField), 'orm.IdField instance is expected'
+        print('Creating descriptor for', idField.name)
+        self._idField = idField
+
+    def __get__(self, record, model = None):
+        #assert model is not None, 'This attribute is accessible only for records, not models'
+        if record is None:
+            return
+        assert isinstance(record, orm.Model), 'This descriptor is only for Model classes!'
+        idField = self._idField
+        recordId = getattr(record, idField.name) # id in the record
+        if recordId is None:
+            return None
+        referRecordAttrName = idField.referRecordAttrName
+        referRecord = getattr(record, referRecordAttrName, None) # the referenced record
+        assert referRecord is None or isinstance(referRecord, idField.referTable), 'This should not have happened: private attribute is not a record of required model'
+        if referRecord is None or recordId != referRecord.id: # if record id has changed - retrieve the new record
+            referRecord = idField.referTable.getOneById(record._db, recordId)
+            setattr(record, referRecordAttrName, referRecord)
+        return referRecord
+
+    def __set__(self, record, value):
+        """When replacing refered record, its id is replacing the id kept in this record"""
+        assert isinstance(record, orm.Model), 'This descriptor is only for Model classes!'
+        idField = self._idField
+        assert isinstance(value, idField.referTable), 'You can assign only records of model `%s`' % idField.referTable
+        setattr(record, idField.name, value.id) # set id to refer to the just assigned record
+
+
+
 class TableIdField(Field):
     """This field stores id of a given table in this DB."""
     def _init_(self, index = ''):
         super()._init_(Column('INT', self, precision = 5, unsigned = True), None, index)
 
-    def _cast(self, value):
+    def cast(self, value):
         if isinstance(value, (orm.Model, orm.ModelMeta)):
             return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
         try:

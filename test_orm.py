@@ -115,12 +115,21 @@ pprint.pprint(list(db.select(Authors.first_name, Authors.last_name).dictresult()
 
 
 book = Books(db, ('name', "Just for Fun."), ('author_id', authors[0].id), ('price', '11.20'),
-             ('publication_date','2002-12-01'))
-print(author)
+             ('publication_date', '2002-12-01'))
+
+book.author = Authors.getOneById(db, 3) # Richard Stallman (?) 
 book.save()
-print(author)
+print(book)
 
 author = Authors(db, **dict(first_name = 'Linus', last_name = 'Torvalds'))
-book.author = author
+print('\nCreated a new author, but did not save it:\n ', author)
+
+book.author = author # No! It's Linus Tovalds the author of this book!
+print('\nAssigned the book this new unsaved author:\n ', book)
+
+author.save()
+print('\nSaved the new author. It should have now an id and a timestamp:\n ', author)
+
+print('\nauthor_id should have changed:\n ', book)
 
 #os.unlink(filePath) # delete the temporary db file
