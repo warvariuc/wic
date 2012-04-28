@@ -48,26 +48,26 @@ db = orm.connect('sqlite://:memory:')
 #db.execute('DROP TABLE IF EXISTS authors')
 #db.execute('DROP TABLE IF EXISTS books')
 
-print('\nCREATE TABLE query for Authors table:')
-print(db.getCreateTableQuery(Authors))
+query = db.getCreateTableQuery(Authors)
+print('\nGetting the CREATE TABLE query for table Authors:\n', query)
+for _query in query.split('\n\n'):
+    db.execute(_query)
 
-for query in db.getCreateTableQuery(Authors).split('\n\n'):
-    db.execute(query)
 
-print('\nCREATE TABLE query for Books table:')
-print(db.getCreateTableQuery(Books))
-for query in db.getCreateTableQuery(Books).split('\n\n'):
-    db.execute(query)
+query = db.getCreateTableQuery(Books)
+print('\nGetting the CREATE TABLE query for table Books:\n', query)
+for _query in query.split('\n\n'):
+    db.execute(_query)
 
 
 #print(Authors.id.table, Books.id.table) # though id is inherited from base model - you can see that now each table has its own id field
 
-print('\nInserting authors:')
 authorsData = (
     dict(first_name = 'Sam', last_name = 'Williams'),
     dict(first_name = 'Steven', last_name = 'Levy'),
     dict(first_name = 'Richard', last_name = 'Stallman')
 )
+print('\nInserting authors:')
 authors = []
 for data in authorsData:
     author = Authors(db = db, **data)
@@ -75,7 +75,6 @@ for data in authorsData:
     print(author)
     authors.append(author)
 
-print('\nInserting books:')
 booksData = (
     dict(name = "Free as in Freedom: Richard Stallman's Crusade for Free Software",
          author_id = authors[0].id, price = '9.55', publication_date = '2002-03-08'),
@@ -86,6 +85,7 @@ booksData = (
     dict(name = "Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
          author_id = authors[1].id, price = '23.00', publication_date = '2002-01-15'),
 )
+print('\nInserting books:')
 for data in booksData:
     book = Books(db = db, **data)
     book.save()
@@ -125,11 +125,16 @@ author = Authors(db, **dict(first_name = 'Linus', last_name = 'Torvalds'))
 print('\nCreated a new author, but did not save it:\n ', author)
 
 book.author = author # No! It's Linus Tovalds the author of this book!
-print('\nAssigned the book this new unsaved author:\n ', book)
+print('\nAssigned the book this new unsaved author. book.author_id should be None as the new author is not saved yet:\n ', book)
+print('But book.author should be the one we assigned:', book.author)
 
 author.save()
 print('\nSaved the new author. It should have now an id and a timestamp:\n ', author)
 
-print('\nauthor_id should have changed:\n ', book)
+print('\nAfter saving the new author book.author_id should have changed:\n ', book)
 
+print('\nRetreving book with id 1:')
+book = Books.getOneById(db, 1)
+print(book)
+print('\nbook.author automatically retrives the author from the db:\n ', book.author)
 #os.unlink(filePath) # delete the temporary db file

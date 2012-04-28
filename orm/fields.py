@@ -183,6 +183,9 @@ class IdField(Field):
     def _init_(self):
         super()._init_(Column('INT', self, precision = 9, unsigned = True, nullable = False, autoincrement = True), None, 'primary') # 9 digits - int32 - should be enough
 
+    def __set__(self, record, value):
+        record.__dict__[self.name] = None if value is None else int(value)
+
 
 class BooleanField(Field):
 
@@ -208,18 +211,27 @@ class RecordIdField(Field):
         else:
             self.__dict__['_referTable'] = referTable # path to the model
 
-        self.referRecordAttrName = '__' + self.name[:-3] # name of the attribute which keeps referred record
+        self._name = '__' + self.name[:-3] # name of the attribute which keeps the referred record or its id
 
         super()._init_(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - should be enough
 
-#    def __get__(self, record, model = None):
-#        if record is None:
-#            return
-#        referRecord = record.__dict__.get(self._idField.referRecordAttrName)
-#        return referRecord and referRecord.id
+    def __get__(self, record, model = None):
+        if record:
+            assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
+            referRecord = getattr(record, self._name) # id or the referred record itself
+            if referRecord is None:
+                return None
+            elif isinstance(referRecord, self.referTable):
+                return referRecord.id
+            elif isinstance(referRecord, int):
+                return referRecord
+            else:
+                raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
+        else:
+            return self
 
     def __set__(self, record, value):
-        record.__dict__[self.name] = None if value is None else int(value)
+        setattr(record, self._name, None if value is None else int(value)) # _name will contain the id of the referred record
 
     @property
     def referTable(self):
@@ -239,37 +251,38 @@ class RecordIdField(Field):
 class ReferredRecord():
     """Descriptor for proxying access to a referred record.
     """
-    def __init__(self, idField):
+    def __init__(self, recordIdField):
         """
-        @param idField: IdField instance for hooking
+        @param recordIdField: the paired IdField instance for hooking
         """
-        assert isinstance(idField, RecordIdField), 'orm.IdField instance is expected'
-        print('Creating descriptor for', idField.name)
-        self._idField = idField
+        assert isinstance(recordIdField, RecordIdField), 'orm.IdField instance is expected'
+        logger.debug('Creating descriptor for %s' % recordIdField.name)
+        self._recordIdField = recordIdField
 
     def __get__(self, record, model = None):
-        #assert model is not None, 'This attribute is accessible only for records, not models'
-        if record is None:
-            return
-        assert isinstance(record, orm.Model), 'This descriptor is only for Model classes!'
-        idField = self._idField
-        recordId = getattr(record, idField.name) # id in the record
-        if recordId is None:
-            return None
-        referRecordAttrName = idField.referRecordAttrName
-        referRecord = getattr(record, referRecordAttrName, None) # the referenced record
-        assert referRecord is None or isinstance(referRecord, idField.referTable), 'This should not have happened: private attribute is not a record of required model'
-        if referRecord is None or recordId != referRecord.id: # if record id has changed - retrieve the new record
-            referRecord = idField.referTable.getOneById(record._db, recordId)
-            setattr(record, referRecordAttrName, referRecord)
-        return referRecord
+        if record:
+            assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
+            recordIdField = self._recordIdField
+            referRecord = getattr(record, recordIdField._name) # id or the referred record itself
+            if referRecord is None:
+                return None
+            elif isinstance(referRecord, recordIdField.referTable):
+                return referRecord
+            elif isinstance(referRecord, int):
+                referRecord = recordIdField.referTable.getOneById(record._db, referRecord)
+                setattr(record, recordIdField._name, referRecord)
+                return referRecord
+            else:
+                raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
+        else:
+            return self
 
     def __set__(self, record, value):
         """When replacing refered record, its id is replacing the id kept in this record"""
         assert isinstance(record, orm.Model), 'This descriptor is only for Model classes!'
-        idField = self._idField
-        assert isinstance(value, idField.referTable), 'You can assign only records of model `%s`' % idField.referTable
-        setattr(record, idField.name, value.id) # set id to refer to the just assigned record
+        recordIdField = self._recordIdField
+        assert isinstance(value, recordIdField.referTable) or value is None, 'You can assign only records of model `%s`' % recordIdField.referTable
+        setattr(record, recordIdField._name, value) # _name will contain the referred record
 
 
 

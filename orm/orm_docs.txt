@@ -1,0 +1,5 @@
+Model names are in plural - Persons, not Person.
+Foreign key fields are always named with '_id' at the end.
+Model is a synonim to table.
+Item is a synonim to record.
+Fields are validation values assigned to them in records.

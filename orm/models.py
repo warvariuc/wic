@@ -268,7 +268,7 @@ class Model(metaclass = ModelMeta):
             if isinstance(value, (Date, DateTime, Decimal)):
                 value = str(value)
             values.append("%s= %r" % (field.name, value))
-        return '%s(%s)' % (self._name, ', '.join(values))
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(values))
 
     @classmethod
     def COUNT(cls, where = None):
@@ -300,6 +300,7 @@ class Model(metaclass = ModelMeta):
         if db.uri in cls._checkedDbs: # this db was already checked 
             return
         tableName = cls._name
+        print('checkTable', db.getTables())
         if tableName not in db.getTables():
             cls._handleTableMissing(db)
 #            if tableName not in db.getTables():
