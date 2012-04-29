@@ -37,23 +37,7 @@ def listify(obj):
         return list(obj)
     return [obj]
 
-#class metamethod(): # old way
-#    """A descriptor you can use to decorate a method. 
-#    When calling the method on an instance - calls its implemetation in the class.
-#    When calling the method on a class - calls its implemetation in the metaclass.
-#    """
-#    def __init__(self, method):
-#        self.method = method
-#
-#    def __get__(self, obj, objtype):
-#        if obj is None:
-#            obj = objtype
-#        def wrapped(*args, **kwargs):
-#            method = self.method
-#            if isinstance(obj, type): # is a class
-#                method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
-#            return method(obj, *args, **kwargs)
-#        return wrapped        
+
 def meta_method(method):
     """A decorator for Model methods. 
     When calling the method on an instance - calls its implemetation in the class.

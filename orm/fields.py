@@ -196,6 +196,20 @@ class BooleanField(Field):
         record.__dict__[self.name] = None if value is None else bool(value)
 
 
+class readonly():
+    """Non-data version of the built-in descriptor `property`.
+    """
+    def __init__(self, method):
+        self.method = method
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        def wrapped(*args, **kwargs):
+            return self.method(instance, *args, **kwargs)
+        return wrapped
+
+
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table.
     """
@@ -209,14 +223,14 @@ class RecordIdField(Field):
         elif not isinstance(referTable, str):
             raise orm.ModelError('Referred model must be a Model or a string with its path.')
         else:
-            self.__dict__['_referTable'] = referTable # path to the model
+            self._referTable = referTable # path to the model
 
         self._name = '__' + self.name[:-3] # name of the attribute which keeps the referred record or its id
 
         super()._init_(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - should be enough
 
     def __get__(self, record, model = None):
-        if record:
+        if record: # called as an instance attribute
             assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
             referRecord = getattr(record, self._name) # id or the referred record itself
             if referRecord is None:
@@ -227,13 +241,13 @@ class RecordIdField(Field):
                 return referRecord
             else:
                 raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
-        else:
+        else: # called as a class attribute
             return self
 
     def __set__(self, record, value):
         setattr(record, self._name, None if value is None else int(value)) # _name will contain the id of the referred record
 
-    @property
+    @readonly
     def referTable(self):
         referTable = orm.getObjectByPath(self._referTable, self.table.__module__)
         self.__dict__['referTable'] = referTable # override the descriptor
@@ -260,7 +274,7 @@ class ReferredRecord():
         self._recordIdField = recordIdField
 
     def __get__(self, record, model = None):
-        if record:
+        if record: # called as an instance attribute
             assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
             recordIdField = self._recordIdField
             referRecord = getattr(record, recordIdField._name) # id or the referred record itself
@@ -274,7 +288,7 @@ class ReferredRecord():
                 return referRecord
             else:
                 raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
-        else:
+        else: # called as a class attribute
             return self
 
     def __set__(self, record, value):
