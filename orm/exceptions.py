@@ -26,6 +26,9 @@ class TableError(OrmError):
     """A problem with a db table structure."""
 
 
+class QueryError(OrmError):
+    """Bad parameters to a query"""
+
 class TableMissing(TableError):
     
     def __init__(self, db, model):

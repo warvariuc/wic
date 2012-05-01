@@ -64,17 +64,6 @@ class ModelMeta(type):
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
             setattr(NewModel, fieldName, newField) # each class has its own field object. Inherited and parent tables do not share field attributes
-            
-            if isinstance(newField, orm.RecordIdField):
-                if not fieldName.endswith('_id'):
-                    raise orm.ModelError('RecordIdField name should end with `_id` (`%s.%s`)' % (name, fieldName))
-                else:
-                    recordName = fieldName[:-3] # name with '_id' stripped 
-                    if recordName in attrs:
-                        raise orm.ModelError('There is an attribute with name `%s` which clashes with RecordIdField name `%s.%s`.'
-                                             'That name is reserved for the record referenced by that record id.' % (recordName, name, fieldName))
-                # create the proxy descriptor for the record referenced by the id field
-                setattr(NewModel, recordName, orm.ReferredRecord(newField))
 
         indexesDict = OrderedDict() # to filter duplicate indexes by index name
         for index in NewModel._indexes:
@@ -202,11 +191,11 @@ class Model(metaclass = ModelMeta):
         signals.post_delete.send(sender = model, record = self)
 
     @classmethod
-    def getOne(cls, db, where):
+    def getOne(cls, db, where, select_related = False):
         """Get a single record which falls under the given condition.
         """
         cls.checkTable(db)
-        records = list(cls.get(db, where, limit = (0, 2)))
+        records = list(cls.get(db, where, limit = (0, 2), select_related = select_related))
         if not records: # not found
             raise orm.RecordNotFound(where._render(db))
         if len(records) == 1:
@@ -215,10 +204,10 @@ class Model(metaclass = ModelMeta):
 
 
     @classmethod
-    def getOneById(cls, db, id):
+    def getOneById(cls, db, id, select_related = False):
         """Get one record by id.
         """
-        return cls.getOne(db, cls.id == id)
+        return cls.getOne(db, cls.id == id, select_related = select_related)
 
     @classmethod
     def get(cls, db, where, orderby = False, limit = False, select_related = False):
@@ -233,10 +222,27 @@ class Model(metaclass = ModelMeta):
         cls.checkTable(db)
         orderby = orderby or cls._ordering # use default table ordering if no ordering passed
         fields = list(cls)
-        #fields.extend()
-        rows = db.select(*fields, where = where, orderby = orderby, limit = limit)
+        from_ = [cls]
+        recordIdFields = []
+        if select_related:
+            for field in cls:
+                if isinstance(field, orm.RecordIdField):
+                    recordIdFields.append(field)
+                    fields.extend(field.referTable)
+                    from_.append(orm.Join(field.referTable, field == field.referTable.id))
+        rows = db.select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit)
         for row in rows:
-            yield cls(db, *zip(rows.fields, row))
+            record = cls(db, *zip(cls, row))
+            if select_related:
+                fieldOffset = len(cls)
+                for recordIdField in recordIdFields:
+                    referTable = recordIdField.referTable
+                    print(referTable, recordIdField.name, fieldOffset, list(map(str, fields)))
+                    print(list(zip(referTable, row[fieldOffset:])))
+                    referRecord = referTable(db, *zip(referTable, row[fieldOffset:]))
+                    setattr(record, recordIdField.referRecordAttrName, referRecord)
+                    fieldOffset += len(referTable)
+            yield record
 
     def save(self):
         db = self._db
@@ -285,7 +291,7 @@ class Model(metaclass = ModelMeta):
         """
         cls.checkTable(db)
         count = cls.COUNT(where)
-        return db.select(count).value(0, count)
+        return db.select(count, from_ = cls).value(0, count)
 
     @classmethod
     def _handleTableMissing(cls, db):

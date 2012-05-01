@@ -65,7 +65,7 @@ class IndexField():
     def __init__(self, field, sortOrder = 'asc', prefixLength = None):
         assert isinstance(field, orm.fields.Field), 'Pass Field instances.'
         assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
-        assert isinstance(prefixLength, (int, type(None))), 'Index prefix length must None or int.'
+        assert isinstance(prefixLength, int) or prefixLength is None, 'Index prefix length must None or int.'
         self.field = field
         self.sortOrder = sortOrder
         self.prefixLength = prefixLength
@@ -124,7 +124,7 @@ class GenericAdapter():
     def __init__(self, uri = '', connect = True, autocommit = True):
         """URI is already without protocol."""
         self.uri = uri
-        logger.info('Creating adapter for "%s"' % uri)
+        logger.info('Creating adapter for `%s`' % self)
         self._timings = []
         if connect:
             self.connection = self.connect()
@@ -456,19 +456,19 @@ class GenericAdapter():
     def _decodeBLOB(cls, value, column):
         return base64.b64decode(value)
 
-    @classmethod
-    def _getExpressionTables(cls, expression):
-        """Get tables involved in WHERE expression.
-        """
-        tables = set()
-        if orm.isModel(expression):
-            tables.add(expression)
-        elif isinstance(expression, orm.Field):
-            tables.add(expression.table)
-        elif isinstance(expression, orm.Expression):
-            tables |= cls._getExpressionTables(expression.left)
-            tables |= cls._getExpressionTables(expression.right)
-        return tables
+#    @classmethod
+#    def _getExpressionTables(cls, expression):
+#        """Get tables involved in WHERE expression.
+#        """
+#        tables = set()
+#        if orm.isModel(expression):
+#            tables.add(expression)
+#        elif isinstance(expression, orm.Field):
+#            tables.add(expression.table)
+#        elif isinstance(expression, orm.Expression):
+#            tables |= cls._getExpressionTables(expression.left)
+#            tables |= cls._getExpressionTables(expression.right)
+#        return tables
 
     def lastInsertId(self):
         """Last insert ID."""
@@ -542,56 +542,73 @@ class GenericAdapter():
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _select(self, *args, where = None, orderby = False, limit = False,
+    def _select(self, *fields, from_ = None, where = None, orderby = False, limit = False,
                 distinct = False, groupby = False, having = ''):
-        """SELECT [ DISTINCT | ALL ] column_expression1, column_expression2, ...
+        """SELECT [ DISTINCT ] column_expression1, column_expression2, ...
           [ FROM from_clause ]
+          [ JOIN table_name ON (join_condition) ]
           [ WHERE where_expression ]
           [ GROUP BY expression1, expression2, ...
-          [ HAVING having_expression ]]
+              [ HAVING having_expression ] ]
           [ ORDER BY order_column_expr1, order_column_expr2, ... ]
         """
-        tables = self._getExpressionTables(where) # get tables involved in the query
-        fields = []
+        if not fields:
+            raise orm.QueryError('Specify at least on field to select.')
+
+        if not from_:
+            from_ = []
+            for field in fields:
+                if isinstance(field, orm.Field):
+                    if field.table not in from_:
+                        from_.append(field.table)
+
+        if not from_:
+            raise orm.QueryError('Specify at least one table in `from_` argument or at least on Field to select')
+
+        _fields = []
+        for field in fields:
+            if isinstance(field, orm.Expression):
+                field = self.render(field)
+            elif not isinstance(field, str):
+                raise orm.QueryError('Field must a Field instance or a string. Got `%s`' % field.__class__.__name__)
+            _fields.append(field)
+        sql_fields = ', '.join(_fields)
+
+        tables = []
         joins = []
-        for arg in args:
-            if orm.isModel(arg):
-                fields.extend(arg) # select all table fields
-                tables.add(arg)
-            elif isinstance(arg, orm.Expression):
-                fields.append(arg)
-                tables |= self._getExpressionTables(arg)
+        texts = []
+
+        for arg in orm.listify(from_):
+            if isinstance(arg, orm.ModelMeta):
+                tables.append(str(arg))
             elif isinstance(arg, orm.Join):
-                joins.append(arg)
+                joins.append('%s JOIN %s ON %s' % (arg.type.upper(), arg.model, self.render(arg.on)))
+            elif isinstance(arg, str):
+                texts.append(arg)
             else:
-                raise ValueError('Unknown argument: %r' % arg)
+                raise orm.QueryError('`from_` argument should contain only Models, Joins or strings, but got a `%s`' % arg.__class__.__name__)
 
-        assert fields, 'Please indicate at least one field.'
-        assert tables, 'SELECT: no tables involved.'
+        sql_from = ''
+        if tables:
+            sql_from += ' ' + ', '.join(tables)
+        if texts:
+            sql_from += ' ' + ' '.join(texts)
+        if joins:
+            sql_from += ' ' + ' '.join(joins)
 
-        sql_f = ', '.join(map(self.render, fields))
-        sql_w = ' WHERE ' + self.render(where) if where else ''
-        sql_s = ''
+        sql_where = ' WHERE ' + self.render(where) if where else ''
+        sql_select = ''
         if distinct is True:
-            sql_s += 'DISTINCT'
+            sql_select += 'DISTINCT'
         elif distinct:
-            sql_s += 'DISTINCT ON (%s)' % distinct
+            sql_select += 'DISTINCT ON (%s)' % distinct
 
-        if joins: # http://stackoverflow.com/questions/187146/inner-join-outer-join-is-the-order-of-tables-in-from-important
-            joinTables = [join.model for join in joins]
-            tables = [table for table in tables if table not in joinTables] # remove from tables those which are joined
-            sql_t = ', '.join(map(str, tables))
-            for join in joins:
-                sql_t += ' %s JOIN %s ON %s' % (join.type.upper(), join.model, self.render(join.on))
-        else:
-            sql_t = ', '.join(map(str, tables))
-
-        sql_o = ''
+        sql_other = ''
         if groupby:
             groupby = xorify(groupby)
-            sql_o += ' GROUP BY %s' % self.render(groupby)
+            sql_other += ' GROUP BY %s' % self.render(groupby)
             if having:
-                sql_o += ' HAVING %s' % having
+                sql_other += ' HAVING %s' % having
 
         if orderby:
             orderby = orm.listify(orderby)
@@ -605,32 +622,36 @@ class GenericAdapter():
                 else:
                     raise SyntaxError('Orderby should receive Field or str.')
                 _orderby.append(_order)
-            sql_o += ' ORDER BY %s' % ', '.join(_orderby)
+            sql_other += ' ORDER BY %s' % ', '.join(_orderby)
 
-        if limit:
-            if not orderby and tables:
-                sql_o += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
+#        if limit:
+#            if not orderby and tables:
+#                sql_other += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
 
-        return fields, self._selectWithLimit(sql_s, sql_f, sql_t, sql_w, sql_o, limit)
+        return fields, self._selectWithLimit(sql_select, sql_fields, sql_from, sql_where, sql_other, limit)
 
-    def _selectWithLimit(self, sql_s, sql_f, sql_t, sql_w, sql_o, limit):
+    def _selectWithLimit(self, sql_select, sql_fields, sql_from, sql_where, sql_other, limit):
         """The syntax may differ in other dbs.
         """
         if limit:
             lmin, lmax = limit
-            sql_o += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
-        return 'SELECT %s %s FROM %s%s%s;' % (sql_s, sql_f, sql_t, sql_w, sql_o)
+            sql_other += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
+        return 'SELECT %s %s FROM %s%s%s;' % (sql_select, sql_fields, sql_from, sql_where, sql_other)
 
-    def select(self, *args, where = None, **attributes):
+    def select(self, *fields, from_ = None, where = None, **attributes):
         """Create and return SELECT query.
-        @param args: tables, fields or joins;
+        @param fields: tables, fields or joins;
+        @param from_: tables and joined tables to select from.
+            None -tables will be automatically extracted from provided fields
+            A single table or string
+            A list of tables or strings
         @param where: expression for where;
         @param limit: a tuple (start, end).
-        @param order:
-        @param group:
+        @param orderby:
+        @param groupby:
         tables are taken from fields and `where` expression;
         """
-        fields, query = self._select(*args, where = where, **attributes)
+        fields, query = self._select(*fields, from_ = from_, where = where, **attributes)
         self.execute(query)
         rows = list(self.cursor.fetchall())
         return self._parseResponse(fields, rows)
@@ -876,7 +897,7 @@ class SqliteAdapter(GenericAdapter):
 #        return 'TEXT'
 #
 #    def _encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
-#        _format = "'%% %d.%df'" % (maxDigits + 1, fractionDigits)
+#        _format = "'%% %i.%if'" % (maxDigits + 1, fractionDigits)
 #        return _format % Decimal(value)
 #
 #    def _decodeDECIMAL(self, value, **kwargs):

@@ -26,7 +26,7 @@ class Form(WForm):
         self.loanAmount.setFocus()
 
         for i in range(4):
-            self._['weekDay%d' % i] = True
+            self._['weekDay%i' % i] = True
 
         table = w_table.WTable(self.tableView)
         table.newColumn('RepaymentNo', label= '#', default= 0, width= 30)
@@ -122,7 +122,7 @@ class Form(WForm):
                 row.RepaymentDate = self._.firstInstallmDate + RelDelta(months= RepaymentNo)
         
                 for i in range(6):
-                    if self._['weekDay%d' % row.RepaymentDate.weekday()]:
+                    if self._['weekDay%i' % row.RepaymentDate.weekday()]:
                         break
                     row.RepaymentDate += RelDelta(days= 1)
                 

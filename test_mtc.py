@@ -48,8 +48,8 @@ db = orm.connect('sqlite://papp/databases/mtc.sqlite')
 #print(dbAdapter.getLastQuery(), '\n')
 
 rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name, Regions.region_name,
-              LeftJoin(Locations, Locations.id == Persons.location_id), 
-              Join(Regions, Regions.id == Locations.region_id), 
+              from_ = [Persons, LeftJoin(Locations, Locations.id == Persons.location_id),
+              Join(Regions, Regions.id == Locations.region_id)],
               where= Persons.phone_number == '763533', 
               limit= (0, 10))
 pprint(list(zip(rows.fields, rows)))
@@ -133,5 +133,5 @@ print(db.getLastQuery(), '\n')
 
 #for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
 #    print(str(person), str(Locations.getOneById(db, person.location_id)))
-pprint(db.select(Persons, where= (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit= (0,5))) 
+pprint(list(db.select(*Persons, where = (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit = (0, 5))))
 print(db.getLastQuery(), '\n')

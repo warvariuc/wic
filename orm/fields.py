@@ -205,6 +205,14 @@ class RecordIdField(Field):
         @param referTable: a model class of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
+        if not self.name.endswith('_id'):
+            raise orm.ModelError('RecordIdField name should end with `_id` (`%s.%s`)' % (self.table, self.name))
+
+        self.referRecordAttrName = self.name[:-3] # name with '_id' stripped 
+        if self.referRecordAttrName in self.table.__dict__:
+            raise orm.ModelError('There is an attribute with name `%s` which clashes with RecordIdField name `%s.%s`.'
+                                 'That name is reserved for the record referenced by that record id.' % (self.referRecordAttrName, self.table, self.name))
+
         if orm.isModel(referTable):
             self.__dict__['referTable'] = referTable # override the descriptor
         elif not isinstance(referTable, str):
@@ -214,7 +222,11 @@ class RecordIdField(Field):
 
         self._name = '__' + self.name[:-3] # name of the attribute which keeps the referred record or its id
 
-        super()._init_(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - should be enough
+        super()._init_(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - ought to be enough for anyone ;)
+
+        # create the proxy descriptor for the record referenced by the id field
+        setattr(self.table, self.referRecordAttrName, ReferredRecord(self))
+
 
     def __get__(self, record, model = None):
         if record: # called as an instance attribute
@@ -244,7 +256,7 @@ class RecordIdField(Field):
         try:
             return int(value)
         except ValueError:
-            raise SyntaxError('Record ID must be an integer.') # TODO: what Exception type to raise?
+            raise orm.QueryError('Record ID must be an integer.')
 
 
 class ReferredRecord():

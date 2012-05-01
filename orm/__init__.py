@@ -33,7 +33,7 @@ def isModel(obj):
 
 def listify(obj):
     """Assure that obj is a list."""
-    if hasattr(obj, '__iter__'):
+    if hasattr(obj, '__iter__') and not isinstance(obj, ModelMeta):
         return list(obj)
     return [obj]
 

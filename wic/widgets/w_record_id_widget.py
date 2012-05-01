@@ -63,7 +63,7 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
     def _updateStyle(self):
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
         selectorWidth = self.selector.sizeHint().width() if self.isSelectorVisible() else 0
-        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % (selectorWidth + borderWidth))
+        self.setStyleSheet('QLineEdit { padding-right: %ipx; }' % (selectorWidth + borderWidth))
 #        fm = QtGui.QFontMetrics(self.font()) # font metrics
 #        maxText = '9' * self._maxDigits + '. '
 #        self.setMinimumSize(fm.width(maxText) + selectorWidth + borderWidth * 2,

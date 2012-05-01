@@ -161,7 +161,7 @@ class WDateEdit(QtGui.QLineEdit):
         self.selector.setVisible(value)
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
         selectorWidth = borderWidth + (self.selector.sizeHint().width() if value else 0)
-        self.setStyleSheet('QLineEdit { padding-right: %dpx; }' % selectorWidth)
+        self.setStyleSheet('QLineEdit { padding-right: %ipx; }' % selectorWidth)
         fm = QtGui.QFontMetrics(self.font()) # font metrics
         self.setMinimumSize(fm.width('99.99.9999 ') + borderWidth * 2 + selectorWidth,
                 max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))

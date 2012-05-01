@@ -97,8 +97,8 @@ for data in booksData:
 # as it is transformed by Python into `where = (14 < Books.price) and (Books.price < '15.00')` 
 # making as result `where = (Books.price < '15.00')`
 print('\nSELECT query:')
-print(db._select(Books.id, where = (15 > Books.price > '14.00'), limit = (0, 10)))
-print(db.select(Books, where = (Books.price > '15'), limit = (0, 10)))
+print(db._select('id', from_ = Books, where = (15 > Books.price > '14.00'), limit = (0, 10)))
+print(db.select(Books.id, from_ = Books, where = (Books.price > '15'), limit = (0, 10)))
 book = Books.getOne(db, where = (Books.price > 15))
 print("print(book, book.author)")
 print(book, book.author)
@@ -113,7 +113,7 @@ print('\nAuthors count')
 pprint.pprint(list(db.select(Authors.first_name, Authors.COUNT()).dictresult()))
 pprint.pprint(list(db.select(Authors.first_name, Authors.last_name).dictresult()))
 
-print('\nSelection one book with id=1:\n ', db.select(Books, Authors, orm.Join(Authors, Books.author_id == Authors.id), where = (Books.id == 1)))
+print('\nSelection one book with id=1:\n ', db.select('*', from_ = [Books, orm.Join(Authors, Books.author_id == Authors.id)], where = (Books.id == 1)))
 
 book = Books(db, ('name', "Just for Fun."), ('author_id', authors[0].id), ('price', '11.20'),
              ('publication_date', '2002-12-01'))
@@ -134,7 +134,7 @@ print('\nSaved the new author. It should have now an id and a timestamp:\n ', au
 print('\nAfter saving the new author book.author_id should have changed:\n ', book)
 
 print('\nRetreving book with id 1:')
-book = Books.getOneById(db, 1)
+book = Books.getOneById(db, 1, select_related = True)
 print(book)
 print('\nbook.author automatically retrives the author from the db:\n ', book.author)
 #os.unlink(filePath) # delete the temporary db file
