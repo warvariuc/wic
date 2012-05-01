@@ -1,6 +1,6 @@
 """This module contains database adapters, which incapsulate all operations specific to a certain database.
 All other ORM modules should be database agnostic."""
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com" 
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com"
 
 import os, sys, base64
 import time, re, math
@@ -86,7 +86,7 @@ class Index():
             assert isinstance(indexField, IndexField), 'Pass IndexField instances.'
             table = table or indexField.field.table
             assert indexField.field.table is table, 'Indexed fields should be from the same table!'
-            
+
         self.table = table
 
         if type is True:
@@ -106,7 +106,7 @@ class Index():
     def __str__(self):
         return '{} `{}` ON ({}) {}'.format(self.type, self.name,
             ', '.join(str(indexField.field) for indexField in self.indexFields), self.method)
-        
+
 #    def _copy(self, model):
 #        """Create a copy of the index with copy of fields in the index with the given model."""
 #        assert isinstance(model, orm.ModelMeta), 'Pass a Model.'
@@ -133,6 +133,9 @@ class GenericAdapter():
             self.connection = None
             self.cursor = None
         self.autocommit = autocommit
+
+    def __str__(self):
+        return '%s://%s' % (self.protocol, self.uri)
 
     def connect(self):
         """Connect to the DB and return the connection. To be overridden in subclasses.
@@ -561,7 +564,7 @@ class GenericAdapter():
             elif isinstance(arg, orm.Join):
                 joins.append(arg)
             else:
-                raise ValueError('Uknown argument: %r' % arg)
+                raise ValueError('Unknown argument: %r' % arg)
 
         assert fields, 'Please indicate at least one field.'
         assert tables, 'SELECT: no tables involved.'
@@ -689,7 +692,7 @@ class Rows():
     def __str__(self):
         return pprint.pformat(self.rows)
 
-    def dictresult(self): 
+    def dictresult(self):
         """Iterator of the result which return row by row in form 
         {'field1_name': field1_value, 'field2_name': field2_value, ...}
         """

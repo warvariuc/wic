@@ -113,13 +113,13 @@ print('\nAuthors count')
 pprint.pprint(list(db.select(Authors.first_name, Authors.COUNT()).dictresult()))
 pprint.pprint(list(db.select(Authors.first_name, Authors.last_name).dictresult()))
 
+print('\nSelection one book with id=1:\n ', db.select(Books, Authors, orm.Join(Authors, Books.author_id == Authors.id), where = (Books.id == 1)))
 
 book = Books(db, ('name', "Just for Fun."), ('author_id', authors[0].id), ('price', '11.20'),
              ('publication_date', '2002-12-01'))
-
 book.author = Authors.getOneById(db, 3) # Richard Stallman (?) 
 book.save()
-print(book)
+print('\nNew saved book with wrong author:\n ', book)
 
 author = Authors(db, **dict(first_name = 'Linus', last_name = 'Torvalds'))
 print('\nCreated a new author, but did not save it:\n ', author)

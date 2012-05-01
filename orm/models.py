@@ -229,9 +229,12 @@ class Model(metaclass = ModelMeta):
         @param limit: tuple (from, to)
         @param select_related: whether to retrieve objects related by foreign keys 
         """
+        logger.debug('Model.get(%s, db= %s, where= %s' % (cls, db, where))
         cls.checkTable(db)
         orderby = orderby or cls._ordering # use default table ordering if no ordering passed
-        rows = db.select(cls, where = where, orderby = orderby, limit = limit)
+        fields = list(cls)
+        #fields.extend()
+        rows = db.select(*fields, where = where, orderby = orderby, limit = limit)
         for row in rows:
             yield cls(db, *zip(rows.fields, row))
 
@@ -239,11 +242,11 @@ class Model(metaclass = ModelMeta):
         db = self._db
         self.checkTable(db)
         model = self.__class__
-        values = [] # list of tuples (Field, value)
         self.timestamp = DateTime.now()
+        values = [] # list of tuples (Field, value)
         for field in model:
             value = self[field]
-            values.append((field, value))
+            values.append(field(value))
 
         signals.pre_save.send(sender = model, record = self)
 
@@ -299,12 +302,10 @@ class Model(metaclass = ModelMeta):
         assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
         if db.uri in cls._checkedDbs: # this db was already checked 
             return
+        logger.debug('Model.checkTable: checking db table %s' % cls)
         tableName = cls._name
-        print('checkTable', db.getTables())
         if tableName not in db.getTables():
             cls._handleTableMissing(db)
-#            if tableName not in db.getTables():
-#                raise exceptions.TableMissing(db, cls)
 #        import pprint
         modelColumns = {field.column.name: field.column for field in cls}
         dbColumns = db.getColumns(tableName)

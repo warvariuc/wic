@@ -50,6 +50,21 @@ def meta_method(method):
     return wrapped        
 
 
+class LazyProperty():
+    """The descriptor is designed to be used as a decorator, and will save the decorated function and its name. 
+    When the descriptor is accessed, it will calculate the value by calling the function and save the calculated value back to the object's dict. 
+    Saving back to the object's dict has the additional benefit of preventing the descriptor from being called the next time the property is accessed.
+    http://blog.pythonisito.com/2008/08/lazy-descriptors.html
+    """
+    def __init__(self, func):
+        self._func = func
+        self.__name__ = func.__name__
+        self.__doc__ = func.__doc__
+
+    def __get__(self, instance, owner):
+        result = instance.__dict__[self.__name__] = self._func(instance)
+        return result
+
 
 class Nil():
     """Custom None"""

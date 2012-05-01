@@ -196,19 +196,6 @@ class BooleanField(Field):
         record.__dict__[self.name] = None if value is None else bool(value)
 
 
-class readonly():
-    """Non-data version of the built-in descriptor `property`.
-    """
-    def __init__(self, method):
-        self.method = method
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        def wrapped(*args, **kwargs):
-            return self.method(instance, *args, **kwargs)
-        return wrapped
-
 
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table.
@@ -247,11 +234,9 @@ class RecordIdField(Field):
     def __set__(self, record, value):
         setattr(record, self._name, None if value is None else int(value)) # _name will contain the id of the referred record
 
-    @readonly
+    @orm.LazyProperty
     def referTable(self):
-        referTable = orm.getObjectByPath(self._referTable, self.table.__module__)
-        self.__dict__['referTable'] = referTable # override the descriptor
-        return referTable
+        return orm.getObjectByPath(self._referTable, self.table.__module__)
 
     def cast(self, value):
         """Convert a value into another value which is ok for this Field.
