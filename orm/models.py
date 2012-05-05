@@ -1,4 +1,4 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
 import inspect
 from datetime import datetime as DateTime, date as Date

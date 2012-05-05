@@ -1,6 +1,6 @@
 """This module contains database adapters, which incapsulate all operations specific to a certain database.
 All other ORM modules should be database agnostic."""
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com"
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import os, sys, base64
 import time, re, math
