@@ -29,7 +29,7 @@ class MainMenu():
             createAction(mainWindow, 'Qt Designer', self.openQtDesigner, None, ':/icons/fugue/application-form.png', 'Run Designer with custom widgets'),
         ))
 
-        self.catalogs = mainWindow.menuBar().addMenu('Справочники')
+        self.catalogs = mainWindow.menuBar().addMenu('Catalogs')
 
         self.windows = mainWindow.menuBar().addMenu('Windows')
 

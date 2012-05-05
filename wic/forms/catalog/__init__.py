@@ -1,5 +1,5 @@
 
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com"
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import sys
 from PyQt4 import QtGui, QtCore

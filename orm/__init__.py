@@ -1,4 +1,4 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import sys, os
 
@@ -39,7 +39,7 @@ def listify(obj):
 
 
 def meta_method(method):
-    """A decorator for Model methods. 
+    """Decorator for Model methods.
     When calling the method on an instance - calls its implemetation in the class.
     When calling the method on a class - calls the method in metaclass with the same name.
     """
@@ -51,9 +51,7 @@ def meta_method(method):
 
 
 class LazyProperty():
-    """The descriptor is designed to be used as a decorator, and will save the decorated function and its name. 
-    When the descriptor is accessed, it will calculate the value by calling the function and save the calculated value back to the object's dict. 
-    Saving back to the object's dict has the additional benefit of preventing the descriptor from being called the next time the property is accessed.
+    """The descriptor is designed to be used as a decorator, and will save the decorated function and its name.
     http://blog.pythonisito.com/2008/08/lazy-descriptors.html
     """
     def __init__(self, func):
@@ -62,8 +60,14 @@ class LazyProperty():
         self.__doc__ = func.__doc__
 
     def __get__(self, instance, owner):
-        result = instance.__dict__[self.__name__] = self._func(instance)
-        return result
+        """When the descriptor is accessed, it will calculate the value by calling the function and save the calculated value back to the object's dict.
+        Saving back to the object's dict has the additional benefit of preventing the descriptor from being called the next time the property is accessed.
+        """
+        if instance is not None: # when the descriptor is accessed as an instance attribute
+            result = instance.__dict__[self.__name__] = self._func(instance)
+            return result
+        else:
+            return self # when the descriptor is accessed as a class attribute
 
 
 class Nil():
@@ -77,7 +81,8 @@ from .models import *
 
 
 def connect(uri):
-    """Search for suitable adapter by protocol"""
+    """Search for suitable adapter by protocol
+    """
     from . import adapters
     for AdapterClass in adapters.__dict__.values():
         if isinstance(AdapterClass, type) \

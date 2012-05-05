@@ -1,4 +1,4 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
@@ -18,7 +18,6 @@ class WItemStyle():
         _roles.update(roles)
         self.roles = _roles
         self.__dict__.update(kwargs)
-
 
     def data(self, role, value = None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
         data = self.roles.get(role)
@@ -132,10 +131,10 @@ class CatalogModel(orm.Model):
         """Default implementation of situation when upon checking there was not found the table 
         corresponding to this model in the db.
         """
-        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?', 
+        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?',
                         'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
                         'Do you want it to be automatically created?'
-                        % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, 
+ % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
                         QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
             db.execute(db.getCreateTableQuery(cls))
             QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
