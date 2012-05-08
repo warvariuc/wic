@@ -1,4 +1,4 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
@@ -14,7 +14,7 @@ class WItemStyle():
     def __init__(self, roles = {}, **kwargs):
         assert isinstance(roles, dict), 'Roles should a dict {role: value|function}'
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                      QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
+                  QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
         }
         _roles.update(roles)
         self.roles = _roles

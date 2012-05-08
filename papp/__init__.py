@@ -1,4 +1,4 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import sys, os
 
@@ -58,7 +58,7 @@ class App(w_app.WApp):
             modelName = catalog.capitalize()
             modelPath = 'papp.catalogs.' + catalog + '.' + modelName
             menus.addActionsToMenu(menu, (
-                menus.createAction(menu, modelName, lambda *args, m=modelPath: self.openCatalogForm(m)),
+                menus.createAction(menu, modelName, lambda *args, m = modelPath: self.openCatalogForm(m), icon = ':/icons/fugue/cards-stack.png'),
             ))
         
     def openCatalogForm(self, modelPath):

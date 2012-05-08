@@ -1,4 +1,4 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com"""
+"""Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
 from PyQt4 import QtCore, QtGui
 
