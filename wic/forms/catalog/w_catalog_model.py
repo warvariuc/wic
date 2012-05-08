@@ -12,6 +12,7 @@ class WItemStyle():
     """Common style for representation of an ItemView item
     """
     def __init__(self, roles = {}, **kwargs):
+        assert isinstance(roles, dict), 'Roles should a dict {role: value|function}'
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
                       QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
         }
@@ -19,8 +20,11 @@ class WItemStyle():
         self.roles = _roles
         self.__dict__.update(kwargs)
 
-
-    def data(self, role, value = None): # http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
+    def data(self, role, value = None):
+        """Process value from the db and return data for the given role.
+        @param role: data role (http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum)
+        @param value: value from the db to analyze or process
+        """
         data = self.roles.get(role)
         return data(value) if callable(data) else data
 
@@ -71,8 +75,19 @@ class WBoolItemStyle(WItemStyle):
         super().__init__(roles = _roles)
 
 
-class WVHeaderStyle(WItemStyle):
-    """Style for vertical headers.
+class WRecordIdItemStyle(WItemStyle):
+    """Style for items which contains record ids.
+    """
+    def __init__(self, roles = {}):
+        _roles = {QtCore.Qt.DisplayRole: self.displayRole}
+        _roles.update(roles)
+        super().__init__(roles = _roles, format = format)
+
+    def displayRole(self, value):
+        return str(value)#.record)
+
+class WHHeaderStyle(WItemStyle):
+    """Style for horizontal headers.
     """
     def __init__(self, roles = {}, title = '', width = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
@@ -89,8 +104,8 @@ class WVHeaderStyle(WItemStyle):
                 format_ = format_[:-1]
             return format(value, format_)
 
-class WHHeaderStyle(WItemStyle):
-    """Style for horizontal headers.
+class WVHeaderStyle(WItemStyle):
+    """Style for vertical headers.
     """
     def __init__(self, roles = {}, height = None):
         _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
@@ -116,6 +131,8 @@ def createStyleForField(field):
         return WDateItemStyle()
     elif isinstance(field, orm.BooleanField):
         return WBoolItemStyle()
+    elif isinstance(field, orm.RecordIdField):
+        return WRecordIdItemStyle()
     else:
         return WItemStyle()
 
@@ -132,10 +149,10 @@ class CatalogModel(orm.Model):
         """Default implementation of situation when upon checking there was not found the table 
         corresponding to this model in the db.
         """
-        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?', 
+        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?',
                         'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
                         'Do you want it to be automatically created?'
-                        % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, 
+                        % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
                         QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
             db.execute(db.getCreateTableQuery(cls))
             QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
@@ -149,18 +166,13 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
     def __init__(self, db, catalogModel, where = None):
         assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'
         super().__init__(None) # no parent
-        self._hHeaderStyle = WHHeaderStyle()
-        self._vHeaderStyles = []
+        self._vHeaderStyle = WVHeaderStyle()
+        self._hHeaderStyles = []
         self._columnStyles = []
         fields = []
-        _join = []
         for field in catalogModel:
             fields.append(field)
-            if isinstance(field, orm.RecordIdField):
-                referTable = field.referTable
-                _join.append(orm.Join(referTable, field == referTable.id))
-                #_join.append(referTable)
-            self._vHeaderStyles.append(WVHeaderStyle(title = field.label))
+            self._hHeaderStyles.append(WHHeaderStyle(title = field.label))
             self._columnStyles.append(createStyleForField(field))
 
         self.db = db
@@ -209,8 +221,6 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
             for rowNo in tuple(cache.keys()):
                 if cache[rowNo][-1] <= expiredTime:
                     cache.pop(rowNo)
-#            cache = {_rowNo: row for _rowNo, row in self._cache.items()
-#                        if row[-1] > expiredTime}
             for i, row in enumerate(rows):
                 cache[rangeStart + i] = tuple(row) + (now,)
             self.timer.start(self.updateTime * 1000)
@@ -236,9 +246,9 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
 
     def headerData(self, section, orientation, role):
         if orientation == QtCore.Qt.Horizontal:
-            return self._vHeaderStyles[section].data(role)
+            return self._hHeaderStyles[section].data(role)
         elif orientation == QtCore.Qt.Vertical:
-            return self._hHeaderStyle.data(role, section)
+            return self._vHeaderStyle.data(role, section)
         return None
 
 

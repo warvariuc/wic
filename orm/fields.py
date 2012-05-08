@@ -14,9 +14,9 @@ class Expression():
 
     def __init__(self, operation, left = Nil, right = Nil, type = None, **kwargs):
         """Create an expression.
-            @param operation: string with the name of DB operation
-            @param left: left operand
-            @param right: right operand 
+        @param operation: string with the operation name (defined in adapters) 
+        @param left: left operand
+        @param right: right operand 
         """
         if left is not Nil and not type:
             if isinstance(left, Field):
@@ -196,6 +196,24 @@ class BooleanField(Field):
         record.__dict__[self.name] = None if value is None else bool(value)
 
 
+class _RecordId(int):
+    """Keeps id of a referred record allowing to get the referred record.
+    """
+    def __new__(cls, *args, recordIdField, record, **kwargs):
+        """
+        @param recordIdField: referred record id model field - to know which model is referred
+        @param record: record part of which is this referred record id
+        """
+        self = super().__new__(cls, *args, **kwargs)
+        self._recordIdField = recordIdField
+        self._record = record
+        return self
+
+    @property
+    def record(self):
+        "Get the record referred by this id."
+        return getattr(self._record, self._recordIdField.referRecordAttrName)
+
 
 class RecordIdField(Field):
     """Foreign key - stores id of a row in another table.
@@ -227,19 +245,20 @@ class RecordIdField(Field):
         # create the proxy descriptor for the record referenced by the id field
         setattr(self.table, self.referRecordAttrName, ReferredRecord(self))
 
-
     def __get__(self, record, model = None):
         if record: # called as an instance attribute
             assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
             referRecord = getattr(record, self._name) # id or the referred record itself
             if referRecord is None:
                 return None
-            elif isinstance(referRecord, self.referTable):
-                return referRecord.id
-            elif isinstance(referRecord, int):
-                return referRecord
+            elif isinstance(referRecord, self.referTable): # last assigned value was Record
+                if referRecord.id is None:
+                    return None
+                return _RecordId(referRecord.id, record = record, recordIdField = self)
+            elif isinstance(referRecord, int): # last assigned value was id
+                return _RecordId(referRecord, record = record, recordIdField = self) 
             else:
-                raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
+                raise TypeError('This should not have happened: private attribute is not a record of required model, int or None')
         else: # called as a class attribute
             return self
 
@@ -274,7 +293,7 @@ class ReferredRecord():
         if record: # called as an instance attribute
             assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
             recordIdField = self._recordIdField
-            referRecord = getattr(record, recordIdField._name) # id or the referred record itself
+            referRecord = getattr(record, recordIdField._name)
             if referRecord is None:
                 return None
             elif isinstance(referRecord, recordIdField.referTable):

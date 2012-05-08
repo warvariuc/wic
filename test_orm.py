@@ -137,4 +137,5 @@ print('\nRetreving book with id 1:')
 book = Books.getOneById(db, 1, select_related = True)
 print(book)
 print('\nbook.author automatically retrives the author from the db:\n ', book.author)
+print(book.author_id.record)
 #os.unlink(filePath) # delete the temporary db file
