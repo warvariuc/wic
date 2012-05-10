@@ -150,10 +150,10 @@ class CatalogModel(orm.Model):
         corresponding to this model in the db.
         """
         if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?',
-                        'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
-                        'Do you want it to be automatically created?'
-                        % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
-                        QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
+                'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
+                'Do you want it to be automatically created?'
+                % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+                QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
             db.execute(db.getCreateTableQuery(cls))
             QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
         else:
@@ -179,15 +179,14 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self.catalogModel = catalogModel
         self.fields = fields# + _join
         self.where = where
-        self.updateTime = 5 # seconds
-        self.fetchCount = 150
-        self.timer = QtCore.QTimer(self)
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.resetCache)
-        orm.signals.post_save.connect(self.resetCache, catalogModel)
-        orm.signals.post_delete.connect(self.resetCache, catalogModel)
+        self.updatePeriod = 5 # seconds
+        self.fetchCount = 150 # number of records to fetch in one db request
+        self.updateTimer = QtCore.QTimer(self)
+        self.updateTimer.setSingleShot(True)
+        self.updateTimer.timeout.connect(self.resetCache)
+        orm.signals.post_save.connect(self.resetCache, catalogModel) # to update the view
+        orm.signals.post_delete.connect(self.resetCache, catalogModel) # when a record was modified
         self.resetCache()
-
 
     def getRowId(self, rowNo):
         """Id field value of the given row.
@@ -196,12 +195,12 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
 
     def resetCache(self, **kwargs):
         #print('clearCache')
-        self.timer.stop()
+        self.updateTimer.stop()
         self.beginResetModel()
         self._cache = {}  # {rowNo: (row + rowTime)}
         self._rowsCount = None
         self.endResetModel()
-        self.timer.start(self.updateTime * 1000)
+        self.updateTimer.start(self.updatePeriod * 1000)
 
     def row(self, rowNo):
         """Get a row from the cache. If it's not in the cache, request a range from DB and update the cache. 
@@ -209,13 +208,13 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         try: # find the row in the cache
             return self._cache[rowNo]
         except KeyError: # fill the cache
-            self.timer.stop()
+            self.updateTimer.stop()
             rangeStart = max(rowNo - self.fetchCount // 3, 0)
             rangeEnd = rangeStart + self.fetchCount
             #print('db fetch', (rangeStart, rangeEnd)) # debug
             rows = self.db.select(*self.fields, where = self.where, limit = (rangeStart, rangeEnd))
             now = time.time()
-            expiredTime = now - self.updateTime
+            expiredTime = now - self.updatePeriod
             cache = self._cache
             # clean the cache of expired rows
             for rowNo in tuple(cache.keys()):
@@ -223,7 +222,7 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
                     cache.pop(rowNo)
             for i, row in enumerate(rows):
                 cache[rangeStart + i] = tuple(row) + (now,)
-            self.timer.start(self.updateTime * 1000)
+            self.updateTimer.start(self.updatePeriod * 1000)
             return cache[rowNo]
 
     def data(self, index, role):
