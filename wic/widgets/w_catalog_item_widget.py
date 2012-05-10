@@ -1,15 +1,13 @@
 from PyQt4 import QtGui, QtCore
 
 
-class WCatalogItemIdWidget(QtGui.QLineEdit):
-    """Custom widget - for keeping id of a record."""
+class WCatalogItemWidget(QtGui.QLineEdit):
+    """Custom widget - for keeping a catalog item."""
 
     changed = QtCore.pyqtSignal()
 
     def __init__(self, parent = None):
         super().__init__(parent)
-        #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        #self.setAlignment(QtCore.Qt.AlignRight)
         self.setReadOnly(True)
         self.selector = QtGui.QToolButton(self)
         self.selector.setIcon(QtGui.QIcon(':/icons/fugue/cards-stack.png'))
@@ -18,9 +16,10 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
         self.selector.clicked.connect(self.selectItem)
 
-        self._db = None
         self.setModel('') # will cause text update
-        
+        self._db = None
+        self._item = None
+
         self.setSelectorVisible(True) # cause style recalculation
 
     def getDb(self):
@@ -29,24 +28,23 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
         import orm
         assert isinstance(db, orm.GenericAdapter), 'db argument must be a GenericAdapter.'
         self._db = db
-    db = QtCore.pyqtProperty(str, getDb, setDb)
 
     def getModel(self):
         return self._model
     def setModel(self, model):
         assert isinstance(model, str), 'Model path must be a string'
         self._model = model
-        self.setId(None)
+        if isinstance(self._item, model):
+            self.setItem(None) # remove item is it's not the same model as the set model
     model = QtCore.pyqtProperty(str, getModel, setModel)
 
-    def getId(self):
+    def getItem(self):
         return self._id
-    def setId(self, id):
+    def setItem(self, item):
         assert id is None or isinstance(id, int), 'id must be an int or None (%s)' % id
         self._id = id
         self.changed.emit()
         self._format() # to reflect changes
-    id = QtCore.pyqtProperty(int, getId, setId)
 
     def clear(self):
         self.setId(None)
@@ -108,7 +106,7 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
         if self._db:
             from wic import forms, getObjectByPath
             model = getObjectByPath(self._model)
-            catalogForm = forms.openCatalogForm(model, self._db, type=1)
+            catalogForm = forms.openCatalogForm(model, self._db, type = 1)
             catalogForm.itemSelected.connect(self.setId)
 
     def contextMenuEvent(self, qContextMenuEvent):
@@ -123,10 +121,3 @@ class WCatalogItemIdWidget(QtGui.QLineEdit):
             ))
             self.menu = menu
         menu.popup(qContextMenuEvent.globalPos())
-
-
-if __name__ == '__main__': # some tests
-    app = QtGui.QApplication([])
-    widget = WCatalogItemIdWidget(None)
-    widget.show()
-    app.exec()

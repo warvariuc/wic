@@ -206,7 +206,7 @@ class WDateEdit(QtGui.QLineEdit):
         curPos = self.cursorPosition()
         i = 0
         while i < len(txt): # remove invalid symbols
-            if txt[i] in ' 0123456789': 
+            if txt[i].isdigit(): 
                 i += 1
             else: 
                 del txt[i]
@@ -227,7 +227,7 @@ class WDateEdit(QtGui.QLineEdit):
             self._prevText = self.text()
 
     def focusOutEvent(self, focusEvent):
-        'Check for changes when leaving the widget'
+        "Check for changes when leaving the widget"
         if focusEvent.reason() != QtCore.Qt.PopupFocusReason: # контекстное меню (или еще что) выскочило 
             if self._prevText is not None: # while the widget was focused - the text was changed
 #                if self.date() is None: # invalid date
