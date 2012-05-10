@@ -61,8 +61,9 @@ class WCatalogItemWidget(QtGui.QLineEdit):
     def _updateStyle(self):
         borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
         selectorWidth = self.selector.sizeHint().width() if self.isSelectorVisible() else 0
-        backColor = hex(QtGui.QApplication.palette().alternateBase().color().rgb())[4:]
-        self.setStyleSheet('QLineEdit { background-color: #%s; padding-right: %ipx; }' % (backColor, selectorWidth + borderWidth))
+        #backColor = hex(QtGui.QApplication.palette().alternateBase().color().rgb())[4:]
+        #self.setStyleSheet('QLineEdit { background-color: #%s; padding-right: %ipx; }' % (backColor, selectorWidth + borderWidth))
+        self.setStyleSheet('QLineEdit { background-color: palette(shadow); padding-right: %ipx; }' % (selectorWidth + borderWidth))
 #        fm = QtGui.QFontMetrics(self.font()) # font metrics
 #        maxText = '9' * self._maxDigits + '. '
 #        self.setMinimumSize(fm.width(maxText) + selectorWidth + borderWidth * 2,
