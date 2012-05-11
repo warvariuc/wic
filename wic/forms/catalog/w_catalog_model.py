@@ -8,7 +8,7 @@ import traceback, time
 import orm, wic
 
 
-class WItemStyle():
+class WStyle():
     """Common style for representation of an ItemView item
     """
     def __init__(self, roles = {}, **kwargs):
@@ -35,7 +35,7 @@ class WItemStyle():
         return str(value) if value else None
 
 
-class WDecimalItemStyle(WItemStyle):
+class WDecimalStyle(WStyle):
     """Style for items with Decimal values.
     """
     def __init__(self, roles = {}, format = ''):
@@ -54,7 +54,7 @@ class WDecimalItemStyle(WItemStyle):
             return format(value, format_)
 
 
-class WDateItemStyle(WItemStyle):
+class WDateStyle(WStyle):
     """Style for items with Date values.
     """
     def __init__(self, roles = {}):
@@ -64,7 +64,7 @@ class WDateItemStyle(WItemStyle):
         super().__init__(roles = _roles)
 
 
-class WBoolItemStyle(WItemStyle):
+class WBoolStyle(WStyle):
     """Style for items with bool values.
     """
     def __init__(self, roles = {}):
@@ -75,7 +75,7 @@ class WBoolItemStyle(WItemStyle):
         super().__init__(roles = _roles)
 
 
-class WRecordIdItemStyle(WItemStyle):
+class WRecordIdStyle(WStyle):
     """Style for items which contains record ids.
     """
     def __init__(self, roles = {}):
@@ -84,9 +84,10 @@ class WRecordIdItemStyle(WItemStyle):
         super().__init__(roles = _roles, format = format)
 
     def displayRole(self, value):
-        return str(value)#.record)
+        return '' if value is None else str(value.record)
 
-class WHHeaderStyle(WItemStyle):
+
+class WHHeaderStyle(WStyle):
     """Style for horizontal headers.
     """
     def __init__(self, roles = {}, title = '', width = None):
@@ -104,7 +105,7 @@ class WHHeaderStyle(WItemStyle):
                 format_ = format_[:-1]
             return format(value, format_)
 
-class WVHeaderStyle(WItemStyle):
+class WVHeaderStyle(WStyle):
     """Style for vertical headers.
     """
     def __init__(self, roles = {}, height = None):
@@ -121,20 +122,6 @@ class WVHeaderStyle(WItemStyle):
                     return ''
                 format_ = format_[:-1]
             return format(value, format_)
-
-
-def createStyleForField(field):
-    assert isinstance(field, orm.Field)
-    if isinstance(field, orm.DecimalField):
-        return WDecimalItemStyle(format = ',.%if ' % field.fractionDigits)
-    elif isinstance(field, orm.DateField):
-        return WDateItemStyle()
-    elif isinstance(field, orm.BooleanField):
-        return WBoolItemStyle()
-    elif isinstance(field, orm.RecordIdField):
-        return WRecordIdItemStyle()
-    else:
-        return WItemStyle()
 
 
 
@@ -160,7 +147,8 @@ class CatalogModel(orm.Model):
             super()._handleTableMissing(db)
 
 
-class WCatalogProxyModel(QtCore.QAbstractTableModel):
+
+class WCatalogViewModel(QtCore.QAbstractTableModel):
     """Qt table model for showing list of catalog items.
     """
     def __init__(self, db, catalogModel, where = None):
@@ -169,76 +157,90 @@ class WCatalogProxyModel(QtCore.QAbstractTableModel):
         self._vHeaderStyle = WVHeaderStyle()
         self._hHeaderStyles = []
         self._columnStyles = []
-        fields = []
         for field in catalogModel:
-            fields.append(field)
             self._hHeaderStyles.append(WHHeaderStyle(title = field.label))
-            self._columnStyles.append(createStyleForField(field))
+            columnStyle = self.createStyleForField(field)
+            columnStyle.fieldName = field.name
+            self._columnStyles.append(columnStyle)
 
+        self._columnCount = len(self._columnStyles)
         self.db = db
         self.catalogModel = catalogModel
-        self.fields = fields# + _join
         self.where = where
+
         self.updatePeriod = 5 # seconds
         self.fetchCount = 150 # number of records to fetch in one db request
-        self.updateTimer = QtCore.QTimer(self)
-        self.updateTimer.setSingleShot(True)
-        self.updateTimer.timeout.connect(self.resetCache)
-        orm.signals.post_save.connect(self.resetCache, catalogModel) # to update the view
-        orm.signals.post_delete.connect(self.resetCache, catalogModel) # when a record was modified
+        self._updateTimer = QtCore.QTimer(self) # timer for updating the view
+        self._updateTimer.setSingleShot(True)
+        self._updateTimer.timeout.connect(self.resetCache)
+        orm.signals.post_save.connect(self.resetCache, catalogModel) # to update the view...
+        orm.signals.post_delete.connect(self.resetCache, catalogModel) # ...when a record was modified
         self.resetCache()
 
-    def getRowId(self, rowNo):
-        """Id field value of the given row.
-        """
-        return self.row(rowNo)[0] # id is always 0
+    def createStyleForField(self, field):
+        assert isinstance(field, orm.Field)
+        if isinstance(field, orm.DecimalField):
+            return WDecimalStyle(format = ',.%if ' % field.fractionDigits)
+        elif isinstance(field, orm.DateField):
+            return WDateStyle()
+        elif isinstance(field, orm.BooleanField):
+            return WBoolStyle()
+        elif isinstance(field, orm.RecordIdField):
+            return WRecordIdStyle()
+        else:
+            return WStyle()
 
     def resetCache(self, **kwargs):
         #print('clearCache')
-        self.updateTimer.stop()
+        self._updateTimer.stop()
         self.beginResetModel()
-        self._cache = {}  # {rowNo: (row + rowTime)}
-        self._rowsCount = None
+        self._cache = {}  # {rowNo: (catalogItem, fetch_time)}
+        self._rowCount = None
         self.endResetModel()
-        self.updateTimer.start(self.updatePeriod * 1000)
+        self._updateTimer.start(self.updatePeriod * 1000)
 
-    def row(self, rowNo):
-        """Get a row from the cache. If it's not in the cache, request a range from DB and update the cache. 
+    def item(self, rowNo):
+        """Get an item from the cache. If it's not in the cache, fetch a range from DB and update the cache. 
         """
         try: # find the row in the cache
-            return self._cache[rowNo]
+            return self._cache[rowNo][0]
         except KeyError: # fill the cache
-            self.updateTimer.stop()
+            #print('Trying to retrieve row %d', rowNo)
+            self._updateTimer.stop()
             rangeStart = max(rowNo - self.fetchCount // 3, 0)
             rangeEnd = rangeStart + self.fetchCount
             #print('db fetch', (rangeStart, rangeEnd)) # debug
-            rows = self.db.select(*self.fields, where = self.where, limit = (rangeStart, rangeEnd))
+            items = self.catalogModel.get(self.db, where = self.where, limit = (rangeStart, rangeEnd), select_related = True)
             now = time.time()
             expiredTime = now - self.updatePeriod
             cache = self._cache
             # clean the cache of expired rows
             for rowNo in tuple(cache.keys()):
-                if cache[rowNo][-1] <= expiredTime:
+                if cache[rowNo][1] <= expiredTime:
                     cache.pop(rowNo)
-            for i, row in enumerate(rows):
-                cache[rangeStart + i] = tuple(row) + (now,)
-            self.updateTimer.start(self.updatePeriod * 1000)
-            return cache[rowNo]
+            #print('for rowNo, item in enumerate(items, rangeStart):')
+            for rowNo, item in enumerate(items, rangeStart):
+                #print(rowNo, item)
+                cache[rowNo] = (item, now)
+            self._updateTimer.start(self.updatePeriod * 1000)
+            return cache[rowNo][0]
 
     def data(self, index, role):
         if index.isValid():
-            value = self.row(index.row())[index.column()]
-            return self._columnStyles[index.column()].data(role, value)
+            item = self.item(index.row())
+            columnStyle = self._columnStyles[index.column()]
+            value = getattr(item, columnStyle.fieldName)
+            return columnStyle.data(role, value)
 
     def rowCount(self, parent):
-        _rowsCount = self._rowsCount
-        if _rowsCount is None:
-            _rowsCount = self._rowsCount = self.catalogModel.getCount(self.db)
+        _rowCount = self._rowCount # cached row count
+        if _rowCount is None: # if it's not filled yet - fetch it from the db
+            _rowCount = self._rowCount = self.catalogModel.getCount(self.db, where = self.where)
             #print('rowCount', _rowsCount)
-        return _rowsCount
+        return _rowCount
 
     def columnCount(self, parent):
-        return len(self._columnStyles)
+        return self._columnCount
 
 #    def flags(self, index):
 #        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable

@@ -6,9 +6,9 @@ aren't handled by the core weakref module).
 """
 
 import weakref, traceback
-import collections
 
-def safeRef(target, onDelete=None):
+
+def safeRef(target, onDelete = None):
     """Return a *safe* weak reference to a callable target
 
     target -- the object to be weakly referenced, if it's a
@@ -25,11 +25,11 @@ def safeRef(target, onDelete=None):
             # Keep track of these instances for lookup by disconnect().
             assert hasattr(target, '__func__'), """safeRef target %r has __self__, but no __func__, don't know how to create reference""" % (target,)
             reference = get_bound_method_weakref(
-                target=target,
-                onDelete=onDelete
+                target = target,
+                onDelete = onDelete
             )
             return reference
-    if isinstance(onDelete, collections.Callable):
+    if callable(onDelete):
         return weakref.ref(target, onDelete)
     else:
         return weakref.ref(target)
@@ -70,7 +70,7 @@ class BoundMethodWeakref(object):
 
     _allInstances = weakref.WeakValueDictionary()
 
-    def __new__(cls, target, onDelete=None, *arguments, **named):
+    def __new__(cls, target, onDelete = None, *arguments, **named):
         """Create new instance or return current instance
 
         Basically this method of construction allows us to
@@ -93,7 +93,7 @@ class BoundMethodWeakref(object):
             base.__init__(target, onDelete, *arguments, **named)
             return base
 
-    def __init__(self, target, onDelete=None):
+    def __init__(self, target, onDelete = None):
         """Return a weak-reference-like instance for a bound method
 
         target -- the instance-method target for the weak
@@ -107,7 +107,7 @@ class BoundMethodWeakref(object):
             collected).  Should take a single argument,
             which will be passed a pointer to this object.
         """
-        def remove(weak, self=self):
+        def remove(weak, self = self):
             """Set self.isDead to true when method or instance is destroyed"""
             methods = self.deletionMethods[:]
             del self.deletionMethods[:]
@@ -117,7 +117,7 @@ class BoundMethodWeakref(object):
                 pass
             for function in methods:
                 try:
-                    if isinstance(function, collections.Callable):
+                    if callable(function):
                         function(self)
                 except Exception as e:
                     try:
@@ -196,7 +196,7 @@ class BoundNonDescriptorMethodWeakref(BoundMethodWeakref):
     aren't descriptors (such as Jython) this implementation has the advantage
     of working in the most cases.
     """
-    def __init__(self, target, onDelete=None):
+    def __init__(self, target, onDelete = None):
         """Return a weak-reference-like instance for a bound method
 
         target -- the instance-method target for the weak
@@ -244,7 +244,7 @@ def get_bound_method_weakref(target, onDelete):
     the underlying class method implementation"""
     if hasattr(target, '__get__'):
         # target method is a descriptor, so the default implementation works:
-        return BoundMethodWeakref(target=target, onDelete=onDelete)
+        return BoundMethodWeakref(target = target, onDelete = onDelete)
     else:
         # no luck, use the alternative implementation:
-        return BoundNonDescriptorMethodWeakref(target=target, onDelete=onDelete)
+        return BoundNonDescriptorMethodWeakref(target = target, onDelete = onDelete)

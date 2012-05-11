@@ -51,7 +51,7 @@ class ModelMeta(type):
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field))
 
-        fields = OrderedDict(sorted(fields, key = lambda f: f[1]._orderNo)) # sort by definition order (as __dict__ is unsorted) - for field recreation order
+        fields = OrderedDict(sorted(fields, key = lambda f: f[1]._id)) # sort by definition order (as __dict__ is unsorted) - for field recreation order
 
         for fieldName, field in fields.items():
             if not fieldName.islower() or fieldName.startswith('_'):
@@ -103,7 +103,7 @@ class ModelMeta(type):
                 fields.append(self[attrName])
             except KeyError:
                 pass
-        fields.sort(key = lambda field: field._orderNo) # sort by creation order - because __dict__ is unordered
+        fields.sort(key = lambda field: field._id) # sort by creation order - because __dict__ is unordered
         for field in fields:
             yield field
 
@@ -218,7 +218,7 @@ class Model(metaclass = ModelMeta):
         @param limit: tuple (from, to)
         @param select_related: whether to retrieve objects related by foreign keys 
         """
-        logger.debug('Model.get(%s, db= %s, where= %s' % (cls, db, where))
+        logger.debug('Model.get(%s, db= %s, where= %s, limit= %s)' % (cls, db, where, limit))
         cls.checkTable(db)
         orderby = orderby or cls._ordering # use default table ordering if no ordering passed
         fields = list(cls)
@@ -229,7 +229,8 @@ class Model(metaclass = ModelMeta):
                 if isinstance(field, orm.RecordIdField):
                     recordIdFields.append(field)
                     fields.extend(field.referTable)
-                    from_.append(orm.Join(field.referTable, field == field.referTable.id))
+                    from_.append(orm.LeftJoin(field.referTable, field == field.referTable.id))
+        #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
         rows = db.select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit)
         for row in rows:
             record = cls(db, *zip(cls, row))
@@ -237,8 +238,8 @@ class Model(metaclass = ModelMeta):
                 fieldOffset = len(cls)
                 for recordIdField in recordIdFields:
                     referTable = recordIdField.referTable
-                    print(referTable, recordIdField.name, fieldOffset, list(map(str, fields)))
-                    print(list(zip(referTable, row[fieldOffset:])))
+                    #print(referTable, recordIdField.name, fieldOffset, list(map(str, fields)))
+                    #print(list(zip(referTable, row[fieldOffset:])))
                     referRecord = referTable(db, *zip(referTable, row[fieldOffset:]))
                     setattr(record, recordIdField.referRecordAttrName, referRecord)
                     fieldOffset += len(referTable)
@@ -291,7 +292,9 @@ class Model(metaclass = ModelMeta):
         """
         cls.checkTable(db)
         count = cls.COUNT(where)
-        return db.select(count, from_ = cls).value(0, count)
+        count = db.select(count, from_ = cls).value(0, count)
+        logger.debug('Model.getCount(%s, db= %s, where= %s) = %s' % (cls, db, where, count))
+        return count 
 
     @classmethod
     def _handleTableMissing(cls, db):

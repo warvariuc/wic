@@ -10,3 +10,6 @@ class Streets(forms.catalog.CatalogModel):
     street_old_name = orm.CharField(maxLength= 50)
     street_type_name = orm.CharField(maxLength= 20)
     location_id = orm.RecordIdField(Locations)
+
+    def __str__(self):
+        return self.street_name

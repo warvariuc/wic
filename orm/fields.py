@@ -93,8 +93,8 @@ class Field(Expression):
         self.label = kwargs.pop('label', None) # label (textual name) of this field
         self._initArgs = args # field will be initalized using these params later, when the class is created
         self._initKwargs = kwargs # for later _init
-        Field._fieldsCount += 1 # tracking creation order
-        self._orderNo = Field._fieldsCount
+        Field._fieldsCount += 1 
+        self._id = Field._fieldsCount # creation order
 
     def _init_(self, column, default, index = ''):
         """This is called by the metaclass to initialize the Field after a Table subclass is created."""

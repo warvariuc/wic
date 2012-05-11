@@ -13,3 +13,6 @@ class Districts(forms.catalog.CatalogModel):
     prefix = orm.IntegerField(maxDigits= 10)
     posta = orm.CharField(maxLength= 20)
     comuna = orm.CharField(maxLength= 50)
+
+#    def __str__(self):
+#        return self.judet + ' ' + self

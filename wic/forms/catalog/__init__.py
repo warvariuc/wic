@@ -14,9 +14,9 @@ widgets = sys.modules['wic.widgets']
 menus = sys.modules['wic.menus']
 from wic import Bunch
 
-from .w_catalog_model import WCatalogProxyModel, CatalogModel
+from .w_catalog_model import WCatalogViewModel, CatalogModel
 
-# TODO: rename WCatalogProxyModel to WCatalogViewModel
+
 class CatalogItemForm(forms.WForm):
     """Form of a catalog item.
     """
@@ -50,11 +50,11 @@ class CatalogItemForm(forms.WForm):
         for field in self._catalogItem.__class__:
             fieldName = field.name
             assert not hasattr(self, fieldName), 'Form already has attribute with name `%s`' % fieldName
-            label = QtGui.QLabel(field.label)
-            label.setObjectName('label_' + fieldName)
-            widget = self.createWidgetForField(field)
+            widget, label = self.createWidgetForField(field)
             widget.setObjectName(fieldName)
             setattr(self, fieldName, widget)
+            #label.setObjectName('label_' + fieldName)
+            setattr(self, 'label_' + fieldName, label)
             label.setBuddy(widget)
             formLayout.addRow(label, widget)
 
@@ -77,7 +77,8 @@ class CatalogItemForm(forms.WForm):
         self.fillFormFromItem()
 
     def fillFormFromItem(self):
-        """Automatically fill the form fields using values from the catalog item fields."""
+        """Automatically fill the form fields using values from the catalog item fields.
+        """
         catalogItem = self._catalogItem
         for field in catalogItem.__class__:
             fieldName = field.name
@@ -117,20 +118,29 @@ class CatalogItemForm(forms.WForm):
 
 
     def createWidgetForField(self, field):
+        """Create widget and label for the given model field
+        @param field: model field
+        @return: tuple (widget, label); widget - QWidget, label - QLabel
+        """
         assert isinstance(field, orm.Field)
+        label = field.label
         if isinstance(field, (orm.CharField, orm.IntegerField, orm.IdField, orm.DateTimeField)):
-            return QtGui.QLineEdit()
+            widget = QtGui.QLineEdit()
         elif isinstance(field, orm.DecimalField):
-            return widgets.WDecimalEdit()
+            widget = widgets.WDecimalEdit()
         elif isinstance(field, orm.DateField):
-            return widgets.WDateEdit()
+            widget = widgets.WDateEdit()
         elif isinstance(field, orm.BooleanField):
-            return QtGui.QCheckBox(field.label)
+            widget = QtGui.QCheckBox(field.label)
+            label = ''
         elif isinstance(field, orm.TextField):
-            return QtGui.QPlainTextEdit()
+            widget = QtGui.QPlainTextEdit()
         elif isinstance(field, orm.RecordIdField):
-            return widgets.WCatalogItemIdWidget()
-        raise Exception('Could not create a widget for field %s' % field)
+            widget = widgets.WCatalogItemIdWidget()
+        else:
+            raise Exception('Could not create a widget for field `%s`' % field)
+        return widget, QtGui.QLabel(label)
+
 
     def setupWidgetForField(self, widget, field):
         """Set up a widget which corresponds to an model field - only the details related to data entering to appearance.
@@ -170,7 +180,7 @@ class CatalogForm(forms.WForm):
 
     _catalogModel = None
     _columns = None # which columns to show in form 'field_name1+100,100 field2,+field3 250,field4 -,field5'
-    _proxyModel = WCatalogProxyModel # you can override this to customize visual appearance
+    _viewModel = WCatalogViewModel # you can override this to customize visual appearance
 
     itemSelected = QtCore.pyqtSignal(int)
     _type = 0 # 0: selection causes opening item form, 1: send itemSelected signal and close the form, 2: send signal but do not close the form (for multiple selection) 
@@ -239,14 +249,14 @@ class CatalogForm(forms.WForm):
         tableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         tableView.customContextMenuRequested.connect(self.onTableViewContextMenuRequested)
 
-        catalogProxyModel = self._proxyModel(self._db, self._catalogModel)
-        tableView.setModel(catalogProxyModel)
+        catalogViewModel = self._viewModel(self._db, self._catalogModel)
+        tableView.setModel(catalogViewModel)
         tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
 
         tableView.selectionModel().setCurrentIndex(tableView.model().index(0, 0), QtGui.QItemSelectionModel.ClearAndSelect)
 
-        catalogProxyModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
-        catalogProxyModel.modelReset.connect(self.onModelReset)
+        catalogViewModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
+        catalogViewModel.modelReset.connect(self.onModelReset)
 
         tableView.verticalScrollBar().valueChanged.connect(self.ensureSelectionVisible)
         tableView.horizontalScrollBar().valueChanged.connect(self.ensureSelectionVisible)

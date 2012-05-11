@@ -1,8 +1,7 @@
 import weakref
 import threading
 
-from dispatch import saferef
-#import collections
+from . import saferef
 
 WEAKREF_TYPES = (weakref.ReferenceType, saferef.BoundMethodWeakref)
 
@@ -73,7 +72,7 @@ class Signal(object):
 #        # If DEBUG is on, check that we got a good receiver
 #        if settings.DEBUG:
 #            import inspect
-#            assert isinstance(receiver, collections.Callable), "Signal receivers must be callable."
+#            assert callable(receiver), "Signal receivers must be callable."
 #
 #            # Check for **kwargs
 #            # Not all callables are inspectable with getargspec, so we'll

@@ -1,15 +1,15 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import sys, os
 
-pythonRequiredVersion = '3.2'
+pythonRequiredVersion = '3.2' # tested with this version or later
 if sys.version < pythonRequiredVersion:
     raise SystemExit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
 try: # load Qt resources (icons, etc.)
-    import wic.widgets.w_widgets_rc
-except ImportError:
-    raise SystemExit('Looks like resources are not compiled. Please run `compile_resources.py`.')
+    from .widgets import w_widgets_rc
+except ImportError as exc:
+    raise SystemExit('Looks like resources are not compiled:\n%s\n\nIf so, run `compile_resources.py`.' % exc)
 
 try: # monkeypatch: use cdecimal instead of decimal, if present - it is faster
     import cdecimal
@@ -19,9 +19,11 @@ except ImportError:
 
 
 
-class Bunch(): # Alex Martelli's recipe
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+class Bunch(dict):
+    """Alex Martelli's recipe"""
+    def __init__(self, **kw):
+        dict.__init__(self, kw)
+        self.__dict__ = self
 
 
 from . import forms, menus, widgets
