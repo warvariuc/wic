@@ -159,25 +159,25 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
         self._columnStyles = []
         for field in catalogModel:
             self._hHeaderStyles.append(WHHeaderStyle(title = field.label))
-            columnStyle = self.createStyleForField(field)
+            columnStyle = self._createStyleForField(field)
             columnStyle.fieldName = field.name
             self._columnStyles.append(columnStyle)
 
         self._columnCount = len(self._columnStyles)
-        self.db = db
-        self.catalogModel = catalogModel
-        self.where = where
+        self._db = db
+        self._catalogModel = catalogModel
+        self._where = where
 
-        self.updatePeriod = 5 # seconds
-        self.fetchCount = 150 # number of records to fetch in one db request
+        self._updatePeriod = 5 # seconds
+        self._fetchCount = 150 # number of records to fetch in one db request
         self._updateTimer = QtCore.QTimer(self) # timer for updating the view
         self._updateTimer.setSingleShot(True)
-        self._updateTimer.timeout.connect(self.resetCache)
-        orm.signals.post_save.connect(self.resetCache, catalogModel) # to update the view...
-        orm.signals.post_delete.connect(self.resetCache, catalogModel) # ...when a record was modified
-        self.resetCache()
+        self._updateTimer.timeout.connect(self._resetCache)
+        orm.signals.post_save.connect(self._resetCache, catalogModel) # to update the view...
+        orm.signals.post_delete.connect(self._resetCache, catalogModel) # ...when a record was modified
+        self._resetCache()
 
-    def createStyleForField(self, field):
+    def _createStyleForField(self, field):
         assert isinstance(field, orm.Field)
         if isinstance(field, orm.DecimalField):
             return WDecimalStyle(format = ',.%if ' % field.fractionDigits)
@@ -190,29 +190,30 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
         else:
             return WStyle()
 
-    def resetCache(self, **kwargs):
+    def _resetCache(self, **kwargs):
         #print('clearCache')
         self._updateTimer.stop()
         self.beginResetModel()
         self._cache = {}  # {rowNo: (catalogItem, fetch_time)}
         self._rowCount = None
         self.endResetModel()
-        self._updateTimer.start(self.updatePeriod * 1000)
+        self._updateTimer.start(self._updatePeriod * 1000)
 
     def item(self, rowNo):
-        """Get an item from the cache. If it's not in the cache, fetch a range from DB and update the cache. 
+        """Get an item from the cache. If it's not in the cache, fetch a range from DB and update the cache.
+        @param rowNo: row number from the view for which to get the item
         """
         try: # find the row in the cache
             return self._cache[rowNo][0]
         except KeyError: # fill the cache
             #print('Trying to retrieve row %d', rowNo)
             self._updateTimer.stop()
-            rangeStart = max(rowNo - self.fetchCount // 3, 0)
-            rangeEnd = rangeStart + self.fetchCount
+            rangeStart = max(rowNo - self._fetchCount // 3, 0)
+            rangeEnd = rangeStart + self._fetchCount
             #print('db fetch', (rangeStart, rangeEnd)) # debug
-            items = self.catalogModel.get(self.db, where = self.where, limit = (rangeStart, rangeEnd), select_related = True)
+            items = self._catalogModel.get(self._db, where = self._where, limit = (rangeStart, rangeEnd), select_related = True)
             now = time.time()
-            expiredTime = now - self.updatePeriod
+            expiredTime = now - self._updatePeriod
             cache = self._cache
             # clean the cache of expired rows
             for rowNo in tuple(cache.keys()):
@@ -222,7 +223,7 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
             for rowNo, item in enumerate(items, rangeStart):
                 #print(rowNo, item)
                 cache[rowNo] = (item, now)
-            self._updateTimer.start(self.updatePeriod * 1000)
+            self._updateTimer.start(self._updatePeriod * 1000)
             return cache[rowNo][0]
 
     def data(self, index, role):
@@ -235,7 +236,7 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
     def rowCount(self, parent):
         _rowCount = self._rowCount # cached row count
         if _rowCount is None: # if it's not filled yet - fetch it from the db
-            _rowCount = self._rowCount = self.catalogModel.getCount(self.db, where = self.where)
+            _rowCount = self._rowCount = self._catalogModel.getCount(self._db, where = self._where)
             #print('rowCount', _rowsCount)
         return _rowCount
 

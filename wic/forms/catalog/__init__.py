@@ -353,15 +353,14 @@ class CatalogForm(forms.WForm):
     def editItem(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
         #currentIndex = self.tableView.currentIndex()
-        id = self.tableView.model().getRowId(currentIndex.row())
+        catalogItem = self.tableView.model().item(currentIndex.row())
         if self._type == 0:
-            catalogItem = self._catalogModel.getOneById(self._db, id)
             openCatalogItemForm(catalogItem)
         elif self._type == 1: # emit signal and close the form
-            self.itemSelected.emit(id)
+            self.itemSelected.emit(catalogItem)
             self.close()
         else: # emit signal but do not close the form
-            self.itemSelected.emit(id)
+            self.itemSelected.emit(catalogItem)
 
     def deleteItem(self):
         if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?',
