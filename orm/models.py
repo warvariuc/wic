@@ -138,9 +138,9 @@ class Model(metaclass = ModelMeta):
 
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
-        @param db: db adapter in which to create the table record 
+        @param db: db adapter in which to save the table record or from which it was fetched
         @param *args: tuples (Field or field_name, value) 
-        @param **kwargs: fieldName=value.
+        @param **kwargs: {fieldName: fieldValue}
         """
         self._db = db
 
@@ -191,23 +191,23 @@ class Model(metaclass = ModelMeta):
         signals.post_delete.send(sender = model, record = self)
 
     @classmethod
-    def getOne(cls, db, where, select_related = False):
+    def getOne(cls, db, where = None, id = None, select_related = False):
         """Get a single record which falls under the given condition.
+        @param db: db adapter to use to getting the record
+        @param where: expression to use for filter
+        @param id: id of the record, if you want to fetch one record by its id
         """
         cls.checkTable(db)
+
+        if id:
+            where = (cls.id == id)
+
         records = list(cls.get(db, where, limit = (0, 2), select_related = select_related))
         if not records: # not found
             raise orm.RecordNotFound(where._render(db))
         if len(records) == 1:
             return records[0]
         raise orm.TooManyRecords
-
-
-    @classmethod
-    def getOneById(cls, db, id, select_related = False):
-        """Get one record by id.
-        """
-        return cls.getOne(db, cls.id == id, select_related = select_related)
 
     @classmethod
     def get(cls, db, where, orderby = False, limit = False, select_related = False):
@@ -216,7 +216,7 @@ class Model(metaclass = ModelMeta):
         @param where: condition to filter
         @param order: list of field to sort by
         @param limit: tuple (from, to)
-        @param select_related: whether to retrieve objects related by foreign keys 
+        @param select_related: whether to retrieve objects related by foreign keys in the same query
         """
         logger.debug('Model.get(%s, db= %s, where= %s, limit= %s)' % (cls, db, where, limit))
         cls.checkTable(db)
@@ -283,6 +283,7 @@ class Model(metaclass = ModelMeta):
     @classmethod
     def COUNT(cls, where = None):
         """Get COUNT expression for this table.
+        @param where: WHERE expression
         """
         return orm.COUNT(where or cls) # COUNT expression
 
@@ -294,7 +295,7 @@ class Model(metaclass = ModelMeta):
         count = cls.COUNT(where)
         count = db.select(count, from_ = cls).value(0, count)
         logger.debug('Model.getCount(%s, db= %s, where= %s) = %s' % (cls, db, where, count))
-        return count 
+        return count
 
     @classmethod
     def _handleTableMissing(cls, db):

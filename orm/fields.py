@@ -93,7 +93,7 @@ class Field(Expression):
         self.label = kwargs.pop('label', None) # label (textual name) of this field
         self._initArgs = args # field will be initalized using these params later, when the class is created
         self._initKwargs = kwargs # for later _init
-        Field._fieldsCount += 1 
+        Field._fieldsCount += 1
         self._id = Field._fieldsCount # creation order
 
     def _init_(self, column, default, index = ''):
@@ -256,7 +256,7 @@ class RecordIdField(Field):
                     return None
                 return _RecordId(referRecord.id, record = record, recordIdField = self)
             elif isinstance(referRecord, int): # last assigned value was id
-                return _RecordId(referRecord, record = record, recordIdField = self) 
+                return _RecordId(referRecord, record = record, recordIdField = self)
             else:
                 raise TypeError('This should not have happened: private attribute is not a record of required model, int or None')
         else: # called as a class attribute
@@ -299,7 +299,7 @@ class ReferredRecord():
             elif isinstance(referRecord, recordIdField.referTable):
                 return referRecord
             elif isinstance(referRecord, int):
-                referRecord = recordIdField.referTable.getOneById(record._db, referRecord)
+                referRecord = recordIdField.referTable.getOne(record._db, id = referRecord)
                 setattr(record, recordIdField._name, referRecord)
                 return referRecord
             else:

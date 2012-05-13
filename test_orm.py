@@ -117,7 +117,7 @@ print('\nSelection one book with id=1:\n ', db.select('*', from_ = [Books, orm.J
 
 book = Books(db, ('name', "Just for Fun."), ('author_id', authors[0].id), ('price', '11.20'),
              ('publication_date', '2002-12-01'))
-book.author = Authors.getOneById(db, 3) # Richard Stallman (?) 
+book.author = Authors.getOne(db, id = 3) # Richard Stallman (?)
 book.save()
 print('\nNew saved book with wrong author:\n ', book)
 
@@ -134,7 +134,7 @@ print('\nSaved the new author. It should have now an id and a timestamp:\n ', au
 print('\nAfter saving the new author book.author_id should have changed:\n ', book)
 
 print('\nRetreving book with id 1:')
-book = Books.getOneById(db, 1, select_related = True)
+book = Books.getOne(db, id = 1, select_related = True)
 print(book)
 print('\nbook.author automatically retrives the author from the db:\n ', book.author)
 print(book.author_id.record)

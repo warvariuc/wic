@@ -366,8 +366,7 @@ class CatalogForm(forms.WForm):
         if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?',
                     QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel) == QtGui.QMessageBox.Yes:
             currentIndex = self.tableView.selectionModel().currentIndex()
-            id = self.tableView.model().getRowId(currentIndex.row())
-            catalogItem = self._catalogModel.getOneById(self._db, id)
+            catalogItem = self.tableView.model().item(currentIndex.row())
             catalogItem.delete()
 
 
