@@ -75,7 +75,7 @@ class WBoolStyle(WStyle):
         super().__init__(roles = _roles)
 
 
-class WRecordIdStyle(WStyle):
+class WRecordStyle(WStyle):
     """Style for items which contains record ids.
     """
     def __init__(self, roles = {}):
@@ -83,8 +83,8 @@ class WRecordIdStyle(WStyle):
         _roles.update(roles)
         super().__init__(roles = _roles, format = format)
 
-    def displayRole(self, value):
-        return '' if value is None else str(value.record)
+    def displayRole(self, record):
+        return '' if record is None else str(record)
 
 
 class WHHeaderStyle(WStyle):
@@ -185,8 +185,8 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
             return WDateStyle()
         elif isinstance(field, orm.BooleanField):
             return WBoolStyle()
-        elif isinstance(field, orm.RecordIdField):
-            return WRecordIdStyle()
+        elif isinstance(field, orm.RecordField):
+            return WRecordStyle()
         else:
             return WStyle()
 

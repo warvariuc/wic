@@ -9,12 +9,12 @@ class Regions(orm.Model):
     region_type_name = orm.CharField(maxLength= 20)
 
 class Locations(orm.Model):
-    region_id = orm.RecordIdField(Regions)
+    region = orm.RecordField(Regions)
     location_name = orm.CharField(maxLength= 100)
     location_type_name = orm.CharField(maxLength= 20)
 
 class Streets(orm.Model):
-    location_id = orm.RecordIdField(Locations)
+    location = orm.RecordField(Locations)
     street_name = orm.CharField(maxLength= 100)
     street_old_name = orm.CharField(maxLength= 100)
     street_type_name = orm.CharField(maxLength= 20)
@@ -25,8 +25,8 @@ class Persons(orm.Model):
     middle_name = orm.CharField(maxLength= 100)
     phone_prefix = orm.IntegerField(maxDigits= 3) # phone prefix code of the location
     phone_number = orm.IntegerField(maxDigits= 10)
-    location_id = orm.RecordIdField(Locations)
-    street_id = orm.RecordIdField(Streets)
+    location = orm.RecordField(Locations)
+    street = orm.RecordField(Streets)
     
     def checkNames(self):
         """An item function, like in Django"""
@@ -48,8 +48,8 @@ db = orm.connect('sqlite://papp/databases/mtc.sqlite')
 #print(dbAdapter.getLastQuery(), '\n')
 
 rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name, Regions.region_name,
-              from_ = [Persons, LeftJoin(Locations, Locations.id == Persons.location_id),
-              Join(Regions, Regions.id == Locations.region_id)],
+              from_ = [Persons, LeftJoin(Locations, Locations.id == Persons.location),
+              Join(Regions, Regions.id == Locations.region)],
               where= Persons.phone_number == '763533', 
               limit= (0, 10))
 pprint(list(zip(rows.fields, rows)))

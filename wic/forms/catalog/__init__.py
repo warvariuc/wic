@@ -5,6 +5,7 @@ import sys
 from PyQt4 import QtGui, QtCore
 
 import orm
+from wic.datetime import DateTime
 
 #from wic import forms, widgets, menus, Bunch # doesn't work (NameError) - http://bugs.python.org/issue992389
 # workaround because of circular imports
@@ -77,7 +78,7 @@ class CatalogItemForm(forms.WForm):
         self.fillFormFromItem()
 
     def fillFormFromItem(self):
-        """Automatically fill the form fields using values from the catalog item fields.
+        """Automatically fill the form fields using the values from the catalog item fields.
         """
         catalogItem = self._catalogItem
         for field in catalogItem.__class__:
@@ -96,8 +97,13 @@ class CatalogItemForm(forms.WForm):
             widget = getattr(self, fieldName, None)
             if widget:
                 fieldValue = forms.getValue(widget)
-                if isinstance(field, (orm.IdField, orm.RecordIdField)) and not fieldValue:
+                if isinstance(field, orm.IdField) and not fieldValue: # if nothing is entered into Id field - treat it as NULL
                     fieldValue = None
+                elif isinstance(field, orm.DateTimeField):
+                    if any(char.isdigit() for char in fieldValue):
+                        fieldValue = DateTime.strptime(fieldValue, '%Y-%m-%d %H:%M:%S.%f')
+                    else:
+                        fieldValue = None
                 setattr(catalogItem, fieldName, fieldValue)
 
     def onSave(self):
@@ -135,8 +141,8 @@ class CatalogItemForm(forms.WForm):
             label = ''
         elif isinstance(field, orm.TextField):
             widget = QtGui.QPlainTextEdit()
-        elif isinstance(field, orm.RecordIdField):
-            widget = widgets.WCatalogItemIdWidget()
+        elif isinstance(field, orm.RecordField):
+            widget = widgets.WCatalogItemWidget()
         else:
             raise Exception('Could not create a widget for field `%s`' % field)
         return widget, QtGui.QLabel(label)
@@ -160,8 +166,8 @@ class CatalogItemForm(forms.WForm):
             if isinstance(widget, widgets.WDecimalEdit):
                 widget.setMaxDigits(field.column.precision)
                 widget.setFractionDigits(field.column.scale)
-        elif isinstance(field, orm.RecordIdField):
-            if isinstance(widget, widgets.WCatalogItemIdWidget):
+        elif isinstance(field, orm.RecordField):
+            if isinstance(widget, widgets.WCatalogItemWidget):
                 catalogModel = field.referTable
                 widget.setModel(catalogModel.__module__ + '.' + catalogModel.__name__)
                 widget.setDb(self._catalogItem._db)
@@ -182,7 +188,7 @@ class CatalogForm(forms.WForm):
     _columns = None # which columns to show in form 'field_name1+100,100 field2,+field3 250,field4 -,field5'
     _viewModel = WCatalogViewModel # you can override this to customize visual appearance
 
-    itemSelected = QtCore.pyqtSignal(int)
+    itemSelected = QtCore.pyqtSignal(CatalogModel)
     _type = 0 # 0: selection causes opening item form, 1: send itemSelected signal and close the form, 2: send signal but do not close the form (for multiple selection) 
 
     def __init__(self, catalogModel, db, type = 0, **kwargs):
@@ -352,7 +358,6 @@ class CatalogForm(forms.WForm):
 
     def editItem(self):
         currentIndex = self.tableView.selectionModel().currentIndex()
-        #currentIndex = self.tableView.currentIndex()
         catalogItem = self.tableView.model().item(currentIndex.row())
         if self._type == 0:
             openCatalogItemForm(catalogItem)

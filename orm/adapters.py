@@ -487,7 +487,7 @@ class GenericAdapter():
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
-        keys = ', '.join(field.name for field, value in fields)
+        keys = ', '.join(field.column.name for field, value in fields)
         values = ', '.join(self.render(value, field) for field, value in fields)
         return 'INSERT INTO %s (%s) VALUES (%s);' % (table, keys, values)
 
@@ -513,7 +513,7 @@ class GenericAdapter():
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
         sql_w = ' WHERE ' + self.render(where) if where else ''
-        sql_v = ', '.join(['%s= %s' % (field.name, self.render(value, field)) for (field, value) in fields])
+        sql_v = ', '.join(['%s= %s' % (field.column.name, self.render(value, field)) for (field, value) in fields])
         return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
 
     def update(self, *fields, where = None, limit = None):

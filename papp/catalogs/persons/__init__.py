@@ -13,8 +13,8 @@ class Persons(forms.catalog.CatalogModel):
     middle_name = orm.CharField(maxLength= 50)
     phone_prefix = orm.IntegerField(maxDigits= 3)
     phone_number = orm.IntegerField(maxDigits= 10)
-    location_id = orm.RecordIdField(Locations)
-    street_id = orm.RecordIdField(Streets)
+    location = orm.RecordField(Locations)
+    street = orm.RecordField(Streets)
 
     def __str__(self):
         return self.last_name + ' ' + self.middle_name + ' ' + self.first_name

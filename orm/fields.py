@@ -215,121 +215,72 @@ class _RecordId(int):
         return getattr(self._record, self._recordIdField.referRecordAttrName)
 
 
-class RecordIdField(Field):
-    """Foreign key - stores id of a row in another table.
+class RecordField(Field):
+    """Field for storing ids to referred records.
     """
     def _init_(self, referTable, index = ''):
         """
-        @param referTable: a model class of which record is referenced
+        @param referTable: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
-        if not self.name.endswith('_id'):
-            raise orm.ModelError('RecordIdField name should end with `_id` (`%s.%s`)' % (self.table, self.name))
+        self._referTable = referTable # path to the model
+        self._name = '__' + self.name # name of the attribute which keeps the referred record or its id
+        super()._init_(Column('INT', self, name = self.name + '_id', precision = 9, unsigned = True), None, index) # 9 digits - int32 - ought to be enough for anyone ;)
 
-        self.referRecordAttrName = self.name[:-3] # name with '_id' stripped 
-        if self.referRecordAttrName in self.table.__dict__:
-            raise orm.ModelError('There is an attribute with name `%s` which clashes with RecordIdField name `%s.%s`.'
-                                 'That name is reserved for the record referenced by that record id.' % (self.referRecordAttrName, self.table, self.name))
-
-        if orm.isModel(referTable):
-            self.__dict__['referTable'] = referTable # override the descriptor
-        elif not isinstance(referTable, str):
-            raise orm.ModelError('Referred model must be a Model or a string with its path.')
-        else:
-            self._referTable = referTable # path to the model
-
-        self._name = '__' + self.name[:-3] # name of the attribute which keeps the referred record or its id
-
-        super()._init_(Column('INT', self, precision = 9, unsigned = True), None, index) # 9 digits - int32 - ought to be enough for anyone ;)
-
-        # create the proxy descriptor for the record referenced by the id field
-        setattr(self.table, self.referRecordAttrName, ReferredRecord(self))
-
-    def __get__(self, record, model = None):
-        if record: # called as an instance attribute
-            assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
-            referRecord = getattr(record, self._name) # id or the referred record itself
-            if referRecord is None:
-                return None
-            elif isinstance(referRecord, self.referTable): # last assigned value was Record
-                if referRecord.id is None:
-                    return None
-                return _RecordId(referRecord.id, record = record, recordIdField = self)
-            elif isinstance(referRecord, int): # last assigned value was id
-                return _RecordId(referRecord, record = record, recordIdField = self)
-            else:
-                raise TypeError('This should not have happened: private attribute is not a record of required model, int or None')
-        else: # called as a class attribute
+    def __get__(self, record, model):
+        if record is None: # called as a class attribute
             return self
+        # called as an instance attribute
+        referRecord = getattr(record, self._name)
+        if referRecord is None:
+            return None
+        elif isinstance(referRecord, self.referTable):
+            return referRecord
+        elif isinstance(referRecord, int):
+            referRecord = self.referTable.getOne(record._db, id = referRecord)
+            setattr(record, self._name, referRecord)
+            return referRecord
+        else:
+            raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
 
     def __set__(self, record, value):
-        setattr(record, self._name, None if value is None else int(value)) # _name will contain the id of the referred record
+        """You can assign to the field an integer id or the record itself."""
+        assert isinstance(value, (int, self.referTable)) or value is None, 'You can assign only records of model `%s`, an integer id of the record or None' % self.referTable
+        setattr(record, self._name, value) # _name will contain the referred record
 
     @orm.LazyProperty
     def referTable(self):
-        return orm.getObjectByPath(self._referTable, self.table.__module__)
+        if isinstance(self._referTable, orm.ModelMeta):
+            return self._referTable
+        elif isinstance(self._referTable, str):
+            return orm.getObjectByPath(self._referTable, self.table.__module__)
+        else:
+            raise orm.ModelError('Referred model must be a Model or a string with its path.')
 
     def cast(self, value):
         """Convert a value into another value which is ok for this Field.
         """
+        if isinstance(value, self.referTable):
+            return value.id
         try:
             return int(value)
         except ValueError:
             raise orm.QueryError('Record ID must be an integer.')
 
-
-class ReferredRecord():
-    """Descriptor for proxying access to a referred record.
-    """
-    def __init__(self, recordIdField):
-        """
-        @param recordIdField: the paired IdField instance for hooking
-        """
-        assert isinstance(recordIdField, RecordIdField), 'orm.IdField instance is expected'
-        logger.debug('Creating descriptor for %s' % recordIdField.name)
-        self._recordIdField = recordIdField
-
-    def __get__(self, record, model = None):
-        if record: # called as an instance attribute
-            assert isinstance(record, orm.Model), 'This descriptor is only for Model instances!'
-            recordIdField = self._recordIdField
-            referRecord = getattr(record, recordIdField._name)
-            if referRecord is None:
-                return None
-            elif isinstance(referRecord, recordIdField.referTable):
-                return referRecord
-            elif isinstance(referRecord, int):
-                referRecord = recordIdField.referTable.getOne(record._db, id = referRecord)
-                setattr(record, recordIdField._name, referRecord)
-                return referRecord
-            else:
-                raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
-        else: # called as a class attribute
-            return self
-
-    def __set__(self, record, value):
-        """When replacing refered record, its id is replacing the id kept in this record"""
-        assert isinstance(record, orm.Model), 'This descriptor is only for Model classes!'
-        recordIdField = self._recordIdField
-        assert isinstance(value, recordIdField.referTable) or value is None, 'You can assign only records of model `%s`' % recordIdField.referTable
-        setattr(record, recordIdField._name, value) # _name will contain the referred record
-
-
-
-class TableIdField(Field):
-    """This field stores id of a given table in this DB."""
-    def _init_(self, index = ''):
-        super()._init_(Column('INT', self, precision = 5, unsigned = True), None, index)
-
-    def cast(self, value):
-        if isinstance(value, (orm.Model, orm.ModelMeta)):
-            return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
-        try:
-            return int(value)
-        except ValueError:
-            raise SyntaxError('Table ID must be an integer.')
-
-
+        
+#class TableIdField(Field):
+#    """This field stores id of a given table in this DB."""
+#    def _init_(self, index = ''):
+#        super()._init_(Column('INT', self, precision = 5, unsigned = True), None, index)
+#
+#    def cast(self, value):
+#        if isinstance(value, (orm.Model, orm.ModelMeta)):
+#            return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
+#        try:
+#            return int(value)
+#        except ValueError:
+#            raise SyntaxError('Table ID must be an integer.')
+#
 #class AnyRecordField(Field):
 #    """This field stores id of a row of any table.
 #    It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID."""

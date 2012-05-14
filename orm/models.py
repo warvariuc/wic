@@ -223,11 +223,11 @@ class Model(metaclass = ModelMeta):
         orderby = orderby or cls._ordering # use default table ordering if no ordering passed
         fields = list(cls)
         from_ = [cls]
-        recordIdFields = []
+        recordFields = []
         if select_related:
-            for field in cls:
-                if isinstance(field, orm.RecordIdField):
-                    recordIdFields.append(field)
+            for i, field in enumerate(cls):
+                if isinstance(field, orm.RecordField):
+                    recordFields.append((i, field))
                     fields.extend(field.referTable)
                     from_.append(orm.LeftJoin(field.referTable, field == field.referTable.id))
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
@@ -236,12 +236,14 @@ class Model(metaclass = ModelMeta):
             record = cls(db, *zip(cls, row))
             if select_related:
                 fieldOffset = len(cls)
-                for recordIdField in recordIdFields:
-                    referTable = recordIdField.referTable
-                    #print(referTable, recordIdField.name, fieldOffset, list(map(str, fields)))
-                    #print(list(zip(referTable, row[fieldOffset:])))
-                    referRecord = referTable(db, *zip(referTable, row[fieldOffset:]))
-                    setattr(record, recordIdField.referRecordAttrName, referRecord)
+                for i, recordField in recordFields:
+                    referTable = recordField.referTable
+                    if row[i] is None: 
+                        referRecord = None
+                    else:
+                        # if referRecord.id is None: # missing record !!! integrity error
+                        referRecord = referTable(db, *zip(referTable, row[fieldOffset:]))
+                    setattr(record, recordField.name, referRecord)
                     fieldOffset += len(referTable)
             yield record
 

@@ -10,7 +10,7 @@ from ..regions import Regions
 class Locations(forms.catalog.CatalogModel):
     location_name = orm.CharField(maxLength= 50)
     location_type_name = orm.CharField(maxLength= 50)
-    region_id = orm.RecordIdField(Regions)
+    region = orm.RecordField(Regions)
 
     def __str__(self):
         return self.location_name

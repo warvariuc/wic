@@ -1,5 +1,6 @@
 from datetime import timedelta as TimeDelta, date as Date, datetime as DateTime 
 from dateutil.relativedelta import relativedelta as RelDelta
+TimeInterval = RelDelta
 
 
 def _format(date):

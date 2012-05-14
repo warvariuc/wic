@@ -22,14 +22,14 @@ class Books(orm.Model):
     # id field is already present 
     name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
     price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00', index = True) # 2 decimal places
-    author_id = orm.RecordIdField('Authors', index = True)
+    author = orm.RecordField('Authors', index = True)
     publication_date = orm.fields.DateField()
     timestamp = orm.fields.DateTimeField()
 #    fan = orm.AnyRecordField(index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
 
-    def save(self):
+    def save(self): # lte's override save
         self.timestamp = DateTime.now()
         super().save()
 
@@ -77,13 +77,13 @@ for data in authorsData:
 
 booksData = (
     dict(name = "Free as in Freedom: Richard Stallman's Crusade for Free Software",
-         author_id = authors[0].id, price = '9.55', publication_date = '2002-03-08'),
+         author = authors[0].id, price = '9.55', publication_date = '2002-03-08'),
     dict(name = "Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
-         author_id = authors[1].id, price = '14.95', publication_date = '2010-03-27'),
+         author = authors[1], price = '14.95', publication_date = '2010-03-27'),
     dict(name = "In The Plex: How Google Thinks, Works, and Shapes Our Lives",
-         author_id = authors[1].id, price = '13.98', publication_date = '2011-04-12'),
+         author = authors[1], price = '13.98', publication_date = '2011-04-12'),
     dict(name = "Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
-         author_id = authors[1].id, price = '23.00', publication_date = '2002-01-15'),
+         author = authors[1], price = '23.00', publication_date = '2002-01-15'),
 )
 print('\nInserting books:')
 for data in booksData:
@@ -113,9 +113,9 @@ print('\nAuthors count')
 pprint.pprint(list(db.select(Authors.first_name, Authors.COUNT()).dictresult()))
 pprint.pprint(list(db.select(Authors.first_name, Authors.last_name).dictresult()))
 
-print('\nSelection one book with id=1:\n ', db.select('*', from_ = [Books, orm.Join(Authors, Books.author_id == Authors.id)], where = (Books.id == 1)))
+print('\nSelecting one book with id=1:\n ', db.select('*', from_ = [Books, orm.Join(Authors, Books.author == Authors.id)], where = (Books.id == 1)))
 
-book = Books(db, ('name', "Just for Fun."), ('author_id', authors[0].id), ('price', '11.20'),
+book = Books(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),
              ('publication_date', '2002-12-01'))
 book.author = Authors.getOne(db, id = 3) # Richard Stallman (?)
 book.save()
@@ -137,5 +137,4 @@ print('\nRetreving book with id 1:')
 book = Books.getOne(db, id = 1, select_related = True)
 print(book)
 print('\nbook.author automatically retrives the author from the db:\n ', book.author)
-print(book.author_id.record)
 #os.unlink(filePath) # delete the temporary db file
