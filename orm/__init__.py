@@ -38,15 +38,16 @@ def listify(obj):
     return [obj]
 
 
-def meta_method(method):
+def metamethod(method):
     """Decorator for Model methods.
     When calling the method on an instance - calls its implemetation in the class.
     When calling the method on a class - calls the method in metaclass with the same name.
     """
     def wrapped(obj, *args, **kwargs):
+        _method = method
         if isinstance(obj, type): # is a class
-            method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
-        return method(obj, *args, **kwargs)
+            _method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
+        return _method(obj, *args, **kwargs)
     return wrapped        
 
 

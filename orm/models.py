@@ -177,7 +177,7 @@ class Model(metaclass = ModelMeta):
             raise TypeError('Pass either a Field or its name.')
         return getattr(self, attrName)
 
-    @orm.meta_method
+    @orm.metamethod
     def delete(self):
         """Delete this record.
         """

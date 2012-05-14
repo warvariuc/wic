@@ -10,7 +10,7 @@ class WCatalogItemWidget(QtGui.QLineEdit):
         super().__init__(parent)
         self.setReadOnly(True)
         self.selector = QtGui.QToolButton(self)
-        self.selector.setIcon(QtGui.QIcon(':/icons/fugue/cards.png'))
+        self.selector.setIcon(QtGui.QIcon(':/icons/fugue/cards-address.png'))
         self.selector.setCursor(QtCore.Qt.PointingHandCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
         self.selector.setFocusPolicy(QtCore.Qt.NoFocus)
