@@ -7,19 +7,19 @@ from PyQt4 import QtCore, QtGui
 import orm
 
 import wic
-from wic import forms, w_app
+from wic import forms, w_main_window
 
 appDir = os.path.dirname(os.path.abspath(__file__))
 
 
-class App(w_app.WApp):
+class MainWindow(w_main_window.WMainWindow):
 
     def onSystemStarted(self): # предопределенная процедура запускаемая при начале работы системы - when the core is ready
         self.addCatalogActions(self.menu.catalogs)
-        self.statusBar.showMessage('Ready...', 5000)
+        self.statusBar().showMessage('Ready...', 5000)
         # `<>` in the beginning of the string means to treat it as HTML
-        self.printMessage('<><b><span style="color: green">Система запущена.</span> Добро пожаловать!</b>', True, False)
-        print('Каталог приложения: %s' % appDir)
+        self.printMessage('<><b><span style="color: green">System started.</span> Welcome!</b>', True, False)
+        print('Application directory: %s' % appDir)
 
         global db
         db = orm.SqliteAdapter('papp/databases/mtc.sqlite')

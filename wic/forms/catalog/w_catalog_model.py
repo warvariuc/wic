@@ -209,9 +209,7 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
             #print('Trying to retrieve row %d', rowNo)
             self._updateTimer.stop()
             rangeStart = max(rowNo - self._fetchCount // 3, 0)
-            rangeEnd = rangeStart + self._fetchCount
-            #print('db fetch', (rangeStart, rangeEnd)) # debug
-            items = self._catalogModel.get(self._db, where = self._where, limit = (rangeStart, rangeEnd), select_related = True)
+            items = self._catalogModel.get(self._db, where = self._where, limit = (rangeStart, self._fetchCount), select_related = True)
             now = time.time()
             expiredTime = now - self._updatePeriod
             cache = self._cache

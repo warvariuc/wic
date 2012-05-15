@@ -257,6 +257,17 @@ class GenericAdapter():
         return 'RANDOM()'
 
     @classmethod
+    def _LIMIT(cls, limit = None):
+        if not limit:
+            return ''
+        elif isinstance(limit, int):
+            return ' LIMIT %i' % limit
+        elif isinstance(limit, (tuple, list)) and len(limit) == 2:
+            return ' LIMIT %i OFFSET %i' % (limit[1], limit[0])
+        else:
+            raise orm.QueryError('limit must be an integer or tuple/list of two elements. Got `%s`' % limit)
+
+    @classmethod
     def render(cls, value, castField = None):
         """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for operations with castField in the DB.
         """
@@ -624,19 +635,18 @@ class GenericAdapter():
                 _orderby.append(_order)
             sql_other += ' ORDER BY %s' % ', '.join(_orderby)
 
+# When using LIMIT, it is a good idea to use an ORDER BY clause that constrains the result rows into a unique order. 
+# Otherwise you will get an unpredictable subset of the query's rows -- you may be asking for the tenth through twentieth rows, 
+# but tenth through twentieth in what ordering? The ordering is unknown, unless you specified ORDER BY.
 #        if limit:
 #            if not orderby and tables:
 #                sql_other += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
 
-        return fields, self._selectWithLimit(sql_select, sql_fields, sql_from, sql_where, sql_other, limit)
+        sql_other += self._LIMIT(limit)
+        sql = 'SELECT %s %s FROM %s%s%s;' % (sql_select, sql_fields, sql_from, sql_where, sql_other)
 
-    def _selectWithLimit(self, sql_select, sql_fields, sql_from, sql_where, sql_other, limit):
-        """The syntax may differ in other dbs.
-        """
-        if limit:
-            lmin, lmax = limit
-            sql_other += ' LIMIT %i OFFSET %i' % (lmax - lmin, lmin)
-        return 'SELECT %s %s FROM %s%s%s;' % (sql_select, sql_fields, sql_from, sql_where, sql_other)
+        return fields, sql
+
 
     def select(self, *fields, from_ = None, where = None, **attributes):
         """Create and return SELECT query.
@@ -646,7 +656,7 @@ class GenericAdapter():
             A single table or string
             A list of tables or strings
         @param where: expression for where;
-        @param limit: a tuple (start, end).
+        @param limit: an integer (LIMIT) or tuple/list of two elements (OFFSET, LIMIT)
         @param orderby:
         @param groupby:
         tables are taken from fields and `where` expression;

@@ -97,8 +97,8 @@ for data in booksData:
 # as it is transformed by Python into `where = (14 < Books.price) and (Books.price < '15.00')` 
 # making as result `where = (Books.price < '15.00')`
 print('\nSELECT query:')
-print(db._select('id', from_ = Books, where = (15 > Books.price > '14.00'), limit = (0, 10)))
-print(db.select(Books.id, from_ = Books, where = (Books.price > '15'), limit = (0, 10)))
+print(db._select('id', from_ = Books, where = (15 > Books.price > '14.00'), limit = 10))
+print(db.select(Books.id, from_ = Books, where = (Books.price > '15'), limit = 10))
 book = Books.getOne(db, where = (Books.price > 15))
 print("print(book, book.author)")
 print(book, book.author)

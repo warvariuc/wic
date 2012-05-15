@@ -290,7 +290,7 @@ class CatalogForm(forms.WForm):
         elif event.type() == QtCore.QEvent.Wheel: # received when scrolling on viewport is on the boundaries
             currentIndex = tableView.selectionModel().currentIndex()
             rowNo = currentIndex.row() - int(event.delta() / 120)
-            rowNo = min(max(rowNo, 0), tableView.model().rowCount(None) - 1)
+            rowNo = min(max(rowNo, 0), tableView.model().rowCount(None) - 1) # to be sure it's not out of boundaries
             tableView.setCurrentIndex(tableView.model().index(rowNo, currentIndex.column())) # when scrolling on the boundary - move the selection closer to that boundary
             return True
 
@@ -341,7 +341,6 @@ class CatalogForm(forms.WForm):
         rowNo = min(rowNo, self.tableView.model().rowCount(None) - 1)
         colNo = min(colNo, self.tableView.model().columnCount(None) - 1)
         index = self.tableView.model().index(rowNo, colNo)
-        #self.tableView.selectionModel().setCurrentIndex(index, QtGui.QItemSelectionModel.ClearAndSelect)
         self.tableView.setCurrentIndex(index)
 
     def onSelectionChanged(self):

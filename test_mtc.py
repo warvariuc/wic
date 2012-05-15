@@ -51,7 +51,7 @@ rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name,
               from_ = [Persons, LeftJoin(Locations, Locations.id == Persons.location),
               Join(Regions, Regions.id == Locations.region)],
               where= Persons.phone_number == '763533', 
-              limit= (0, 10))
+              limit= 10)
 pprint(list(zip(rows.fields, rows)))
 print(db.getLastQuery(), '\n')
 
@@ -133,5 +133,5 @@ print(db.getLastQuery(), '\n')
 
 #for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
 #    print(str(person), str(Locations.getOne(db, id = person.location_id)))
-pprint(list(db.select(*Persons, where = (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit = (0, 5))))
+pprint(list(db.select(*Persons, where = (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit = 5)))
 print(db.getLastQuery(), '\n')

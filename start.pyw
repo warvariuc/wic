@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-from papp import App
 
 try:
     sys.argv.remove('--debug')
@@ -10,7 +9,10 @@ except ValueError:
 else:
     _toProfile = True
 
-app = App(sys.argv)
+from wic import w_app
+import papp
+
+app = w_app.WApp(sys.argv, papp.MainWindow)
 
 
 if _toProfile:

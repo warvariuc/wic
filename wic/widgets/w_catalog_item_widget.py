@@ -77,9 +77,13 @@ class WCatalogItemWidget(QtGui.QLineEdit):
         self.selector.move(frameWidth, (self.rect().bottom() + 1 - sz.height()) / 2)
 
     def _updateStyle(self):
-        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
-        selectorWidth = self.selector.sizeHint().width() if self.isSelectorVisible() else 0
-        self.setStyleSheet('QLineEdit { background-color: palette(alternate-base); padding-left: %ipx; }' % (selectorWidth + borderWidth))
+        if self.isSelectorVisible():
+            selectorWidth = self.selector.sizeHint().width()
+            borderWidth = 0
+        else:
+            selectorWidth = 0
+            borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
+        self.setStyleSheet('QLineEdit { background-color: palette(alternate-base); padding-left: %ipx;}' % (selectorWidth + borderWidth))
 #        fm = QtGui.QFontMetrics(self.font()) # font metrics
 #        maxText = '9' * self._maxDigits + '. '
 #        self.setMinimumSize(fm.width(maxText) + selectorWidth + borderWidth * 2,

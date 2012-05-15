@@ -202,9 +202,9 @@ class Model(metaclass = ModelMeta):
         if id:
             where = (cls.id == id)
 
-        records = list(cls.get(db, where, limit = (0, 2), select_related = select_related))
+        records = list(cls.get(db, where, limit = 2, select_related = select_related))
         if not records: # not found
-            raise orm.RecordNotFound(where._render(db))
+            raise orm.RecordNotFound(db.render(where))
         if len(records) == 1:
             return records[0]
         raise orm.TooManyRecords
