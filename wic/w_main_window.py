@@ -46,22 +46,24 @@ class WMainWindow(QtGui.QMainWindow):
         self.messagesWindow = MessagesWindow(self)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow)
 
-        self.printMessage = self.messagesWindow.printMessage
+        self.printMessage = self.messagesWindow.printMessage # not nice
 
         sys.stdout = MessagesOut(self.printMessage)  # hook the real STDOUT
         sys.excepthook = exception_hook # set our exception hook
 
-        from wic import menus
-        self.menu = menus.MainMenu(self)
 
         from wic import w_settings
         self.settings = w_settings.WSettings(self)
 
+        self.setupMenu()
 
         if self._authenticationEnabled:
             self.authenticate()
         QtCore.QTimer.singleShot(0, self.onSystemStarted) # when event loop is working
 
+    def setupMenu(self):
+        from wic import menus
+        self.menu = menus.MainMenu(self)
 
     def onSubwindowActivated(self, subWindow): # http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
         #self.mdiArea.setActiveSubWindow(subWindow)
@@ -112,10 +114,10 @@ class WMainWindow(QtGui.QMainWindow):
         self.close() # TODO: check for self._unconditionalQuit when closing forms and mainWindow
 
     def onSystemStarted(self):
-        """Called when everything is ready"""
+        """Called on startup when everything is ready."""
 
     def onSystemAboutToQuit(self):
-        """Called when app is requested to quit. Return False to cancel"""
+        """Called when the app is requested to quit. Return False to cancel"""
 
     def showWarning(self, title, text):
         """Convenience function to show a warning message box."""

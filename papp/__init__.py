@@ -14,8 +14,7 @@ appDir = os.path.dirname(os.path.abspath(__file__))
 
 class MainWindow(w_main_window.WMainWindow):
 
-    def onSystemStarted(self): # предопределенная процедура запускаемая при начале работы системы - when the core is ready
-        self.addCatalogActions(self.menu.catalogs)
+    def onSystemStarted(self): # predefined function scalled when the core is ready
         self.statusBar().showMessage('Ready...', 5000)
         # `<>` in the beginning of the string means to treat it as HTML
         self.printMessage('<><b><span style="color: green">System started.</span> Welcome!</b>', True, False)
@@ -30,16 +29,6 @@ class MainWindow(w_main_window.WMainWindow):
     #    from .reports.repayment_schedule import Form
     #    forms.openForm(Form)
     #    
-    #    from .catalogs.books import Books
-    #    book = Books.getOne(db, where= (Books.price > 14))
-    #    print(db.getLastQuery())
-    #
-    #    openCatalogItemForm(book)
-    #    openCatalogItemForm(Books(db))
-    #    
-
-#        openCatalogForm(Books, db)
-
         from .catalogs.locations import Locations
         forms.openCatalogForm(Locations, db)
 
@@ -49,22 +38,25 @@ class MainWindow(w_main_window.WMainWindow):
     def onSystemAboutToExit(self): # предопределенная процедура запускаемая при завершении работы системы
         return True # return False to cancel quitting
 
-    def addCatalogActions(self, menu):
-        """Add actions for catalogs."""
+    def setupMenu(self):
+        super().setupMenu()
+
+        #Add actions for catalogs.
         # http://docs.python.org/library/pkgutil.html#pkgutil.walk_packages
+        menu = self.menu.catalogs
         from wic import menus
-        catalogs = ('persons', 'locations', 'districts', 'regions', 'streets', 'new')
+        catalogs = ('persons', 'locations', 'districts', 'regions', 'streets')
         for catalog in catalogs:
             modelName = catalog.capitalize()
             modelPath = 'papp.catalogs.' + catalog + '.' + modelName
             menus.addActionsToMenu(menu, (
                 menus.createAction(menu, modelName, lambda *args, m = modelPath: self.openCatalogForm(m), icon = ':/icons/fugue/cards-address.png'),
             ))
-        
+
     def openCatalogForm(self, modelPath):
         from wic import getObjectByPath
         forms.openCatalogForm(getObjectByPath(modelPath), db)
-    
+
 
 
 def test():
