@@ -124,7 +124,7 @@ class GenericAdapter():
     def __init__(self, uri = '', connect = True, autocommit = True):
         """URI is already without protocol."""
         self.uri = uri
-        logger.info('Creating adapter for `%s`' % self)
+        logger.debug('Creating adapter for `%s`' % self)
         self._timings = []
         if connect:
             self.connection = self.connect()
@@ -157,14 +157,15 @@ class GenericAdapter():
         return self.connection.rollback()
 
     def _execute(self, *a, **b):
-        lastQuery = a[0]
+        query = a[0]
+        logger.debug('DB query: %s' % query)
         t0 = time.time()
         try:
             result = self.cursor.execute(*a, **b)
         except Exception:
-            logger.warning(lastQuery)
+            logger.warning(query)
             raise
-        self._timings.append((lastQuery, round(time.time() - t0, 4)))
+        self._timings.append((query, round(time.time() - t0, 4)))
         return result
 
     def execute(self, *args, **kwargs):

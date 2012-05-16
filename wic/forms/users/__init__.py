@@ -18,7 +18,7 @@ class Form(forms.CatalogItemForm):
 
     @QtCore.pyqtSlot()
     def on_buttonTestConnection_clicked(self):
-        dbUri = getValue(self.dbUri)
+        dbUri = forms._.dbUri
         import orm
         ADAPTERS = dict(sqlite= orm.SqliteAdapter, mysql= orm.MysqlAdapter) # available adapters
         try: # 'sqlite://../mtc.sqlite'

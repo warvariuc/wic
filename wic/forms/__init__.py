@@ -2,14 +2,26 @@ __authot__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import os, sys, traceback
 from PyQt4 import QtGui, QtCore, uic
-from wic.widgets import WDateEdit, WDecimalEdit, WCatalogItemWidget
 import orm
+from orm import Nil
 import wic
+from wic.widgets import WDateEdit, WDecimalEdit, WCatalogItemWidget
 
 
 class FormNotFoundError(Exception):
     """Raised when a form is not found
     """
+
+
+def value(widget, value = Nil):
+    """Get/set widget value depending on its type.
+    @param widget: QWidget from/which to get/set a value
+    @param value: if specified - set that value, otherwise get widget's value
+    """
+    if value is Nil:
+        return getValue(widget)
+    else:
+        return setValue(widget, value)
 
 
 def setValue(widget, value):
@@ -66,9 +78,10 @@ def getValue(widget):
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)):
         return widget.text()
     elif isinstance(widget, QtGui.QComboBox):
-        lineEdit = widget.lineEdit()
-        if lineEdit: #Only editable combo boxes have a line edit
-            return lineEdit.text()
+        if widget.isEditable():
+            return widget.currentText()
+        else: # TODO: what getvalue for a combobox should return: current index or item data for the current index, or current text? 
+            return widget.itemData(widget.currentIndex())
     elif isinstance(widget, QtGui.QSpinBox):
         return widget.value()
     elif isinstance(widget, QtGui.QCheckBox):
