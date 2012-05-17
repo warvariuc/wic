@@ -106,8 +106,8 @@ class MainMenu():
         openForm(help_about.Form)
 
     def showCalculator(self):
-        from wic.widgets import w_decimal_edit
-        w_decimal_edit.WPopupCalculator(self.mainWindow, persistent = True).show()
+        from wic.widgets import WPopupCalculator
+        WPopupCalculator(self.mainWindow, persistent = True).show()
 
     def showCalendar(self):
         from wic.widgets import w_date_edit

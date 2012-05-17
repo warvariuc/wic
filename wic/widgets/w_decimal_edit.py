@@ -1,7 +1,7 @@
 from PyQt4 import QtGui, QtCore
-from wic.widgets import ui_w_popup_calculator
-import re, decimal
-Dec = decimal.Decimal
+import re
+from decimal import Decimal as Dec
+from . import ui_w_popup_calculator
 
 
 def regularNotation(value):

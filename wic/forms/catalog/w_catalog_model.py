@@ -8,6 +8,45 @@ import traceback, time
 import orm, wic
 
 
+
+class WStyle2():
+    """Common style for representation of an ItemView item
+    """
+    def __init__(self, roles = {}, **kwargs):
+        assert isinstance(roles, dict), 'Roles should a dict {role: value|function}'
+        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
+                  QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
+        }
+        _roles.update(roles)
+        self.roles = _roles
+        self.__dict__.update(kwargs)
+
+    def data(self, role, value = None):
+        """Process value from the db and return data for the given role.
+        @param role: data role (http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum)
+        @param value: value from the db to analyze or process
+        """
+        data = self.roles.get(role)
+        return data(value) if callable(data) else data
+
+    def displayRole(self, value): # data to be rendered in the form of text
+        return str(value) if value else ''
+
+    def toolTipRole(self, value):
+        return str(value) if value else None
+    
+    def TextAlignmentRole(self):
+        ""
+        
+    TextAlignmentRole = QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft
+
+    def DecorationRole(self):
+        ""
+        
+    def CheckStateRole(self):
+        ""
+
+
 class WStyle():
     """Common style for representation of an ItemView item
     """

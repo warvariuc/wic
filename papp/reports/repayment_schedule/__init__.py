@@ -1,11 +1,11 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from PyQt4 import QtCore, QtGui, QtWebKit
 
-from wic.datetime import Date, RelDelta
+from wic.datetime import Date, TimeInterval
 from decimal import Decimal as Dec
 from wic.forms import WForm
-from wic import w_table, mainWindow
+from wic import w_table, app
 
 
 
@@ -13,12 +13,12 @@ daysInYear = 365
 
 
 class Form(WForm):
-    
+
     def onOpen(self): # called by the system after it loads the Form
 
         self._.equalInstallments = True
         self._.disbursDate = Date.today()
-        self._.firstInstallmDate = self._.disbursDate + RelDelta(months= 1)
+        self._.firstInstallmDate = self._.disbursDate + TimeInterval(months = 1)
         self._.loanAmount = 10000
         self._.numInstallments = 12
         self._.annInterestRate = 16
@@ -29,15 +29,15 @@ class Form(WForm):
             self._['weekDay%i' % i] = True
 
         table = w_table.WTable(self.tableView)
-        table.newColumn('RepaymentNo', label= '#', default= 0, width= 30)
-        table.newColumn('RepaymentDate', label= 'Date', editable= True, alignment= QtCore.Qt.AlignCenter, width= 80, onEdited= self.onTableValueEdited)
-        table.newColumn('DaysCount', label= 'Days', default= 0, width= 35)
-        table.newColumn('Balance', format= ',.2f ', default= Dec(), width= 80) # 
-        col = table.newColumn('Flag', label= '*', default= False, editable= True, width= 25, onEdited= self.onTableValueEdited)
+        table.newColumn('RepaymentNo', label = '#', default = 0, width = 30)
+        table.newColumn('RepaymentDate', label = 'Date', editable = True, alignment = QtCore.Qt.AlignCenter, width = 80, onEdited = self.onTableValueEdited)
+        table.newColumn('DaysCount', label = 'Days', default = 0, width = 35)
+        table.newColumn('Balance', format = ',.2f ', default = Dec(), width = 80) # 
+        col = table.newColumn('Flag', label = '*', default = False, editable = True, width = 25, onEdited = self.onTableValueEdited)
         col.headerItem.roles[QtCore.Qt.ToolTipRole] = 'Fixed principal'
-        table.newColumn('Principal', format= ',.2f ', default= Dec(), editable= True, width= 80, onEdited= self.onTableValueEdited)
-        table.newColumn('Interest', format= ',.2f ', default= Dec(), width= 80)
-        table.newColumn('Total', format= ',.2f ', default= Dec(), editable= True, width= 80, onEdited= self.onTableValueEdited) # default = func - вычисляемое значение
+        table.newColumn('Principal', format = ',.2f ', default = Dec(), editable = True, width = 80, onEdited = self.onTableValueEdited)
+        table.newColumn('Interest', format = ',.2f ', default = Dec(), width = 80)
+        table.newColumn('Total', format = ',.2f ', default = Dec(), editable = True, width = 80, onEdited = self.onTableValueEdited) # default = func - вычисляемое значение
 
         boldFont = QtGui.QFont()
         boldFont.setBold(True)
@@ -53,7 +53,7 @@ class Form(WForm):
 
         self.tableView.horizontalHeader().sectionResized.connect(self.updateTotalsSectionWidth)
         self.tableView.horizontalScrollBar().valueChanged.connect(self.totalsTableView.horizontalScrollBar().setValue)
-        
+
         self.table = table
 
         self.loanAmount.edited.connect(self.CalculateAmounts)
@@ -95,12 +95,12 @@ class Form(WForm):
             totalInterest += row.Interest
             totalTotal += row.Total
             totalDays += row.DaysCount
-    
+
         self.totalsTableView.item(0, 2).setText(str(totalDays))
         self.totalsTableView.item(0, 5).setText(format(totalPrincipal, ',f'))
         self.totalsTableView.item(0, 6).setText(format(totalInterest, ',f'))
         self.totalsTableView.item(0, 7).setText(format(totalTotal, ',f'))
-    
+
     @QtCore.pyqtSlot()
     def on_calculate_clicked(self):
         if not (self._.disbursDate and self._.loanAmount and self._.numInstallments
@@ -108,43 +108,43 @@ class Form(WForm):
             QtGui.QMessageBox.warning(self, 'Заполните поля', 'Заполните все необходимые поля')
         else:
             self.CalculateSchedule()
-    
+
     def CalculateSchedule(self):
         self.CalculateDates()
         self.CalculateAmounts()
-        
+
     def CalculateDates(self):
-        if self._.disbursDate and self._.numInstallments and self._.firstInstallmDate: 
+        if self._.disbursDate and self._.numInstallments and self._.firstInstallmDate:
             self.table.delRows()
             for RepaymentNo in range(int(self._.numInstallments)):
                 row = self.table.newRow()
                 row.RepaymentNo = RepaymentNo + 1
-                row.RepaymentDate = self._.firstInstallmDate + RelDelta(months= RepaymentNo)
-        
+                row.RepaymentDate = self._.firstInstallmDate + TimeInterval(months = RepaymentNo)
+
                 for i in range(6):
                     if self._['weekDay%i' % row.RepaymentDate.weekday()]:
                         break
-                    row.RepaymentDate += RelDelta(days= 1)
-                
+                    row.RepaymentDate += TimeInterval(days = 1)
+
     def CalculateAmounts(self):
         if self._.disbursDate and self._.loanAmount and self._.numInstallments \
                 and self._.annInterestRate and self.table.rowCount():
             if not self._.firstInstallmDate:
-                self._.firstInstallmDate = self._.disbursDate + RelDelta(months= 1)
+                self._.firstInstallmDate = self._.disbursDate + TimeInterval(months = 1)
         #    Состояние ( "Идет расчет..." );
             dailyInterestRate = self._.annInterestRate / 100 / daysInYear
             tbl = self.table.copy() # предполагается, что даты уже рассчитаны
             countAuto = self.table.rowCount()
             amountAuto = self._.loanAmount
             prevDate = self._.disbursDate
-        
+
             for row in tbl.rows():
                 row.DaysCount = (row.RepaymentDate - prevDate).days # количество дней между выплатами
                 prevDate = row.RepaymentDate
                 if row.Flag:
                     countAuto -= 1 # количество и...
                     amountAuto -= row.Principal #...сумма отведенная на автоматически рассчитываемые выплаты
-        
+
             if countAuto:
                 if self._.equalInstallments:
                     minEqual = Dec(0)
@@ -171,7 +171,7 @@ class Form(WForm):
                         if abs(PrincipalBalance) <= threshold or maxEqual - minEqual <= Dec('0.01'): break
                 else:
                     equal = round(amountAuto / countAuto, 2)
-            
+
                 PrincipalBalance = self._.loanAmount
                 for rowIndex in range(self.table.rowCount()):
                     row = self.table.row(rowIndex)
@@ -200,15 +200,15 @@ class Form(WForm):
             html += '<td align="right">{RepaymentNo}<td align="center">{RepaymentDate:%m.%d.%Y}<td align="right">{DaysCount}'\
                     '<td align="right">{Balance:,.2f}<td align="right">{Principal:,.2f}'\
                     '<td align="right">{Interest:,.2f}<td align="right">{Total:,.2f}'.format(
-                    RepaymentNo= row.RepaymentNo, RepaymentDate= row.RepaymentDate, DaysCount= row.DaysCount, Balance= row.Balance,
-                    Principal= row.Principal, Interest= row.Interest, Total= row.Total)
+                    RepaymentNo = row.RepaymentNo, RepaymentDate = row.RepaymentDate, DaysCount = row.DaysCount, Balance = row.Balance,
+                    Principal = row.Principal, Interest = row.Interest, Total = row.Total)
         html += '\n</table></body></html>'
         webView.setHtml(html)
-    
-        window = mainWindow.mdiArea.addSubWindow(webView) # FIXME: use openForm
+
+        window = app.addSubWindow(webView) # FIXME: use openForm
         window.setWindowTitle('Print schedule')
         window.show()
-    
+
         printer = QtGui.QPrinter()
         printDialog = QtGui.QPrintPreviewDialog(printer)
         #printDialog.printer()->setPaperSize(QPrinter::A4);

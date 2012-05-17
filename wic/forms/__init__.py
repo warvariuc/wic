@@ -52,6 +52,10 @@ def setValue(widget, value):
         lineEdit = widget.lineEdit()
         if lineEdit: #Only editable combo boxes have a line edit
             lineEdit.setText(value)
+        if widget.isEditable(): # if the combo box is editable - set the text 
+            return widget.lineEdit.setText(value)
+        else: # find item with the given value and set it as current
+            widget.setCurrentIndex(widget.findData(value))
     elif isinstance(widget, QtGui.QSpinBox):
         widget.setValue(int(value))
     elif isinstance(widget, QtGui.QCheckBox):
@@ -78,9 +82,9 @@ def getValue(widget):
     elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)):
         return widget.text()
     elif isinstance(widget, QtGui.QComboBox):
-        if widget.isEditable():
+        if widget.isEditable(): # if the combo box is editable - return the text
             return widget.currentText()
-        else: # TODO: what getvalue for a combobox should return: current index or item data for the current index, or current text? 
+        else: # otherwise return the value of the selectem item 
             return widget.itemData(widget.currentIndex())
     elif isinstance(widget, QtGui.QSpinBox):
         return widget.value()
