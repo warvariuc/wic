@@ -244,9 +244,10 @@ class CatalogForm(forms.WForm):
         tableView.setSelectionMode(tableView.SingleSelection)
         #self.tableView.verticalHeader().hide()
         tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
-        rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4
+        rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
         tableView.verticalHeader().setDefaultSectionSize(rowHeight)
         #tableView.setIconSize(QtCore.QSize(16, 16))
+        #tableView.horizontalHeader().setResizeMode(QtGui.QHeaderView.ResizeToContents) # very slow - it queries all items
         tableView.horizontalHeader().setStretchLastSection(True) # the last visible section in the header takes up all the available space
         tableView.setGridStyle(QtCore.Qt.DotLine)
 

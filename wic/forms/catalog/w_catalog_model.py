@@ -8,37 +8,50 @@ import traceback, time
 import orm, wic
 
 
+#def role(qtRole, roleValue):
+#
+#
+#    def decorator(func):
+#
+#        def wrapped(*args, **kwargs):
+#            return func(*args, **kwargs)
+#
+#        return wrapped
+#
+#    return decorator
+
+
+
+class Role():
+    """A descriptor you can use to decorate a method.
+    """ 
+    def __init__(self, method):
+        self.method = method
+
+    def __get__(self, obj, objtype):
+        if obj is None:
+            return self
+        def wrapped(*args, **kwargs):
+            return self.method(obj, *args, **kwargs)
+        return wrapped    
+    
 
 class WStyle2():
     """Common style for representation of an ItemView item
     """
-    def __init__(self, roles = {}, **kwargs):
-        assert isinstance(roles, dict), 'Roles should a dict {role: value|function}'
-        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                  QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
-        }
-        _roles.update(roles)
-        self.roles = _roles
-        self.__dict__.update(kwargs)
 
-    def data(self, role, value = None):
-        """Process value from the db and return data for the given role.
-        @param role: data role (http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum)
-        @param value: value from the db to analyze or process
-        """
-        data = self.roles.get(role)
-        return data(value) if callable(data) else data
-
+    @Role(QtCore.Qt.DisplayRole)
     def displayRole(self, value): # data to be rendered in the form of text
         return str(value) if value else ''
 
     def toolTipRole(self, value):
         return str(value) if value else None
     
+    @Role(QtCore.Qt.TextAlignmentRole)
     def TextAlignmentRole(self):
         ""
-        
-    TextAlignmentRole = QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft
+
+    TextAlignmentRole = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)        
 
     def DecorationRole(self):
         ""
@@ -267,6 +280,21 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
         if index.isValid():
             item = self.item(index.row())
             columnStyle = self._columnStyles[index.column()]
+            value = getattr(item, columnStyle.fieldName)
+            return columnStyle.data(role, value)
+
+    def data2(self, index, role, _roleStyles = {}):
+        if index.isValid():
+            
+            roleStyles = _roleStyles.get(role)
+            if roleStyles is None:
+                # fill column styles
+                pass
+                roleStyles = _roleStyles.get(role)
+            
+            columnStyle = roleStyles[index.column()]
+            
+            item = self.item(index.row())
             value = getattr(item, columnStyle.fieldName)
             return columnStyle.data(role, value)
 

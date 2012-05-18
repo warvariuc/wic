@@ -180,7 +180,8 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
 
 
 class WTable():
-    """ТаблицаЗначений
+    """Аналог ТаблицаЗначений из 1С:Предприятие 7.7
+    Can be attached to a table view. 
     """
 
     __slots__ = ['_columns', '_columnsOrder', '_rows', '_tableView']
@@ -197,6 +198,9 @@ class WTable():
         self.attachTableView(tableView)
 
     def attachTableView(self, tableView):
+        """Attach this table to an exisitng table view.
+        @param tableView: QTableView instance to which to attach or None - to release
+        """
         if not tableView:
             if self._tableView:
                 self._tableView.removeEventFilter(self._tableView.model())
