@@ -13,10 +13,11 @@ class WApp(QtGui.QApplication):
             raise Exception('There can be only one WApp instance')
         super().__init__(argv)
 
-        wic.app = self
-
         self.setOrganizationName(self._organizationName)
         self.setApplicationName(self._applicationName)
 
         self.mainWindow = MainWindowClass()
+
+        wic.app = self.mainWindow
+
         self.mainWindow.show() # show the main wndow

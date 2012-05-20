@@ -96,14 +96,18 @@ class WMainWindow(QtGui.QMainWindow):
             window.showMinimized()
 
     def addSubWindow(self, widget): # https://bugreports.qt.nokia.com/browse/QTBUG-9462
-        """Add a new subwindow with the given widget"""
+        """Add a new subwindow with the given widget
+        """
         subWindow = QtGui.QMdiSubWindow() # no parent
         subWindow.setWidget(widget)
         subWindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.mdiArea.addSubWindow(subWindow)
         subWindow.setWindowIcon(widget.windowIcon())
         subWindow.show()
-        widget.closed.connect(subWindow.close) # when form closes - close subWindow too
+        from wic import forms
+        if isinstance(widget, forms.WForm):
+            widget.closed.connect(subWindow.close) # when form closes - close subWindow too
+        return subWindow
 
     def authenticate(self):
         """Show log in window."""
@@ -125,7 +129,7 @@ class WMainWindow(QtGui.QMainWindow):
 
     def showInformation(self, title, text):
         """Convenience function to show an information message box."""
-        QtGui.QMessageBox.information(self, self, title, text)
+        QtGui.QMessageBox.information(self, title, text)
 
 
 

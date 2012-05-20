@@ -54,6 +54,9 @@ class MainMenu():
         )
         self.windows.aboutToShow.connect(self.updateWindowMenu) # Before window menu is shown, update the menu with the titles of each open window
 
+    def addMenu(self, *args):
+        return self.mainWindow.menuBar().addMenu(*args)
+
     def updateWindowMenu(self):
         """Create windows menu with actions to jump to any open subwindow."""
         self.showMessagesWindow.setChecked(self.mainWindow.messagesWindow.isVisible()) # set checked here instead of catching visibilitychanged event

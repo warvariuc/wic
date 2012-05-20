@@ -11,29 +11,28 @@ from wic.forms import WForm, setValue, getValue
 class Form(WForm):
     """Lissajous figures in new fashion :)."""
 
-    def on_open(self): 
-        global dt
-        dt = Liss(None)
-        self.placeholder.addWidget(dt)
-        dt.show()
-        dt.antialiasing = True
-        self.antialiasing.setChecked(True)
+    def onOpen(self): 
+        self.dt = Liss(None)
+        self.placeholder.addWidget(self.dt)
+        self.dt.show()
+        self.dt.antialiasing = True
+        self._.antialiasing = True
     
     @QtCore.pyqtSlot()
     def on_buttonStart_clicked(self): 
-        if dt.timer.isActive():
-            dt.stop()
+        if self.dt.timer.isActive():
+            self.dt.stop()
             self.buttonStart.setText('Start')
         else:
-            dt.start()
+            self.dt.start()
             self.buttonStart.setText('Stop')
     
     @QtCore.pyqtSlot()
     def on_buttonReset_clicked(self): 
-        dt.resetParams()
+        self.dt.resetParams()
     
     def on_antialiasing_stateChanged(self, state): 
-        dt.antialiasing = state
+        self.dt.antialiasing = state
 
 
 

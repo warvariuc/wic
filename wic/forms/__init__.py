@@ -212,7 +212,7 @@ def openForm(FormClass, *args, modal = False, **kwargs):
     form = FormClass(*args, **kwargs) # no parent widget for now
     if modal:
         return form.exec()
-    wic.app.mainWindow.addSubWindow(form)
+    wic.app.addSubWindow(form)
     return form
 
 

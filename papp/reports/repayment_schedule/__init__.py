@@ -4,16 +4,18 @@ from PyQt4 import QtCore, QtGui, QtWebKit
 
 from wic.datetime import Date, TimeInterval
 from decimal import Decimal as Dec
-from wic.forms import WForm
-from wic import w_table, app
+from wic import forms, w_table, app
 
 
 
 daysInYear = 365
 
 
-class Form(WForm):
-
+class Form(forms.WForm):
+    
+    _formTitle = 'Repayment Schedule'
+    _iconPath = ':/icons/fugue/receipt-invoice.png'
+    
     def onOpen(self): # called by the system after it loads the Form
 
         self._.equalInstallments = True
