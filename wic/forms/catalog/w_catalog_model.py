@@ -3,177 +3,118 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
-import traceback, time
+import traceback, time, inspect
 
 import orm, wic
 
 
-#def role(qtRole, roleValue):
-#
-#
-#    def decorator(func):
-#
-#        def wrapped(*args, **kwargs):
-#            return func(*args, **kwargs)
-#
-#        return wrapped
-#
-#    return decorator
-
-
 
 class Role():
-    """A descriptor you can use to decorate a method.
-    """ 
-    def __init__(self, method):
-        self.method = method
-
-    def __get__(self, obj, objtype):
-        if obj is None:
-            return self
-        def wrapped(*args, **kwargs):
-            return self.method(obj, *args, **kwargs)
-        return wrapped    
-    
-
-class WStyle2():
-    """Common style for representation of an ItemView item
     """
+    """
+    def __init__(self, QtRole, value = None):
+        assert isinstance(QtRole, int)
+        self.QtRole = QtRole
+        self.value = value
 
-    @Role(QtCore.Qt.DisplayRole)
-    def displayRole(self, value): # data to be rendered in the form of text
-        return str(value) if value else ''
+    def __call__(self, func):
+        self.value = func
+        return self
 
-    def toolTipRole(self, value):
-        return str(value) if value else None
-    
-    @Role(QtCore.Qt.TextAlignmentRole)
-    def TextAlignmentRole(self):
-        ""
-
-    TextAlignmentRole = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)        
-
-    def DecorationRole(self):
-        ""
-        
-    def CheckStateRole(self):
-        ""
 
 
 class WStyle():
     """Common style for representation of an ItemView item
+    http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
     """
-    def __init__(self, roles = {}, **kwargs):
-        assert isinstance(roles, dict), 'Roles should a dict {role: value|function}'
-        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                  QtCore.Qt.DisplayRole: self.displayRole, QtCore.Qt.ToolTipRole: self.toolTipRole
-        }
-        _roles.update(roles)
-        self.roles = _roles
+    def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+        self.data = self.getRoles()
+#        print(self.data)
 
-    def data(self, role, value = None):
-        """Process value from the db and return data for the given role.
-        @param role: data role (http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum)
-        @param value: value from the db to analyze or process
-        """
-        data = self.roles.get(role)
-        return data(value) if callable(data) else data
+    @Role(QtCore.Qt.DisplayRole)
+    def display(self, value): # data to be rendered in the form of text
+        return value
+        #return None if value is None else str(value)
 
-    def displayRole(self, value):
-        return str(value) if value else ''
+    @Role(QtCore.Qt.ToolTipRole)
+    def toolTip(self, value):
+        return value
+        #return None if value is None else str(value)
 
-    def toolTipRole(self, value):
-        return str(value) if value else None
+    textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
+    decoration = Role(QtCore.Qt.DecorationRole, None)
+    checkState = Role(QtCore.Qt.CheckStateRole, None)
+    sizeHint = Role(QtCore.Qt.SizeHintRole, None)
+
+    def getRoles(self):
+        roles = {}
+        for attrName, attrValue in inspect.getmembers(self):
+            if isinstance(attrValue, Role):
+                assert attrValue.QtRole not in roles, 'The same role is met twice with different names.'
+                roles[attrValue.QtRole] = attrValue.value
+        return roles
 
 
 class WDecimalStyle(WStyle):
     """Style for items with Decimal values.
     """
-    def __init__(self, roles = {}, format = ''):
-        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight,
-                      QtCore.Qt.DisplayRole: self.displayRole}
-        _roles.update(roles)
-        super().__init__(roles = _roles, format = format)
-
-    def displayRole(self, value):
+    @Role(QtCore.Qt.DisplayRole)
+    def display(self, value):
         format_ = self.format
         if format_:
-            if format_[-1:] == ' ':
+            if format_.endswith(' '):
                 if not value:
                     return ''
                 format_ = format_[:-1]
             return format(value, format_)
+
+    textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
 
 
 class WDateStyle(WStyle):
     """Style for items with Date values.
     """
-    def __init__(self, roles = {}):
-        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
-                  QtCore.Qt.DisplayRole: formatDate}
-        _roles.update(roles)
-        super().__init__(roles = _roles)
+    display = Role(QtCore.Qt.DisplayRole, formatDate)
+    textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
 
 
 class WBoolStyle(WStyle):
     """Style for items with bool values.
     """
-    def __init__(self, roles = {}):
-        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter,
-                  QtCore.Qt.DisplayRole: None,
-                  QtCore.Qt.CheckStateRole: lambda value: QtCore.Qt.Checked if value else QtCore.Qt.Unchecked}
-        _roles.update(roles)
-        super().__init__(roles = _roles)
+    @Role(QtCore.Qt.CheckStateRole)
+    def checkState(self, value, checked = QtCore.Qt.Checked, unchecked = QtCore.Qt.Unchecked): # attr lookup optimization
+        return checked if value else unchecked
+    textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
+    display = Role(QtCore.Qt.DisplayRole, None)
 
 
 class WRecordStyle(WStyle):
     """Style for items which contains record ids.
     """
-    def __init__(self, roles = {}):
-        _roles = {QtCore.Qt.DisplayRole: self.displayRole}
-        _roles.update(roles)
-        super().__init__(roles = _roles, format = format)
+    @Role(QtCore.Qt.DisplayRole)
+    def display(self, record):
+        return None if record is None else str(record)
 
-    def displayRole(self, record):
-        return '' if record is None else str(record)
 
 
 class WHHeaderStyle(WStyle):
     """Style for horizontal headers.
     """
-    def __init__(self, roles = {}, title = '', width = None):
-        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                  QtCore.Qt.DisplayRole: title}
-        _roles.update(roles)
-        super().__init__(roles = _roles, title = title, width = width)
+    def __init__(self, *args, title, width = 0, **kwargs):
+        self.display = Role(QtCore.Qt.DisplayRole, title) # title is constant - override display
+        #self.sizeHint = Role(QtCore.Qt.SizeHintRole, QtCore.QSize(width, 0))
+        super().__init__(*args, **kwargs)
 
-    def displayRole(self, value):
-        format_ = self.format
-        if format_:
-            if format_[-1:] == ' ':
-                if not value:
-                    return ''
-                format_ = format_[:-1]
-            return format(value, format_)
 
 class WVHeaderStyle(WStyle):
     """Style for vertical headers.
     """
-    def __init__(self, roles = {}, height = None):
-        _roles = {QtCore.Qt.TextAlignmentRole: QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft,
-                  QtCore.Qt.DisplayRole: lambda value: value}
-        _roles.update(roles)
-        super().__init__(roles = _roles, height = height)
+    def __init__(self, *args, height = 0, **kwargs):
+        #self.sizeHint = Role(QtCore.Qt.SizeHintRole, QtCore.QSize(0, height))
+        super().__init__(*args, **kwargs)
 
-    def displayRole(self, value):
-        format_ = self.format
-        if format_:
-            if format_[-1:] == ' ':
-                if not value:
-                    return ''
-                format_ = format_[:-1]
-            return format(value, format_)
+
 
 
 
@@ -206,13 +147,12 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
     def __init__(self, db, catalogModel, where = None):
         assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'
         super().__init__(None) # no parent
-        self._vHeaderStyle = WVHeaderStyle()
+        self._vHeaderStyle = WVHeaderStyle() # one style for all rows
         self._hHeaderStyles = []
         self._columnStyles = []
         for field in catalogModel:
             self._hHeaderStyles.append(WHHeaderStyle(title = field.label))
             columnStyle = self._createStyleForField(field)
-            columnStyle.fieldName = field.name
             self._columnStyles.append(columnStyle)
 
         self._columnCount = len(self._columnStyles)
@@ -231,16 +171,17 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
 
     def _createStyleForField(self, field):
         assert isinstance(field, orm.Field)
+
         if isinstance(field, orm.DecimalField):
-            return WDecimalStyle(format = ',.%if ' % field.fractionDigits)
+            return WDecimalStyle(format = ',.%if ' % field.fractionDigits, fieldName = field.name)
         elif isinstance(field, orm.DateField):
-            return WDateStyle()
+            return WDateStyle(fieldName = field.name)
         elif isinstance(field, orm.BooleanField):
-            return WBoolStyle()
+            return WBoolStyle(fieldName = field.name)
         elif isinstance(field, orm.RecordField):
-            return WRecordStyle()
+            return WRecordStyle(fieldName = field.name)
         else:
-            return WStyle()
+            return WStyle(fieldName = field.name)
 
     def _resetCache(self, **kwargs):
         #print('clearCache')
@@ -278,25 +219,16 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
 
     def data(self, index, role):
         if index.isValid():
-            item = self.item(index.row())
-            columnStyle = self._columnStyles[index.column()]
-            value = getattr(item, columnStyle.fieldName)
-            return columnStyle.data(role, value)
+            style = self._columnStyles[index.column()]
+            data = style.data.get(role)
 
-    def data2(self, index, role, _roleStyles = {}):
-        if index.isValid():
-            
-            roleStyles = _roleStyles.get(role)
-            if roleStyles is None:
-                # fill column styles
-                pass
-                roleStyles = _roleStyles.get(role)
-            
-            columnStyle = roleStyles[index.column()]
-            
+            if not hasattr(data, '__call__'): # not a function to call
+                return data
+
             item = self.item(index.row())
-            value = getattr(item, columnStyle.fieldName)
-            return columnStyle.data(role, value)
+            value = getattr(item, style.fieldName)
+
+            return data(style, value) # call the function
 
     def rowCount(self, parent):
         _rowCount = self._rowCount # cached row count
@@ -313,34 +245,10 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
 
     def headerData(self, section, orientation, role):
         if orientation == QtCore.Qt.Horizontal:
-            return self._hHeaderStyles[section].data(role)
+            style = self._hHeaderStyles[section]
         elif orientation == QtCore.Qt.Vertical:
-            return self._vHeaderStyle.data(role, section)
-        return None
-
-
-#    def setQuery(self, model, fields, where):
-#        """"""
-#        assert isinstance(model, orm.Model), 'Pass an orm.Model instance'
-#        assert all(isinstance(field, orm.Field) for field in fields), 'All fields must be instances of orm.Field'
-
-
-
-
-
-#if __name__ == '__main__': # some tests
-#    app = QtGui.QApplication([])
-#
-#    tableView = QtGui.QTableView(None)
-#
-#    table = WTable(tableView)
-#    table.newColumn('column1', label = 'int', default = 0, width = 50)
-#    table.newColumn('column2', label = 'Decimal', editable = True, alignment = QtCore.Qt.AlignRight, default = Dec())
-#    table.newColumn('column3', label = 'Date', editable = True, default = Date())
-#    for rowIndex in range(10):
-#        row = table.newRow()
-#        row.column1 = rowIndex + 1
-#        row.column2 = Dec(rowIndex)
-#
-#    tableView.show()
-#    app.exec()
+            style = self._vHeaderStyle
+        else:
+            return None
+        data = style.data.get(role)
+        return data(style, section) if hasattr(data, '__call__') else data
