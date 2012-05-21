@@ -10,7 +10,7 @@ class MainMenu():
     def __init__(self, mainWindow):
         self.mainWindow = mainWindow
 
-        self.file = mainWindow.menuBar().addMenu('File')
+        self.file = self.addMenu('File')
         self.open = createAction(mainWindow, 'Open…', self.onFileOpen, QtGui.QKeySequence.Open, ':/icons/fugue/folder-open-document-text.png')
         self.save = createAction(mainWindow, 'Save', self.onFileSave, QtGui.QKeySequence.Save, ':/icons/fugue/disk-black.png')
         self.quitApp = createAction(mainWindow, 'Quit', mainWindow.close, QtGui.QKeySequence.Quit, ':/icons/fugue/cross-button.png')
@@ -20,7 +20,7 @@ class MainMenu():
         self.recentFiles.aboutToShow.connect(self.updateRecentFiles)
         addActionsToMenu(self.file, (self.save, self.quitApp))
 
-        self.service = mainWindow.menuBar().addMenu('Service')
+        self.service = self.addMenu('Service')
         addActionsToMenu(self.service, (
             createAction(mainWindow, 'Calculator', self.showCalculator, 'Ctrl+F2', ':/icons/fugue/calculator-scientific.png'),
             createAction(mainWindow, 'Calendar', self.showCalendar, icon = ':/icons/fugue/calendar-blue.png'),
@@ -29,11 +29,11 @@ class MainMenu():
             createAction(mainWindow, 'Qt Designer', self.openQtDesigner, None, ':/icons/fugue/application-form.png', 'Run Designer with custom widgets'),
         ))
 
-        self.catalogs = mainWindow.menuBar().addMenu('Catalogs')
+        self.catalogs = self.addMenu('Catalogs')
+        self.reports = self.addMenu('Reports')
+        self.windows = self.addMenu('Windows')
 
-        self.windows = mainWindow.menuBar().addMenu('Windows')
-
-        self.help = mainWindow.menuBar().addMenu('Help')
+        self.help = self.addMenu('Help')
         addActionsToMenu(self.help, (
             createAction(mainWindow, 'About application', self.helpAbout, 'F1', ':/icons/fugue/question-button.png', 'See information about this application'),
         ))
@@ -49,7 +49,7 @@ class MainMenu():
             createAction(mainWindow, 'Iconize All', mainWindow.minimizeSubwindows),
             None, # separator
             createAction(mainWindow, 'Close', mainWindow.mdiArea.closeActiveSubWindow, QtGui.QKeySequence.Close, ':/icons/fugue/cross-white.png', 'Закрыть активное окно'),
-            None,
+            None, # separator
             self.showMessagesWindow,
         )
         self.windows.aboutToShow.connect(self.updateWindowMenu) # Before window menu is shown, update the menu with the titles of each open window
@@ -106,7 +106,7 @@ class MainMenu():
 
     def helpAbout(self):
         from wic.forms import openForm, help_about
-        openForm(help_about.Form)
+        openForm(help_about.Form, modal = True)
 
     def showCalculator(self):
         from wic.widgets import WPopupCalculator

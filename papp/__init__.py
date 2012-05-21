@@ -50,27 +50,20 @@ class MainWindow(w_main_window.WMainWindow):
             modelName = catalog.capitalize()
             modelPath = 'papp.catalogs.' + catalog + '.' + modelName
             menus.addActionsToMenu(menu, (
-                menus.createAction(menu, modelName, lambda *args, m = modelPath: self.openCatalogForm(m), 
+                menus.createAction(menu, modelName, lambda *args, p = modelPath: forms.openCatalogForm(p, db),
                                    icon = ':/icons/fugue/cards-address.png'),
             ))
-            
-        menu = self.menu.reports = self.menu.addMenu('Reports')
+
+        menu = self.menu.reports
         reports = ('test', 'lissajous', 'repayment_schedule')
         for report in reports:
             reportName = report.capitalize()
             reportPath = 'papp.reports.' + report + '.Form'
             menus.addActionsToMenu(menu, (
-                menus.createAction(menu, reportName, lambda *args, p = reportPath: self.openReportForm(p), 
+                menus.createAction(menu, reportName, lambda *args, p = reportPath: forms.openForm(p),
                                    icon = ':/icons/fugue/application-form.png'),
             ))
 
-    def openCatalogForm(self, modelPath):
-        from wic import getObjectByPath
-        forms.openCatalogForm(getObjectByPath(modelPath), db)
-
-    def openReportForm(self, reportPath):
-        from wic import getObjectByPath
-        forms.openForm(getObjectByPath(reportPath))
 
 
 def test():

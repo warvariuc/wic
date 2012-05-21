@@ -1,4 +1,4 @@
-__authot__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import os, sys, traceback
 from PyQt4 import QtGui, QtCore, uic
@@ -208,6 +208,8 @@ class WForm(QtGui.QDialog):
 
 
 def openForm(FormClass, *args, modal = False, **kwargs):
+    if isinstance(FormClass, str):
+        FormClass = wic.getObjectByPath(FormClass)
     assert issubclass(FormClass, WForm), 'This is not a WForm.'
     form = FormClass(*args, **kwargs) # no parent widget for now
     if modal:
