@@ -3,7 +3,7 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 from PyQt4 import QtGui, QtCore
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
-import traceback, time, inspect
+import traceback, time, inspect, sys
 
 import orm, wic
 
@@ -13,6 +13,9 @@ class Role():
     """
     """
     def __init__(self, QtRole, value = None):
+        """
+        @param QtRole: http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
+        """
         assert isinstance(QtRole, int)
         self.QtRole = QtRole
         self.value = value
@@ -25,11 +28,10 @@ class Role():
 
 class WStyle():
     """Common style for representation of an ItemView item
-    http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
     """
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
-        self.data = self.getRoles()
+        self.getRoles()
 #        print(self.data)
 
     @Role(QtCore.Qt.DisplayRole)
@@ -48,12 +50,14 @@ class WStyle():
     sizeHint = Role(QtCore.Qt.SizeHintRole, None)
 
     def getRoles(self):
+        """Walk over all role attributes of this style and put them in `data` attribute as dictionary {QtStyle: value}.
+        """
         roles = {}
         for attrName, attrValue in inspect.getmembers(self):
             if isinstance(attrValue, Role):
                 assert attrValue.QtRole not in roles, 'The same role is met twice with different names.'
                 roles[attrValue.QtRole] = attrValue.value
-        return roles
+        self.data = roles
 
 
 class WDecimalStyle(WStyle):
@@ -111,10 +115,15 @@ class WVHeaderStyle(WStyle):
     """Style for vertical headers.
     """
     def __init__(self, *args, height = 0, **kwargs):
-        #self.sizeHint = Role(QtCore.Qt.SizeHintRole, QtCore.QSize(0, height))
+        self.sizeHint = Role(QtCore.Qt.SizeHintRole, QtCore.QSize(50, QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4))
+        #self.size =  # font height and some spare pixels
         super().__init__(*args, **kwargs)
 
+        #rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
 
+#    @Role(QtCore.Qt.SizeHintRole)
+#    def sizeHint(self, value):
+#        print('here2', file=sys.stderr)
 
 
 

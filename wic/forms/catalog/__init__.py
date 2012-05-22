@@ -207,8 +207,6 @@ class CatalogForm(forms.WForm):
         self.tableView.setFocus()
         #self.tableView.resizeColumnsToContents() - too slow - requests all the data from model
 
-        self.tableView.selectRow(0)
-
     def createWidgets(self):
         """Automatically create on the form widgets.
         """
