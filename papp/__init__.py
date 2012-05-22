@@ -23,15 +23,6 @@ class MainWindow(w_main_window.WMainWindow):
         global db
         db = orm.SqliteAdapter('papp/databases/mtc.sqlite')
 
-#        from .reports.test import Form
-#        forms.openForm(Form)
-    #    
-    #    from .reports.repayment_schedule import Form
-    #    forms.openForm(Form)
-    #    
-        from .catalogs.locations import Locations
-        forms.openCatalogForm(Locations, db)
-
         #self.mainWindow.restoreSubwindows()
 
 

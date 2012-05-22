@@ -15,7 +15,7 @@ widgets = sys.modules['wic.widgets']
 menus = sys.modules['wic.menus']
 from wic import Bunch
 
-from .w_catalog_model import WCatalogViewModel, CatalogModel
+from .w_catalog_view_model import WCatalogViewModel, CatalogModel
 
 
 class CatalogItemForm(forms.WForm):
@@ -181,7 +181,7 @@ class CatalogForm(forms.WForm):
 
     _uiFilePath = None
     _formTitle = 'Catalog'
-    _iconPath = ':/icons/fugue/cards-stack.png'
+    _iconPath = ':/icons/fugue/cards-address.png'
     _toolbarVisible = True
 
     _catalogModel = None
@@ -208,7 +208,7 @@ class CatalogForm(forms.WForm):
         #self.tableView.resizeColumnsToContents() - too slow - requests all the data from model
 
     def createWidgets(self):
-        """Automatically create on the form widgets.
+        """Automatically create widgets on the form.
         """
         layout = QtGui.QVBoxLayout(self)
         layout.setMargin(2)
@@ -238,11 +238,15 @@ class CatalogForm(forms.WForm):
 
     def setupTableView(self, tableView):
         assert isinstance(tableView, QtGui.QTableView)
+
+        catalogViewModel = self._viewModel(self._db, self._catalogModel) # create catalog view model
+
         tableView.setSelectionBehavior(tableView.SelectItems)
         tableView.setSelectionMode(tableView.SingleSelection)
         #self.tableView.verticalHeader().hide()
         tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
-        rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
+        #rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
+        rowHeight = catalogViewModel.headerData(0, QtCore.Qt.Vertical, catalogViewModel._styles.DefaultSectionSizeRole)
         tableView.verticalHeader().setDefaultSectionSize(rowHeight)
         #tableView.setIconSize(QtCore.QSize(16, 16))
         #tableView.horizontalHeader().setResizeMode(QtGui.QHeaderView.ResizeToContents) # very slow - it queries all items
@@ -252,19 +256,18 @@ class CatalogForm(forms.WForm):
         tableView.installEventFilter(self)
         tableView.doubleClicked.connect(self.menu.editItem.trigger)
         tableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        tableView.customContextMenuRequested.connect(self.onTableViewContextMenuRequested)
 
-        catalogViewModel = self._viewModel(self._db, self._catalogModel)
         tableView.setModel(catalogViewModel)
+
+        # signals
+        tableView.customContextMenuRequested.connect(self.onTableViewContextMenuRequested)
         tableView.selectionModel().selectionChanged.connect(self.onSelectionChanged)
-
-        tableView.selectionModel().setCurrentIndex(tableView.model().index(0, 0), QtGui.QItemSelectionModel.ClearAndSelect)
-
         catalogViewModel.modelAboutToBeReset.connect(self.onModelAboutToBeReset)
         catalogViewModel.modelReset.connect(self.onModelReset)
-
         tableView.verticalScrollBar().valueChanged.connect(self.ensureSelectionVisible)
         tableView.horizontalScrollBar().valueChanged.connect(self.ensureSelectionVisible)
+
+        tableView.setCurrentIndex(tableView.model().index(0, 0))
 
     def eventFilter(self, tableView, event): # target - tableView
         #print('eventFilter', event)
