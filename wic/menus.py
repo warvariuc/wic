@@ -118,7 +118,7 @@ class MainMenu():
 
     def onFileOpen(self):
         filePath = QtGui.QFileDialog.getOpenFileName(self.mainWindow,
-                'Open file', self.settings.lastUsedDirectory, 'Modules (*.py);;Forms (*.ui);;All files (*.*)')
+                'Open file', self.mainWindow.settings.lastUsedDirectory, 'Modules *.py(*.py);;Forms *.ui(*.ui);;All files *.*(*.*)')
         if filePath:
             self.mainWindow.settings.lastUsedDirectory = os.path.dirname(filePath)
             self._openFile(filePath)
@@ -141,7 +141,7 @@ class MainMenu():
 
 
     def onFileSave(self):
-        QtGui.QMessageBox.warning(self, 'Not implemented', 'This feature is not yet implemented')
+        self.mainWindow.showWarning('Not implemented', 'This feature is not yet implemented')
 
     def showMessagesWindow(self):
         self.mainWindow.messagesWindow.setVisible(self.showMessagesWindow.isChecked())

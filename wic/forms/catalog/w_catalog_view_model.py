@@ -25,10 +25,9 @@ class Role():
         return self
 
 
+DefaultSectionSizeRole = QtCore.Qt.UserRole
 
 class Styles:
-
-    DefaultSectionSizeRole = QtCore.Qt.UserRole
 
     class Style():
         """Common style for representation of an ItemView item
@@ -120,7 +119,7 @@ class Styles:
         """
         def __init__(self, *args, **kwargs):
             rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
-            self.defaultSectionSize = Role(Styles.DefaultSectionSizeRole, rowHeight)
+            self.defaultSectionSize = Role(DefaultSectionSizeRole, rowHeight)
             super().__init__(*args, **kwargs)
 
 

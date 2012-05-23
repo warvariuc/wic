@@ -23,6 +23,8 @@ class MainWindow(w_main_window.WMainWindow):
         global db
         db = orm.SqliteAdapter('papp/databases/mtc.sqlite')
 
+        from .reports import phone_number_search
+        forms.openForm(phone_number_search.Form)
         #self.mainWindow.restoreSubwindows()
 
 
@@ -46,7 +48,7 @@ class MainWindow(w_main_window.WMainWindow):
             ))
 
         menu = self.menu.reports
-        reports = ('test', 'lissajous', 'repayment_schedule')
+        reports = ('phone_number_search', 'test', 'lissajous', 'repayment_schedule')
         for report in reports:
             reportName = report.capitalize()
             reportPath = 'papp.reports.' + report + '.Form'

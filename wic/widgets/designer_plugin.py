@@ -24,7 +24,7 @@ class WDateEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     Also serves as base class for other custom widget plugins:"""
 
     _module = 'wic.widgets.w_date_edit' # path to the widget's module
-    _Klass = 'WDateEdit' # name of the widget class
+    _class = 'WDateEdit' # name of the widget class
     _icon = ':/icons/fugue/calendar-blue.png' # path to the icon in the resources
 
     def __init__(self, parent = None):
@@ -44,7 +44,7 @@ class WDateEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return QtGui.QIcon(self._icon)
 
     def domXml(self):
-        return '<widget class="%s" name="%s">\n</widget>\n' % (self._Klass, self.name())
+        return '<widget class="%s" name="%s">\n</widget>\n' % (self._class, self.name())
 
     def group(self):
         return 'wic'
@@ -53,7 +53,7 @@ class WDateEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return self._module
 
     def name(self):
-        return self._Klass
+        return self._class
 
     def toolTip(self):
         return ''
@@ -63,7 +63,7 @@ class WDateEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
 
     def createWidget(self, parent):
         module = importlib.import_module(self._module)
-        Klass = getattr(module, self._Klass)
+        Klass = getattr(module, self._class)
         return Klass(parent)
 
 
@@ -71,16 +71,16 @@ class WDateEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
 class WDecimalEditPlugin(WDateEditPlugin):
 
     _module = 'wic.widgets.w_decimal_edit'
-    _Klass = 'WDecimalEdit'
+    _class = 'WDecimalEdit'
     _icon = ':/icons/calculator.png'
 
 
 
-class WCatalogItemIdWidgetPlugin(WDateEditPlugin):
+class WCatalogItemWidgetPlugin(WDateEditPlugin):
 
-    _module = 'wic.widgets.w_record_id_widget'
-    _Klass = 'WCatalogItemIdWidget'
-    _icon = ':/icons/fugue/cards-stack.png'
+    _module = 'wic.widgets.w_catalog_item_widget'
+    _class = 'WCatalogItemWidget'
+    _icon = ':/icons/fugue/card-address.png'
 
 
 

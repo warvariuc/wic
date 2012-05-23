@@ -1,11 +1,9 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
-import os, sys
 from PyQt4 import QtCore, QtGui
 
 from wic.forms import WForm, setValue, getValue
-from datetime import date as Date
-from dateutil.relativedelta import relativedelta as RelDelta
+from wic.datetime import Date, RelDelta
 import papp
 
 
