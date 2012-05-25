@@ -68,6 +68,12 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>phoneNumber</tabstop>
+  <tabstop>lastName</tabstop>
+  <tabstop>search</tabstop>
+  <tabstop>searchResults</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

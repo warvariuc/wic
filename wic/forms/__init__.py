@@ -206,6 +206,13 @@ class WForm(QtGui.QDialog):
     def onReset(self):
         ""
 
+    def showWarning(self, title, text):
+        """Convenience function to show a warning message box."""
+        QtGui.QMessageBox.warning(self, title, text)
+
+    def showInformation(self, title, text):
+        """Convenience function to show an information message box."""
+        QtGui.QMessageBox.information(self, title, text)
 
 
 def openForm(FormClass, *args, modal = False, **kwargs):

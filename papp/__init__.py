@@ -10,6 +10,7 @@ import wic
 from wic import forms, w_main_window
 
 appDir = os.path.dirname(os.path.abspath(__file__))
+db = None
 
 
 class MainWindow(w_main_window.WMainWindow):

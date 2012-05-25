@@ -218,6 +218,14 @@ class GenericAdapter():
         return '(%s + %s)' % (cls.render(left), cls.render(right, left))
 
     @classmethod
+    def _CONCAT(cls, expressions): # ((expression1) || (expression2) || ...)
+        "Concatenate two or more expressions."
+        renderedExpressions = [] 
+        for expression in expressions:
+            renderedExpressions.append('(' + cls.render(expression) + ')')
+        return '(' + ' || '.join(renderedExpressions) + ')'
+
+    @classmethod
     def _IN(cls, first, second):
         if isinstance(second, str):
             return '(%s IN (%s))' % (cls.render(first), second[:-1])
@@ -952,6 +960,14 @@ class MysqlAdapter(GenericAdapter):
     def _RANDOM(cls):
         return 'RAND()'
 
+    @classmethod
+    def _CONCAT(cls, expressions): # CONCAT(str1,str2,...)
+        "Concatenate two or more expressions."
+        renderedExpressions = [] 
+        for expression in expressions:
+            renderedExpressions.append('(' + cls.render(expression) + ')')
+        return 'CONCAT(' + ', '.join(renderedExpressions) + ')'
+    
     def lastInsertId(self):
         return self.cursor.lastrowid
 

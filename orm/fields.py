@@ -325,3 +325,9 @@ def UPPER(expression):
 def LOWER(expression):
     assert isinstance(expression, Expression), 'Argument must be a Field or an Expression.'
     return Expression('_LOWER', expression)
+
+def CONCAT(*expressions):
+    "Concatenate two or more expressions/strings."
+    for expression in expressions:
+        assert isinstance(expression, (str, Expression)), 'Argument must be a Field or an Expression or a str.'
+    return Expression('_CONCAT', expressions)
