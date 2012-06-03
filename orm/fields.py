@@ -16,7 +16,8 @@ class Expression():
         """Create an expression.
         @param operation: string with the operation name (defined in adapters) 
         @param left: left operand
-        @param right: right operand 
+        @param right: right operand
+        @param type: cast type field
         """
         if left is not Nil and not type:
             if isinstance(left, Field):
@@ -62,17 +63,29 @@ class Expression():
         self.sort = 'ASC'
         return self
 
+    def UPPER(self):
+        return Expression('_UPPER', self)
+
+    def LOWER(self):
+        return Expression('_LOWER', self)
+
     def IN(self, *items):
         """The IN clause."""
         return Expression('_IN', self, items)
+
+    def LIKE(self, pattern):
+        assert isinstance(pattern, str), 'Pattern must be a string.'
+        return Expression('_LIKE', self, pattern)
 
     def __str__(self, db = None):
         """Construct the text of the WHERE clause from this Expression.
         @param db: GenericAdapter subclass to use for rendering.
         """
+        args = [arg for arg in (self.left, self.right) if arg is not Nil] # filter nil operands
+        if not args: # no args - treat operation as representation of the entire operation
+            return self.operation
         db = db or orm.GenericAdapter
         operation = getattr(db, self.operation) # get the operation function from adapter
-        args = [arg for arg in (self.left, self.right) if arg is not Nil] # filter nil operands
         return operation(*args) # execute the operation
 
     def cast(self, value):
@@ -85,6 +98,7 @@ class Expression():
 class Field(Expression):
     """Abstract ORM table field.
     """
+
     _fieldsCount = 0 # will be used to track the original definition order of the fields 
 
     def __init__(self, *args, **kwargs):
@@ -267,7 +281,7 @@ class RecordField(Field):
         except ValueError:
             raise orm.QueryError('Record ID must be an integer.')
 
-        
+
 #class TableIdField(Field):
 #    """This field stores id of a given table in this DB."""
 #    def _init_(self, index = ''):

@@ -25,4 +25,5 @@ class Form(forms.WForm):
         from papp.catalogs.persons import Persons
         from papp import db
         #print(list(Persons.get(db, where = (Persons.phone_number == phoneNumber), limit = 10, select_related = True)))
-        print(db._select('*', orm.CONCAT(Persons.phone_prefix, Persons.phone_number), from_ = Persons, limit = 10))
+        combinedPhoneNumber = orm.CONCAT(Persons.phone_prefix, Persons.phone_number)
+        print(db._select('*', combinedPhoneNumber, from_ = Persons, where = combinedPhoneNumber.LIKE('%' + phoneNumber + '%'), limit = 10))

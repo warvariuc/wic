@@ -218,6 +218,11 @@ class GenericAdapter():
         return '(%s + %s)' % (cls.render(left), cls.render(right, left))
 
     @classmethod
+    def _LIKE(cls, expression, pattern):
+        "The LIKE Operator."
+        return "(%s LIKE '%s')" % (cls.render(expression), pattern)
+
+    @classmethod
     def _CONCAT(cls, expressions): # ((expression1) || (expression2) || ...)
         "Concatenate two or more expressions."
         renderedExpressions = [] 
@@ -280,14 +285,12 @@ class GenericAdapter():
     def render(cls, value, castField = None):
         """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for operations with castField in the DB.
         """
-        if isinstance(value, orm.fields.Expression): # it's an Expression or Field 
+        if isinstance(value, orm.Expression): # it's an Expression or Field 
             return value.__str__(cls) # render sub-expression
         else: # it's a value for a DB column
             if value is not None and castField is not None:
-                assert isinstance(castField, orm.fields.Expression), 'Cast field must be an Expression.'
-                if isinstance(castField, orm.fields.Field): # Field - subclass of Expression
-                    pass #
-                else: # is the Expression itself
+                assert isinstance(castField, orm.Expression), 'Cast field must be an Expression.'
+                if castField.__class__ is orm.Expression: # Field - subclass of Expression
                     castField = castField.type # expression right operand type
                 value = castField.cast(value)
                 try:
@@ -683,7 +686,7 @@ class GenericAdapter():
                 value = row[j]
                 if value is not None and isinstance(field, orm.Field):
                     column = field.column
-                    if isinstance(column, orm.fields.Column):
+                    if isinstance(column, orm.Column):
                         decodeFunc = getattr(self, '_decode' + column.type.upper(), None)
                         if callable(decodeFunc):
                             value = decodeFunc(value, column)
