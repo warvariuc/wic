@@ -698,7 +698,8 @@ class GenericAdapter():
 
 
 class Rows():
-    """Keeps results of a SELECT and has methods for convenient access."""
+    """Keeps results of a SELECT and has methods for convenient access.
+    """
 
     def __init__(self, db, fields, rows):
         """

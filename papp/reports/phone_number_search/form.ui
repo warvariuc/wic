@@ -6,46 +6,17 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>445</width>
-    <height>338</height>
+    <width>545</width>
+    <height>281</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Phone number search</string>
+   <string>Moldova phone number search</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="margin">
     <number>2</number>
    </property>
-   <property name="spacing">
-    <number>2</number>
-   </property>
-   <item row="1" column="0">
-    <widget class="QLineEdit" name="phoneNumber"/>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QTableWidget" name="searchResults"/>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Search results</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QLineEdit" name="lastName"/>
-   </item>
-   <item row="0" column="1">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Last name</string>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
@@ -53,7 +24,40 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="phoneNumber">
+     <property name="inputMask">
+      <string>00000000; </string>
+     </property>
+     <property name="maxLength">
+      <number>8</number>
+     </property>
+     <property name="placeholderText">
+      <string>Enter part of the phone number</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Last name</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QLineEdit" name="lastName">
+     <property name="inputMask">
+      <string>&gt;aaaaaaaaaaaaaaaaaaaa; </string>
+     </property>
+     <property name="maxLength">
+      <number>20</number>
+     </property>
+     <property name="placeholderText">
+      <string>Enter part of the last name</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4">
     <widget class="QPushButton" name="search">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -65,6 +69,9 @@
       <string>Search</string>
      </property>
     </widget>
+   </item>
+   <item row="1" column="0" colspan="5">
+    <widget class="QTableWidget" name="searchResults"/>
    </item>
   </layout>
  </widget>
