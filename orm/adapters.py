@@ -27,6 +27,12 @@ except ImportError:
     logger.info('no pymysql driver')
 
 
+try:
+    import psycopg2
+    drivers.append('psycopg2')
+except ImportError:
+    logger.info('no psycopg2 driver')
+
 
 class Column():
     """A generic database table column.
@@ -1005,6 +1011,73 @@ class MysqlAdapter(GenericAdapter):
             columns[column.name] = column
         return columns
 
+
+class PostgreSqlAdapter(GenericAdapter):
+    """Adapter for PostgreSql databases."""
+
+    protocol = 'postgresql'
+    driver = globals().get('psycopg2')
+
+    def __init__(self, uri, **kwargs):
+        m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
+                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
+        assert m, "Invalid database URI: %s" % self.uri
+        kwargs['user'] = m.group('user')
+        assert kwargs['user'], 'User required'
+        kwargs['password'] = m.group('password') or ''
+        kwargs['host'] = m.group('host')
+        assert kwargs['host'], 'Host name required'
+        kwargs['database'] = m.group('db')
+        assert kwargs['database'], 'Database name required'
+        kwargs['port'] = int(m.group('port') or 5432)
+        self.driverArgs = kwargs
+        super().__init__(uri)
+        
+
+    def connect(self):
+        connection = self.driver.connect(**self.driverArgs)
+        connection.set_client_encoding('UTF8')
+#        connection.execute('SET FOREIGN_KEY_CHECKS=1;')
+#        connection.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
+        return connection
+
+#    @classmethod
+#    def _getCreateTableOther(cls, table):
+#        return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
+
+    
+    def lastInsertId(self):
+        return self.cursor.lastrowid
+
+    def getTables(self):
+        """Get list of tables (names) in this DB."""
+        self.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        return [row[0] for row in self.cursor.fetchall()]
+
+    def getColumns(self, tableName):
+        """Get columns of a table"""
+        self.execute("SELECT column_name, data_type, column_default, is_nullable, character_maximum_length, "
+                     "       numeric_precision, numeric_scale, column_type, extra, column_comment "
+                     "FROM information_schema.columns "
+                     "WHERE table_schema = '%s' AND table_name = '%s'" % (self.driverArgs['db'], tableName))
+        columns = {}
+        for row in self.cursor.fetchall():
+            typeName = row[1].lower()
+            if 'int' in typeName:
+                typeName = 'int'
+            elif 'char' in typeName:
+                typeName = 'char'
+            elif typeName not in ('text', 'datetime', 'date'):
+                raise Exception('Unexpected data type: %s' % typeName)
+            precision = row[4] or row[5]
+            nullable = row[3].lower() == 'yes'
+            autoincrement = 'auto_increment' in row[8].lower()
+            unsigned = row[7].lower().endswith('unsigned')
+            column = Column(type = typeName, field = None, name = row[0], default = row[2],
+                            precision = precision, scale = row[6], unsigned = unsigned,
+                            nullable = nullable, autoincrement = autoincrement, comment = row[9])
+            columns[column.name] = column
+        return columns
 
 
 

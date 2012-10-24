@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
 import pprint
@@ -29,7 +30,7 @@ class Books(orm.Model):
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
 
-    def save(self): # lte's override save
+    def save(self): # let's override save
         self.timestamp = DateTime.now()
         super().save()
 
@@ -43,8 +44,9 @@ class Streets(CatalogModel):
 #fd, filePath = tempfile.mkstemp(suffix='.sqlite')
 #os.close(fd)
 #db = orm.connect('sqlite://' + filePath)
-db = orm.connect('sqlite://:memory:')
+#db = orm.connect('sqlite://:memory:')
 #db = orm.connect('mysql://root@localhost/test')
+db = orm.connect('postgresql://postgres@localhost/test')
 #db.execute('DROP TABLE IF EXISTS authors')
 #db.execute('DROP TABLE IF EXISTS books')
 
