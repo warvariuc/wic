@@ -56,7 +56,7 @@ class Column():
         assert isinstance(db, GenericAdapter) or (isinstance(db, type) and issubclass(db, GenericAdapter)), 'Must be GenericAdapter class or instance'
         colFunc = getattr(db, '_' + self.type.upper())
         columnType = colFunc(self)
-        return '`%s` %s' % (self.name, columnType)
+        return '%s %s' % (self.name, columnType)
 
     def str(self):
         attrs = self.__dict__.copy()
@@ -104,7 +104,7 @@ class Index():
             name += type # and add index type at the end
         self.name = name
 
-        self.indexFields = indexFields # fields involved in this index
+        self.indexFields = list(indexFields) # fields involved in this index
         self.type = type # index type: unique, primary, etc.
         self.method = method # if empty - will be used default for this type of DB
         self.other = kwargs # other parameters for a specific DB adapter
@@ -360,13 +360,11 @@ class GenericAdapter():
             else:
                 indexType = 'KEY'
             columns = []
-            for i, field in enumerate(index.fields):
-                column = field.column.name
-                prefixLength = index.prefixLengths[i]
-                if prefixLength:
-                    column += '(%i)' % prefixLength
-                sortOrder = index.sortOrders[i]
-                column += ' %s' % sortOrder.upper()
+            for indexField in index.indexFields:
+                column = indexField.field.name
+                if indexField.prefixLength:
+                    column += '(%i)' % indexField.prefixLength
+                column += ' %s' % indexField.sortOrder.upper()
                 columns.append(column)
 
             indexes.append('%s %s (%s)' % (indexType, index.name, ', '.join(columns)))
@@ -398,6 +396,7 @@ class GenericAdapter():
         `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s rating from store'
         """
         maxInt = int('9' * column.precision)
+        # TODO: check for column.unsigned
         bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
@@ -751,7 +750,7 @@ class Rows():
 
 
 
-
+####################################################################################################
 
 class SqliteAdapter(GenericAdapter):
     """Adapter for Sqlite databases"""
@@ -933,6 +932,7 @@ class SqliteAdapter(GenericAdapter):
 #        return Decimal(str(value))
 
 
+####################################################################################################
 
 class MysqlAdapter(GenericAdapter):
     """Adapter for MySql databases."""
@@ -1012,6 +1012,8 @@ class MysqlAdapter(GenericAdapter):
         return columns
 
 
+####################################################################################################
+
 class PostgreSqlAdapter(GenericAdapter):
     """Adapter for PostgreSql databases."""
 
@@ -1041,13 +1043,74 @@ class PostgreSqlAdapter(GenericAdapter):
 #        connection.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
         return connection
 
-#    @classmethod
-#    def _getCreateTableOther(cls, table):
-#        return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
+    @classmethod
+    def _getCreateTableOther(cls, table):
+        indexes = []
+        for index in table._indexes:
+            if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+                indexType = 'PRIMARY KEY'
+            elif index.type == 'unique':
+                indexType = 'UNIQUE'
+            else:
+                indexType = 'INDEX'
+            columns = []
+            for indexField in index.indexFields:
+                column = indexField.field.column.name
+#                prefixLength = index.prefixLengths[i] 
+#                if prefixLength:
+#                    column += '(%i)' % prefixLength
+                sortOrder = indexField.sortOrder
+                column += ' %s' % sortOrder.upper()
+                columns.append(column)
+            table = index.indexFields[0].field.table # al fields are checked to have the same table, so take the first one
+            indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, table, ', '.join(columns)))
 
-    
+        comments = []
+        for field in table:
+            column = field.column
+            if column is not None and column.comment:
+                comments.append(
+                    "COMMENT ON COLUMN %s.%s IS '%s'" % (
+                        table.name, column.name, cls.escape(column.comment)
+                    )
+                )
+        
+        other = ''
+        if indexes:
+            other += ';\n\n' + ';\n\n'.join(indexes)
+
+        if comments:
+            other += ';\n\n' + ';\n'.join(comments)
+        return other
+
     def lastInsertId(self):
         return self.cursor.lastrowid
+
+    
+    @classmethod
+    def _INT(cls, column, intMap = [(2, 'smallint'), (4, 'integer'), (8, 'digint')]):
+        """Render declaration of INT column type.
+        store_rating_sum BIGINT UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s rating from store'
+        """
+        if column.autoincrement:
+            columnStr = 'SERIAL'
+        else:
+            maxInt = int('9' * column.precision)
+            bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
+            for _bytesCount, _columnType in intMap:
+                if bytesCount <= _bytesCount:
+                    break
+            else:
+                raise Exception('Too big precision specified.')
+            columnStr = _columnType
+
+            if not column.nullable:
+                columnStr += ' NOT'
+            columnStr += ' NULL'
+            if column.nullable or column.default is not None:
+                columnStr += ' DEFAULT ' + cls._render(column.default, None)
+
+        return columnStr
 
     def getTables(self):
         """Get list of tables (names) in this DB."""
@@ -1078,7 +1141,9 @@ class PostgreSqlAdapter(GenericAdapter):
                             nullable = nullable, autoincrement = autoincrement, comment = row[9])
             columns[column.name] = column
         return columns
-
+    
+    # TODO: make a callback on the adapter to check new models.
+    # for example integers in postgres cannot be unsigned
 
 
 def xorify(orderBy):
