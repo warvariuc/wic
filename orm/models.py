@@ -43,7 +43,8 @@ class ModelMeta(type):
 
         logger.debug('Finishing initialization of model `%s`' % NewModel)
 
-        NewModel._indexes = list(NewModel._indexes) # assure each class has its own attribute, because by default _indexes is inherited from the parent class
+        # assure each class has its own attribute, because by default _indexes is inherited from the parent class
+        NewModel._indexes = list(NewModel._indexes)
 
         attrs = OrderedDict(inspect.getmembers(NewModel))
         fields = []
@@ -51,26 +52,31 @@ class ModelMeta(type):
             if isinstance(field, orm.fields.Field):
                 fields.append((fieldName, field))
 
-        fields = OrderedDict(sorted(fields, key = lambda f: f[1]._id)) # sort by definition order (as __dict__ is unsorted) - for field recreation order
+        # sort by definition order (as __dict__ is unsorted) - for field recreation order
+        fields = OrderedDict(sorted(fields, key = lambda f: f[1]._id))
 
         for fieldName, field in fields.items():
             if not fieldName.islower() or fieldName.startswith('_'):
-                raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and must not start with `_`.' % (fieldName, name))
+                raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
+                                     'must not start with `_`.' % (fieldName, name))
 
-            newField = field.__class__(name = fieldName, table = NewModel, label = field.label) # recreate the field - to handle correctly inheritance of Tables
+            # recreate the field - to handle correctly inheritance of Tables
+            newField = field.__class__(name = fieldName, table = NewModel, label = field.label)
             try:
                 newField._init_(*field._initArgs, **field._initKwargs) # and initialize it
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
-            setattr(NewModel, fieldName, newField) # each class has its own field object. Inherited and parent tables do not share field attributes
+            # each class has its own field object. Inherited and parent tables do not share field attributes
+            setattr(NewModel, fieldName, newField)
 
         indexesDict = OrderedDict() # to filter duplicate indexes by index name
         for index in NewModel._indexes:
             if index.table is not NewModel: # inherited index
                 if not isinstance(index, orm.Index):
                     raise orm.ModelError('Found a non Index in the _indexes.')
-                if index.table is not NewModel: # index was inherited from parent model - recreate it with fields from new model
+                if index.table is not NewModel:
+                    # index was inherited from parent model - recreate it with fields from new model
                     indexFields = [orm.IndexField(NewModel[indexField.field.name], indexField.sortOrder, indexField.prefixLength)
                                    for indexField in index.indexFields] # replace fields by name with fields from new model
                     index = orm.Index(indexFields, index.type, index.name, index.method, **index.other)
@@ -146,7 +152,8 @@ class Model(metaclass = ModelMeta):
 
         table = None
         for arg in args:
-            assert hasattr(arg, '__iter__') and len(arg) == 2, 'Pass tuples with 2 items: (field, value).'
+            assert isinstance(arg, (list, tuple)) and len(arg) == 2, \
+                'Pass tuples with 2 items: (field, value).'
             field, value = arg
             if isinstance(field, str):
                 field = self.__class__[field]
@@ -218,7 +225,7 @@ class Model(metaclass = ModelMeta):
         @param limit: tuple (from, to)
         @param select_related: whether to retrieve objects related by foreign keys in the same query
         """
-        logger.debug('Model.get(%s, db= %s, where= %s, limit= %s)' % (cls, db, where, limit))
+        logger.debug("Model.get('%s', db= %s, where= %s, limit= %s)" % (cls, db, where, limit))
         cls.checkTable(db)
         orderby = orderby or cls._ordering # use default table ordering if no ordering passed
         fields = list(cls)
@@ -261,8 +268,7 @@ class Model(metaclass = ModelMeta):
 
         isNew = not self.id
         if isNew: # new record
-            db.insert(*values)
-            self.id = db.lastInsertId()
+            self.id = db.insert(*values)
         else: # existing record
             rowsCount = db.update(*values, where = (model.id == self.id))
             if not rowsCount:

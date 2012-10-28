@@ -29,11 +29,11 @@ def getObjectByPath(objectPath, packagePath= None):
     return getattr(module, objectName)
     
 def isModel(obj):
-    return isinstance(obj, ModelMeta) # return isinstance(obj, type) and issubclass(obj, Model) # isinstance(res, type) == inspect.isclass(obj)
+    return isinstance(obj, ModelMeta)
 
 def listify(obj):
     """Assure that obj is a list."""
-    if hasattr(obj, '__iter__') and not isinstance(obj, ModelMeta):
+    if hasattr(obj, '__iter__') and not isinstance(obj, (str, ModelMeta)):
         return list(obj)
     return [obj]
 

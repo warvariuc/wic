@@ -134,8 +134,12 @@ class Field(Expression):
 class CharField(Field):
     """Field for storing strings of certain length.
     """
-    def _init_(self, maxLength, default = None, index = ''):
-        super()._init_(Column('CHAR', self, precision = maxLength, default = default), default, index)
+    def _init_(self, maxLength, default = None, index = '', comment = ''):
+        super()._init_(
+            Column('CHAR', self, precision = maxLength, default = default, comment = comment),
+            default,
+            index,
+        )
 
 
 class TextField(Field):
@@ -149,8 +153,12 @@ class IntegerField(Field):
     def _init_(self, maxDigits = 9, default = None, autoincrement = False, index = ''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
-        super()._init_(Column('INT', self, precision = self.maxDigits, unsigned = True, default = default,
-                             autoincrement = autoincrement), default, index)
+        super()._init_(
+            Column('INT', self, precision = self.maxDigits, unsigned = True, default = default,
+                   autoincrement = autoincrement),
+            default,
+            index
+        )
 
     def __set__(self, record, value):
         record.__dict__[self.name] = int(value)
@@ -181,7 +189,11 @@ class DateField(Field):
 class DateTimeField(Field):
 
     def _init_(self, default = None, index = ''):
-        super()._init_(Column('DATETIME', self, default = default), default, index)
+        super()._init_(
+            Column('DATETIME', self, default = default),
+            default,
+            index
+        )
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -204,7 +216,10 @@ class IdField(Field):
 class BooleanField(Field):
 
     def _init_(self, default = None, index = ''):
-        super()._init_(Column('INT', self, precision = 1, default = default), default, index)
+        super()._init_(
+            Column('INT', self, precision = 1, default = default),
+            default, index
+        )
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else bool(value)
@@ -239,7 +254,12 @@ class RecordField(Field):
         """
         self._referTable = referTable # path to the model
         self._name = '__' + self.name # name of the attribute which keeps the referred record or its id
-        super()._init_(Column('INT', self, name = self.name + '_id', precision = 9, unsigned = True), None, index) # 9 digits - int32 - ought to be enough for anyone ;)
+        super()._init_(
+            # 9 digits - int32 - ought to be enough for anyone ;)
+            Column('INT', self, name = self.name + '_id', precision = 9, unsigned = True),
+            None,
+            index
+        )
 
     def __get__(self, record, model):
         if record is None: # called as a class attribute
@@ -255,11 +275,14 @@ class RecordField(Field):
             setattr(record, self._name, referRecord)
             return referRecord
         else:
-            raise TypeError('This should not have happened: private attribute is not a record of required model, id or None')
+            raise TypeError('This should not have happened: private attribute is not a record of '
+                            'required model, id or None')
 
     def __set__(self, record, value):
         """You can assign to the field an integer id or the record itself."""
-        assert isinstance(value, (int, self.referTable)) or value is None, 'You can assign only records of model `%s`, an integer id of the record or None' % self.referTable
+        assert isinstance(value, (int, self.referTable)) or value is None, \
+            'You can assign only records of model `%s`, an integer id of the record or None' \
+            % self.referTable
         setattr(record, self._name, value) # _name will contain the referred record
 
     @orm.LazyProperty
@@ -321,8 +344,12 @@ class RecordField(Field):
 
 
 def COUNT(expression = None, distinct = False):
-    assert expression is None or isinstance(expression, Expression) or orm.isModel(expression), 'Argument must be a Field, an Expression or a Table.'
-    return Expression('_COUNT', expression, distinct = distinct)
+    if expression is None or isinstance(expression, Expression):
+        return Expression('_COUNT', None, distinct = distinct)
+    elif orm.isModel(expression):
+        return Expression('_COUNT', None, table = expression)
+    else:
+        raise orm.QueryError('Argument must be a Field, an Expression or a Table.')
 
 def MAX(expression):
     assert isinstance(expression, Expression), 'Argument must be a Field or an Expression.'

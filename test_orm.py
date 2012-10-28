@@ -13,8 +13,8 @@ class Authors(orm.Model):
     """Authors catalog"""
     _tableId = 1
     # id field is already present 
-    first_name = orm.CharField(maxLength = 100)
-    last_name = orm.CharField(maxLength = 100)
+    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
+    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
 
 
 class Books(orm.Model):
@@ -41,14 +41,20 @@ class Streets(CatalogModel):
     street_name = orm.CharField(maxLength = 50)
 
 
-#fd, filePath = tempfile.mkstemp(suffix='.sqlite')
-#os.close(fd)
-#db = orm.connect('sqlite://' + filePath)
-#db = orm.connect('sqlite://:memory:')
-#db = orm.connect('mysql://root@localhost/test')
-db = orm.connect('postgresql://postgres@localhost/test')
-#db.execute('DROP TABLE IF EXISTS authors')
-#db.execute('DROP TABLE IF EXISTS books')
+##################################################################
+test = ('sqlite', 'mysql', 'postgresql')[0]
+if test == 'sqlite':
+    fd, filePath = tempfile.mkstemp(suffix='.sqlite')
+    os.close(fd)
+#    db = orm.connect('sqlite://' + filePath)
+    db = orm.connect('sqlite://:memory:')
+elif test == 'mysql':
+    db = orm.connect('mysql://root@localhost/test')
+elif test == 'postgresql':
+    db = orm.connect('postgresql://postgres@localhost/test')
+    
+db.execute('DROP TABLE IF EXISTS authors')
+db.execute('DROP TABLE IF EXISTS books')
 
 query = db.getCreateTableQuery(Authors)
 print('\nGetting the CREATE TABLE query for table Authors:\n', query)
@@ -61,6 +67,7 @@ print('\nGetting the CREATE TABLE query for table Books:\n', query)
 for _query in query.split('\n\n'):
     db.execute(_query)
 
+db.commit()
 
 #print(Authors.id.table, Books.id.table) # though id is inherited from base model - you can see that now each table has its own id field
 
@@ -112,7 +119,7 @@ print(Books.getOne(db, where = (Books.id == book.id)))
 
 
 print('\nAuthors count')
-pprint.pprint(list(db.select(Authors.first_name, Authors.COUNT()).dictresult()))
+pprint.pprint(list(db.select(Authors.COUNT()).dictresult()))
 pprint.pprint(list(db.select(Authors.first_name, Authors.last_name).dictresult()))
 
 print('\nSelecting one book with id=1:\n ', db.select('*', from_ = [Books, orm.Join(Authors, Books.author == Authors.id)], where = (Books.id == 1)))
