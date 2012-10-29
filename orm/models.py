@@ -272,7 +272,9 @@ class Model(metaclass = ModelMeta):
         else: # existing record
             rowsCount = db.update(*values, where = (model.id == self.id))
             if not rowsCount:
-                raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, id=%s' % (model, self.id))
+                raise orm.exceptions.SaveError(
+                    'Looks like the record was deleted: table=`%s`, id=%s' % (model, self.id)
+                )
         db.commit()
 
         signals.post_save.send(sender = model, record = self, isNew = isNew)

@@ -111,7 +111,7 @@ class Field(Expression):
         self._id = Field._fieldsCount # creation order
 
     def _init_(self, column, default, index = ''):
-        """This is called by the metaclass to initialize the Field after a Table subclass is created."""
+        """This is called by the metaclass to initialize the Field after a Model was defined."""
         #del self._initArgs, self._initKwargs
         self.column = column
         self.default = default
@@ -167,7 +167,12 @@ class IntegerField(Field):
 class DecimalField(Field):
 
     def _init_(self, maxDigits, fractionDigits, default = None, index = ''):
-        super()._init_(Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits, default = default), default, index)
+        super()._init_(
+            Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits,
+                   default = default),
+            default,
+            index
+        )
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else Decimal(value)
@@ -182,7 +187,8 @@ class DateField(Field):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d').date()
         elif not isinstance(value, Date) and value is not None:
-            raise ValueError('Provide a datetime.date or a string in format "%Y-%m-%d" with valid date.')
+            raise ValueError('Provide a datetime.date or a string in format "%Y-%m-%d" with valid '
+                             'date.')
         record.__dict__[self.name] = value
 
 
@@ -199,7 +205,8 @@ class DateTimeField(Field):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         elif not isinstance(value, DateTime) and value is not None:
-            raise ValueError('Provide a datetime.datetime or a string in format "%Y-%m-%d %H:%M:%S.%f" with valid date-time.')
+            raise ValueError('Provide a datetime.datetime or a string in format '
+                             '"%Y-%m-%d %H:%M:%S.%f" with valid date-time.')
         record.__dict__[self.name] = value
 
 
@@ -207,7 +214,13 @@ class IdField(Field):
     """Primary integer autoincrement key. ID - implicitly present in each table.
     """
     def _init_(self):
-        super()._init_(Column('INT', self, precision = 9, unsigned = True, nullable = False, autoincrement = True), None, 'primary') # 9 digits - int32 - should be enough
+        super()._init_(
+            # 9 digits - int32 - should be enough
+            Column('INT', self, precision = 9, unsigned = True, nullable = False,
+                   autoincrement = True),
+            None,
+            'primary'
+        )
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else int(value)
@@ -370,5 +383,6 @@ def LOWER(expression):
 def CONCAT(*expressions):
     "Concatenate two or more expressions/strings."
     for expression in expressions:
-        assert isinstance(expression, (str, Expression)), 'Argument must be a Field or an Expression or a str.'
+        assert isinstance(expression, (str, Expression)), \
+            'Argument must be a Field or an Expression or a str.'
     return Expression('_CONCAT', expressions)

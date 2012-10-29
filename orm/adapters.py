@@ -37,8 +37,8 @@ except ImportError:
 class Column():
     """A generic database table column.
     """
-    def __init__(self, type, field, name = '', default = None, precision = None, scale = None, unsigned = None,
-                 nullable = True, autoincrement = False, comment = ''):
+    def __init__(self, type, field, name = '', default = None, precision = None, scale = None,
+                 unsigned = None, nullable = True, autoincrement = False, comment = ''):
         self.name = name or field.name # column name
         self.type = type # string with the name of data type (decimal, varchar, bigint...)
         self.field = field # model field related to this column
@@ -53,7 +53,8 @@ class Column():
 
     def __str__(self, db = None):
         db = db or GenericAdapter
-        assert isinstance(db, GenericAdapter) or (isinstance(db, type) and issubclass(db, GenericAdapter)), 'Must be GenericAdapter class or instance'
+        assert isinstance(db, GenericAdapter) or (isinstance(db, type) and issubclass(db, GenericAdapter)), \
+            'Must be GenericAdapter class or instance'
         colFunc = getattr(db, '_' + self.type.upper())
         columnType = colFunc(self)
         return '%s %s' % (self.name, columnType)
@@ -71,7 +72,8 @@ class IndexField():
     def __init__(self, field, sortOrder = 'asc', prefixLength = None):
         assert isinstance(field, orm.fields.Field), 'Pass Field instances.'
         assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
-        assert isinstance(prefixLength, int) or prefixLength is None, 'Index prefix length must None or int.'
+        assert isinstance(prefixLength, int) or prefixLength is None, \
+            'Index prefix length must None or int.'
         self.field = field
         self.sortOrder = sortOrder
         self.prefixLength = prefixLength
@@ -247,7 +249,7 @@ class GenericAdapter():
     def _COUNT(cls, expression):
         if expression is None:
             return 'COUNT(*)'
-        assert isinstance(expression, orm.Expression) 
+        assert isinstance(expression, orm.Expression)
         distinct = getattr(expression, 'distinct', False)
         expression = cls.render(expression)
         if distinct:
@@ -288,11 +290,13 @@ class GenericAdapter():
         elif isinstance(limit, (tuple, list)) and len(limit) == 2:
             return ' LIMIT %i OFFSET %i' % (limit[1], limit[0])
         else:
-            raise orm.QueryError('limit must be an integer or tuple/list of two elements. Got `%s`' % limit)
+            raise orm.QueryError('limit must be an integer or tuple/list of two elements. Got `%s`'
+                                 % limit)
 
     @classmethod
     def render(cls, value, castField = None):
-        """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for operations with castField in the DB.
+        """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for
+        operations with castField in the DB.
         """
         if isinstance(value, orm.Expression): # it's an Expression or Field
             if isinstance(value, orm.DateTimeField):
@@ -314,9 +318,11 @@ class GenericAdapter():
     @classmethod
     def _render(cls, value, column = None):
         """Render a simple value to the format needed for the given column.
-        For example, _render a datetime to the format acceptable for datetime columns in this kind of DB.
+        For example, _render a datetime to the format acceptable for datetime columns in this kind
+        of DB.
         If there is no column - present the value as string.
-        Values are always passed to queries as quoted strings. I.e. even integers like 123 are put like '123'.
+        Values are always passed to queries as quoted strings. I.e. even integers like 123 are put
+        like '123'.
         """
         if value is None:
             return cls._NULL()
@@ -466,12 +472,14 @@ class GenericAdapter():
     @classmethod
     def _encodeDATETIME(cls, value, column):
         """Not all DBs have microsecond precision in DATETIME columns.
-        So, generic implementation stores datetimes as integer number of microseconds since the Epoch.
+        So, generic implementation stores datetimes as integer number of microseconds since the
+        Epoch.
         """
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         if isinstance(value, DateTime):
-            return int(time.mktime(value.timetuple()) * 1000000) + value.microsecond # in microseconds since the UNIX epoch  
+            # in microseconds since the UNIX epoch
+            return int(time.mktime(value.timetuple()) * 1000000) + value.microsecond
         raise SyntaxError('Expected datetime.datetime.')
 
     @classmethod
@@ -521,7 +529,8 @@ class GenericAdapter():
         fields = []
         table = None
         for item in _fields:
-            assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
+            assert isinstance(item, (list, tuple)) and len(item) == 2, \
+                'Pass tuples with 2 items: (field, value).'
             field, value = item
             assert isinstance(field, orm.Field), 'First item must be a Field.'
             _table = field.table
@@ -548,14 +557,16 @@ class GenericAdapter():
           """
         table = None
         for item in fields:
-            assert isinstance(item, (list, tuple)) and len(item) == 2, 'Pass tuples with 2 items: (field, value).'
+            assert isinstance(item, (list, tuple)) and len(item) == 2, \
+                'Pass tuples with 2 items: (field, value).'
             field, value = item
             assert isinstance(field, orm.Field), 'First item in the tuple must be a Field.'
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
         sql_w = ' WHERE ' + self.render(where) if where else ''
-        sql_v = ', '.join(['%s= %s' % (field.column.name, self.render(value, field)) for (field, value) in fields])
+        sql_v = ', '.join(['%s= %s' % (field.column.name, self.render(value, field))
+                           for (field, value) in fields])
         return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
 
     def update(self, *fields, where = None, limit = None):
@@ -607,14 +618,16 @@ class GenericAdapter():
                         from_.append(field.table)
 
         if not from_:
-            raise orm.QueryError('Specify at least one table in `from_` argument or at least on Field to select')
+            raise orm.QueryError('Specify at least one table in `from_` argument or at least on '
+                                 'Field to select')
 
         _fields = []
         for field in fields:
             if isinstance(field, orm.Expression):
                 field = self.render(field)
             elif not isinstance(field, str):
-                raise orm.QueryError('Field must a Field instance or a string. Got `%s`' % field.__class__.__name__)
+                raise orm.QueryError('Field must a Field instance or a string. Got `%s`'
+                                     % field.__class__.__name__)
             _fields.append(field)
         sql_fields = ', '.join(_fields)
 
@@ -630,7 +643,8 @@ class GenericAdapter():
             elif isinstance(arg, str):
                 texts.append(arg)
             else:
-                raise orm.QueryError('`from_` argument should contain only Models, Joins or strings, but got a `%s`' % arg.__class__.__name__)
+                raise orm.QueryError('`from_` argument should contain only Models, Joins or '
+                                     'strings, but got a `%s`' % arg.__class__.__name__)
 
         sql_from = ''
         if tables:
@@ -746,7 +760,8 @@ class Rows():
         self.fields = tuple(fields)
         self.rows = rows
         self._fieldsStr = tuple(str(field) for field in fields)
-        self._fieldsOrder = dict((fieldStr, i) for i, fieldStr in enumerate(self._fieldsStr)) # {field_str: field_order}
+        # {field_str: field_order}
+        self._fieldsOrder = dict((fieldStr, i) for i, fieldStr in enumerate(self._fieldsStr))
 
     def value(self, rowNo, field):
         """Get a value
@@ -800,7 +815,8 @@ class SqliteAdapter(GenericAdapter):
     def connect(self):
         dbPath = self.dbPath
         if dbPath != ':memory:' and not os.path.isfile(dbPath):
-            raise orm.ConnectionError('"%s" is not a file.\nFor a new database create an empty file.' % dbPath)
+            raise orm.ConnectionError('"%s" is not a file.\nFor a new database create an empty '
+                                      'file.' % dbPath)
         return self.driver.Connection(self.dbPath, **self.driverArgs)
 
     def _truncate(self, table, mode = ''):
@@ -848,8 +864,10 @@ class SqliteAdapter(GenericAdapter):
                 sortOrder = indexField.sortOrder
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
-            table = index.indexFields[0].field.table # al fields are checked to have the same table, so take the first one
-            indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, table, ', '.join(columns)))
+                # al fields are checked to have the same table, so take the first one
+            table = index.indexFields[0].field.table
+            indexes.append('CREATE %s "%s" ON "%s" (%s)'
+                           % (indexType, index.name, table, ', '.join(columns)))
 
         return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''
 
@@ -1013,10 +1031,12 @@ class MysqlAdapter(GenericAdapter):
 
     def getColumns(self, tableName):
         """Get columns of a table"""
-        self.execute("SELECT column_name, data_type, column_default, is_nullable, character_maximum_length, "
-                     "       numeric_precision, numeric_scale, column_type, extra, column_comment "
+        self.execute("SELECT column_name, data_type, column_default, is_nullable,"
+                     "       character_maximum_length, numeric_precision, numeric_scale,"
+                     "       column_type, extra, column_comment "
                      "FROM information_schema.columns "
-                     "WHERE table_schema = '%s' AND table_name = '%s'" % (self.driverArgs['db'], tableName))
+                     "WHERE table_schema = '%s' AND table_name = '%s'"
+                     % (self.driverArgs['db'], tableName))
         columns = {}
         for row in self.cursor.fetchall():
             typeName = row[1].lower()
@@ -1151,8 +1171,10 @@ class PostgreSqlAdapter(GenericAdapter):
                 sortOrder = indexField.sortOrder
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
-            table = index.indexFields[0].field.table # al fields are checked to have the same table, so take the first one
-            indexes.append('CREATE %s "%s" ON "%s" (%s)' % (indexType, index.name, table, ', '.join(columns)))
+                # all fields are checked to have the same table, so take the first one
+            table = index.indexFields[0].field.table
+            indexes.append('CREATE %s "%s" ON "%s" (%s)'
+                           % (indexType, index.name, table, ', '.join(columns)))
 
         comments = []
         for field in table:
@@ -1174,7 +1196,9 @@ class PostgreSqlAdapter(GenericAdapter):
 
     def getTables(self):
         """Get list of tables (names) in this DB."""
-        self.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        self.execute("SELECT table_name "
+                     "FROM information_schema.tables "
+                     "WHERE table_schema = 'public'")
         return [row[0] for row in self.cursor.fetchall()]
 
     def getColumns(self, tableName):
@@ -1221,6 +1245,7 @@ class PostgreSqlAdapter(GenericAdapter):
         self.execute(query)
         self._autocommit()
         return self.cursor.fetchone()[0]
+
 
 def xorify(orderBy):
     if hasattr(orderBy, '__iter__'):
