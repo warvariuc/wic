@@ -12,6 +12,7 @@ import orm
 def setUpModule():
     pass
 
+
 def tearDownModule():
     pass
 
@@ -44,17 +45,21 @@ class TestModel(orm.Model):
 class TestModelsPostgresql(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.db = orm.connect('postgresql://postgres@localhost/test')
+#        CREATE USER test WITH PASSWORD 'test';
+#        CREATE DATABASE test;
+#        GRANT ALL PRIVILEGES ON DATABASE test TO test;
+        cls.db = orm.connect('postgresql://test:test@localhost/test')
 
     @classmethod
     def tearDownClass(cls):
-        cls.db = None  # disconnect?    
+        cls.db = None  # disconnect?
 
     def test_create_table_from_model(self):
 
         query = self.db.getCreateTableQuery(TestModel)
         for _query in query.split('\n\n'):
             self.db.execute(_query)
+
 
 class TestModels(unittest.TestCase):
 

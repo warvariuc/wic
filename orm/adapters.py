@@ -396,7 +396,6 @@ class GenericAdapter():
         """Get CREATE TABLE statement for the given model in this DB.
         """
         assert orm.isModel(model), 'Provide a Table subclass.'
-
         columns = cls._getCreateTableColumns(model)
         indexes = cls._getCreateTableIndexes(model)
         other = cls._getCreateTableOther(model)
@@ -404,6 +403,7 @@ class GenericAdapter():
         query += '\n  ' + ',\n  '.join(columns)
         query += ',\n  ' + ',\n  '.join(indexes)
         query += '\n) ' + other + ';'
+        # TODO return list of queries, instead of a single query
         return query
 
     @classmethod
@@ -707,7 +707,6 @@ class GenericAdapter():
         sql = 'SELECT %s %s FROM %s%s%s;' % (sql_select, sql_fields, sql_from, sql_where, sql_other)
 
         return fields, sql
-
 
     def select(self, *fields, from_ = None, where = None, **attributes):
         """Create and return SELECT query.
