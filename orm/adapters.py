@@ -1,5 +1,7 @@
-"""This module contains database adapters, which incapsulate all operations specific to a certain database.
-All other ORM modules should be database agnostic."""
+"""
+This module contains database adapters, which incapsulate all operations specific to a certain database.
+All other ORM modules should be database agnostic.
+"""
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import os, sys, base64
@@ -10,28 +12,6 @@ import pprint
 
 import orm
 from orm import logger
-
-
-drivers = []
-
-try:
-    import sqlite3
-    drivers.append('sqlite3')
-except ImportError:
-    logger.info('no sqlite3.dbapi2 driver')
-
-try:
-    import pymysql
-    drivers.append('pymysql')
-except ImportError:
-    logger.info('no pymysql driver')
-
-
-try:
-    import psycopg2
-    drivers.append('psycopg2')
-except ImportError:
-    logger.info('no psycopg2 driver')
 
 
 class Column():
@@ -88,7 +68,8 @@ class Index():
         @param type: index, primary, unique, fulltext, spatial - specific fot the db
         @param method: btree, hash, gist, gin - specific fot the db
         """
-        assert isinstance(indexFields, (list, tuple)) and indexFields, 'Pass a list of indexed fields.'
+        assert isinstance(indexFields, (list, tuple)) and indexFields, \
+            'Pass a list of indexed fields.'
         table = None
         for indexField in indexFields:
             assert isinstance(indexField, IndexField), 'Pass IndexField instances.'
@@ -100,7 +81,8 @@ class Index():
         if type is True:
             type = 'index'
 
-        if name == '': # if name was not given compose it from the names of all fields involved in the index
+        if name == '':
+            # if name was not given compose it from the names of all fields involved in the index
             for indexField in indexFields:
                 name += indexField.field.name + '_'
             name += type # and add index type at the end
@@ -127,7 +109,10 @@ class GenericAdapter():
     """Generic DB adapter.
     """
     protocol = 'generic'
-    epoch = Date(1970, 1, 1) # from this date number of days will be counted when storing DATE values in the DB
+    driver = None
+
+    # from this date number of days will be counted when storing DATE values in the DB
+    epoch = Date(1970, 1, 1)
 
     def __init__(self, uri = '', connect = True, autocommit = True):
         """URI is already without protocol."""
@@ -389,7 +374,7 @@ class GenericAdapter():
 
     @classmethod
     def _getCreateTableOther(cls, table):
-        return ''
+        return []
 
     @classmethod
     def getCreateTableQuery(cls, model):
@@ -398,16 +383,16 @@ class GenericAdapter():
         assert orm.isModel(model), 'Provide a Table subclass.'
         columns = cls._getCreateTableColumns(model)
         indexes = cls._getCreateTableIndexes(model)
-        other = cls._getCreateTableOther(model)
         query = 'CREATE TABLE %s (' % str(model)
         query += '\n  ' + ',\n  '.join(columns)
-        query += ',\n  ' + ',\n  '.join(indexes)
-        query += '\n) ' + other + ';'
-        # TODO return list of queries, instead of a single query
-        return query
+        query += ',\n  ' + ',\n  '.join(indexes) + '\n) '
+        queries = [query]
+        queries.extend(cls._getCreateTableOther(model))
+        return queries
 
     @classmethod
-    def _INT(cls, column, intMap = [(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'), (8, 'BIGINT')]):
+    def _INT(cls, column, intMap = [(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'),
+                                    (8, 'BIGINT')]):
         """Render declaration of INT column type.
         `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s rating from store'
         """
@@ -540,7 +525,7 @@ class GenericAdapter():
                 fields.append(item)
         keys = ', '.join(field.column.name for field, value in fields)
         values = ', '.join(self.render(value, field) for field, value in fields)
-        return 'INSERT INTO %s (%s) VALUES (%s);' % (table, keys, values)
+        return 'INSERT INTO %s (%s) VALUES (%s)' % (table, keys, values)
 
     def insert(self, *fields):
         """Insert records in the db.
@@ -567,7 +552,7 @@ class GenericAdapter():
         sql_w = ' WHERE ' + self.render(where) if where else ''
         sql_v = ', '.join(['%s= %s' % (field.column.name, self.render(value, field))
                            for (field, value) in fields])
-        return 'UPDATE %s SET %s%s;' % (table, sql_v, sql_w)
+        return 'UPDATE %s SET %s%s' % (table, sql_v, sql_w)
 
     def update(self, *fields, where = None, limit = None):
         """Update records
@@ -583,7 +568,7 @@ class GenericAdapter():
         """DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]"""
         assert orm.isModel(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
-        return 'DELETE FROM %s%s;' % (table, sql_w)
+        return 'DELETE FROM %s%s' % (table, sql_w)
 
     def delete(self, table, where, limit = None):
         """Delete records from table with the given condition and limit.
@@ -639,7 +624,8 @@ class GenericAdapter():
             if isinstance(arg, orm.ModelMeta):
                 tables.append(str(arg))
             elif isinstance(arg, orm.Join):
-                joins.append('%s JOIN %s ON %s' % (arg.type.upper(), arg.model, self.render(arg.on)))
+                joins.append('%s JOIN %s ON %s' % (arg.type.upper(), arg.model,
+                                                   self.render(arg.on)))
             elif isinstance(arg, str):
                 texts.append(arg)
             else:
@@ -704,7 +690,7 @@ class GenericAdapter():
 #                sql_other += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
 
         sql_other += self._LIMIT(limit)
-        sql = 'SELECT %s %s FROM %s%s%s;' % (sql_select, sql_fields, sql_from, sql_where, sql_other)
+        sql = 'SELECT %s %s FROM %s%s%s' % (sql_select, sql_fields, sql_from, sql_where, sql_other)
 
         return fields, sql
 
@@ -801,22 +787,24 @@ class SqliteAdapter(GenericAdapter):
     """Adapter for Sqlite databases"""
 
     protocol = 'sqlite'
-    driver = globals().get('sqlite3')
 
     def __init__(self, dbPath, **kwargs):
         self.driverArgs = kwargs
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
         if dbPath != ':memory:' and not os.path.isabs(dbPath):
-            dbPath = os.path.abspath(os.path.join(os.getcwd(), dbPath)) # convert relative path to be absolute
+            # convert relative path to be absolute
+            dbPath = os.path.abspath(os.path.join(os.getcwd(), dbPath))
         self.dbPath = dbPath
         super().__init__(dbPath)
 
     def connect(self):
+        import sqlite3
+        self.driver = sqlite3
         dbPath = self.dbPath
         if dbPath != ':memory:' and not os.path.isfile(dbPath):
             raise orm.ConnectionError('"%s" is not a file.\nFor a new database create an empty '
                                       'file.' % dbPath)
-        return self.driver.Connection(self.dbPath, **self.driverArgs)
+        return sqlite3.Connection(self.dbPath, **self.driverArgs)
 
     def _truncate(self, table, mode = ''):
         tableName = str(table)
@@ -868,7 +856,7 @@ class SqliteAdapter(GenericAdapter):
             indexes.append('CREATE %s "%s" ON "%s" (%s)'
                            % (indexType, index.name, table, ', '.join(columns)))
 
-        return (';\n\n' + ';\n\n'.join(indexes)) if indexes else ''
+        return indexes
 
     @classmethod
     def _CHAR(cls, column):
@@ -983,7 +971,6 @@ class MysqlAdapter(GenericAdapter):
     """Adapter for MySql databases."""
 
     protocol = 'mysql'
-    driver = globals().get('pymysql')
 
     def __init__(self, uri, **kwargs):
         m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
@@ -1002,14 +989,16 @@ class MysqlAdapter(GenericAdapter):
         super().__init__(uri)
 
     def connect(self):
-        connection = self.driver.connect(**self.driverArgs)
+        import pymysql
+        self.driver = pymysql
+        connection = pymysql.connect(**self.driverArgs)
         connection.execute('SET FOREIGN_KEY_CHECKS=1;')
         connection.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
         return connection
 
     @classmethod
     def _getCreateTableOther(cls, table):
-        return "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__
+        return ["ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__]
 
     @classmethod
     def _RANDOM(cls):
@@ -1062,7 +1051,6 @@ class PostgreSqlAdapter(GenericAdapter):
     """Adapter for PostgreSql databases."""
 
     protocol = 'postgresql'
-    driver = globals().get('psycopg2')
 
     def __init__(self, uri, **kwargs):
         m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
@@ -1081,7 +1069,10 @@ class PostgreSqlAdapter(GenericAdapter):
 
 
     def connect(self):
-        connection = self.driver.connect(**self.driverArgs)
+
+        import psycopg2
+        self.driver = psycopg2
+        connection = psycopg2.connect(**self.driverArgs)
         connection.set_client_encoding('UTF8')
 #        connection.execute('SET FOREIGN_KEY_CHECKS=1;')
 #        connection.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
@@ -1153,7 +1144,7 @@ class PostgreSqlAdapter(GenericAdapter):
 
     @classmethod
     def _getCreateTableOther(cls, table):
-        indexes = []
+        queries = []
         for index in table._indexes:
             if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
@@ -1172,26 +1163,19 @@ class PostgreSqlAdapter(GenericAdapter):
                 columns.append(column)
                 # all fields are checked to have the same table, so take the first one
             table = index.indexFields[0].field.table
-            indexes.append('CREATE %s "%s" ON "%s" (%s)'
+            queries.append('CREATE %s "%s" ON "%s" (%s)'
                            % (indexType, index.name, table, ', '.join(columns)))
 
-        comments = []
         for field in table:
             column = field.column
             if column is not None and column.comment:
-                comments.append(
+                queries.append(
                     "COMMENT ON COLUMN %s.%s IS %s" % (
                         table._name, column.name, cls.escape(column.comment)
                     )
                 )
 
-        other = ''
-        if indexes:
-            other += ';\n\n' + ';\n\n'.join(indexes)
-
-        if comments:
-            other += ';\n\n' + ';\n'.join(comments)
-        return other
+        return queries
 
     def getTables(self):
         """Get list of tables (names) in this DB."""
@@ -1240,10 +1224,20 @@ class PostgreSqlAdapter(GenericAdapter):
     def insert(self, *fields):
         """Overriden to add `RETURNING id`
         """
-        query = self._insert(*fields)[:-1] + ' RETURNING id'
+        query = self._insert(*fields) + ' RETURNING id'
         self.execute(query)
         self._autocommit()
         return self.cursor.fetchone()[0]
+
+    def _dropTable(self, tableName):
+        """Return query for dropping a table
+        @param table_name: table name or a model describing the table
+        """
+        if orm.isModel(tableName):
+            tableName = tableName._name
+        elif not isinstance(tableName, str):
+            raise AssertionError('Expecting a str or a Model')
+        return 'DROP TABLE IF EXISTS %s' % tableName
 
 
 def xorify(orderBy):

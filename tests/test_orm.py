@@ -25,6 +25,23 @@ class TestModel(orm.Model):
     date_field = orm.fields.DateField()
     date_time_field = orm.fields.DateTimeField()
 
+
+
+class Authors(orm.Model):
+    """Authors catalog"""
+    # id field is already present 
+    name = orm.CharField(maxLength = 100, comment='Author\'s name')
+    created_at = orm.DateTimeField()
+
+
+class Books(orm.Model):
+    """Books catalog"""
+    # id field is already present 
+    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
+    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00', index = True) # 2 decimal places
+    author = orm.RecordField('Authors', index = True)
+    publication_date = orm.fields.DateField()
+                                            
 #
 #class TestModelsSqlite(unittest.TestCase):
 #    @classmethod
@@ -43,6 +60,7 @@ class TestModel(orm.Model):
 
 
 class TestModelsPostgresql(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
 #        CREATE USER test WITH PASSWORD 'test';
@@ -54,11 +72,13 @@ class TestModelsPostgresql(unittest.TestCase):
     def tearDownClass(cls):
         cls.db = None  # disconnect?
 
-    def test_create_table_from_model(self):
+    def testCreateTableFromModel(self):
 
-        query = self.db.getCreateTableQuery(TestModel)
-        for _query in query.split('\n\n'):
-            self.db.execute(_query)
+        db = self.db
+        for model in (Authors, Books):
+            db.execute(db._dropTable(model))
+            for query in db.getCreateTableQuery(model):
+                db.execute(query)
 
 
 class TestModels(unittest.TestCase):
