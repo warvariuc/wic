@@ -4,17 +4,61 @@ Unit tests for ORM
 
 import sys
 import os
-if os.path.isdir('gluon'):
-    sys.path.append(os.path.realpath('gluon'))
-else:
-    sys.path.append(os.path.realpath('../'))
-
 import unittest
 
 import orm
 
 
+def setUpModule():
+    pass
+
+def tearDownModule():
+    pass
+
+
+class TestModel(orm.Model):
+    char_field = orm.CharField(maxLength = 100)
+    text_field = orm.TextField()
+    decimal_field = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00')
+    author = orm.RecordField('TestModel', index = True)
+    date_field = orm.fields.DateField()
+    date_time_field = orm.fields.DateTimeField()
+
+#
+#class TestModelsSqlite(unittest.TestCase):
+#    @classmethod
+#    def setUpClass(cls):
+#        cls.db = orm.connect('sqlite://:memory:')
+#
+#    @classmethod
+#    def tearDownClass(cls):
+#        cls.db = None  # disconnect?    
+#
+#    def test_create_table_from_model(self):
+#
+#        query = self.db.getCreateTableQuery(TestModel)
+#        for _query in query.split('\n\n'):
+#            self.db.execute(_query)
+
+
+class TestModelsPostgresql(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db = orm.connect('postgresql://postgres@localhost/test')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db = None  # disconnect?    
+
+    def test_create_table_from_model(self):
+
+        query = self.db.getCreateTableQuery(TestModel)
+        for _query in query.split('\n\n'):
+            self.db.execute(_query)
+
 class TestModels(unittest.TestCase):
+
+
 
     def testFieldName(self):
 
@@ -28,9 +72,9 @@ class TestModels(unittest.TestCase):
 
         class TestModel2(orm.Model):
             field_1 = orm.IntegerField()
-            
+
         self.assertEqual(TestModel2.field_1.name, 'field_1')
-            
+
 #        self.assertRaises(SyntaxError, Field, '_abc', 'string')
 #
 #        # Check that Fields cannot contain punctuation other than underscores
