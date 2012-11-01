@@ -13,9 +13,9 @@ import pprint
 import orm
 from orm import logger
 
-
+# TODO: merge Column into Field, as they have references to each other and are closely related
 class Column():
-    """A generic database table column.
+    """Information about database table column.
     """
     def __init__(self, type, field, name = '', default = None, precision = None, scale = None,
                  unsigned = None, nullable = True, autoincrement = False, comment = ''):

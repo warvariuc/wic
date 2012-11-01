@@ -60,10 +60,9 @@ class ModelMeta(type):
                 raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
                                      'must not start with `_`.' % (fieldName, name))
 
-            # recreate the field - to handle correctly inheritance of Tables
-            newField = field.__class__(name = fieldName, table = NewModel, label = field.label)
+            # recreate the field - to handle correctly inheritance of Models
             try:
-                newField._init_(*field._initArgs, **field._initKwargs) # and initialize it
+                newField = field.__class__(fieldName = fieldName, model = NewModel)
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
@@ -81,7 +80,7 @@ class ModelMeta(type):
                                    for indexField in index.indexFields] # replace fields by name with fields from new model
                     index = orm.Index(indexFields, index.type, index.name, index.method, **index.other)
                 for indexField in index.indexFields:
-                    if issubclass(NewModel, indexField.field.table):
+                    if issubclass(NewModel, indexField.field.model):
                         indexField.field = NewModel[indexField.field.name] # to assure that field from this model, and from parent, is used
                     else:
                         raise orm.ModelError('Field `%s` in index is not from model `%s`.' % (indexField.field, NewModel))
@@ -320,7 +319,8 @@ class Model(metaclass = ModelMeta):
         Add checkTable call in very model method that uses a db.
         """
         assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
-        if db.uri in cls._checkedDbs: # this db was already checked 
+        if db.uri in cls._checkedDbs:
+            # this db was already checked 
             return
         logger.debug('Model.checkTable: checking db table %s' % cls)
         tableName = cls._name

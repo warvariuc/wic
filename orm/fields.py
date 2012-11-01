@@ -99,23 +99,33 @@ class Field(Expression):
     """Abstract ORM table field.
     """
 
-    _fieldsCount = 0 # will be used to track the original definition order of the fields 
+    _fieldsCount = 0 # will be used to track the definition order of the fields in models 
 
     def __init__(self, *args, **kwargs):
-        self.name = kwargs.pop('name', None) # attribute name of the field
-        self.table = kwargs.pop('table', None) # part of which table is this field
-        self.label = kwargs.pop('label', None) # label (textual name) of this field
-        self._initArgs = args # field will be initalized using these params later, when the class is created
-        self._initKwargs = kwargs # for later _init
+        """
+        Should not be overriden in subclasses. Overide `_init_` method.
+        """
         Field._fieldsCount += 1
         self._id = Field._fieldsCount # creation order
 
-    def _init_(self, column, default, index = ''):
-        """This is called by the metaclass to initialize the Field after a Model was defined."""
-        #del self._initArgs, self._initKwargs
+        self.name = kwargs.pop('fieldName', None) # attribute name of the field
+        self.model = kwargs.pop('model', None) # part of which table is this field
+
+        if self.model:
+            # it called by the metaclass
+            self._init_(*self._initArgs, **self._initKwargs) # and initialize it
+            #del self._initArgs, self._initKwargs
+        else:
+            self._initArgs = args # field will be initalized using these params later, when the class is created
+            self._initKwargs = kwargs # for later _init
+
+    def _init_(self, column, index = '', label = ''):
+        """Base initialization method. Called by subclasses.
+        @param column: Column instance
+        @param index: 
+        """
         self.column = column
-        self.default = default
-        self.label = self.label or self.name.replace('_', ' ').capitalize()
+        self.label = label or self.name.replace('_', ' ').capitalize()
 
         if index: # index type name is given
             self.table._indexes.append(orm.Index([orm.IndexField(self)], index))
@@ -125,7 +135,7 @@ class Field(Expression):
         return '%s.%s' % (self.table, self.column.name)
 
     def __call__(self, value):
-        """You can use Field()(value) to return a tuple for INSERT.
+        """You can use Field(...)(value) to return a tuple for INSERT.
         """
         return (self, value)
 
@@ -134,11 +144,19 @@ class Field(Expression):
 class CharField(Field):
     """Field for storing strings of certain length.
     """
-    def _init_(self, maxLength, default = None, index = '', comment = ''):
+    def _init_(self, maxLength, default = None, index = '', name = '', label = '', comment = ''):
+        """Initialize a CHAR field.
+        @param maxLength: maximum length in bytes of the string to be stored in the DB
+        @param default: default value to store in the DB
+        @param index: index type to be applied on the corresponding column in the DB
+        @param name: name of the column in the DB table
+        @param label: short description of the fields (e.g.for for forms)
+        @param comment: comment for the field
+        """
         super()._init_(
             Column('CHAR', self, precision = maxLength, default = default, comment = comment),
-            default,
             index,
+            label
         )
 
 
