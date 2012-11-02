@@ -8,16 +8,15 @@ import orm
 from orm import signals, logger, exceptions
 
 
-
 class Join():
     """Object holding parameters for a join.
     """
     def __init__(self, model, on, type = ''):
-        assert isinstance(model, orm.ModelMeta), 'Pass a model class.'
+        assert orm.isModel(model), 'Pass a model class.'
         assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
-        self.model = model # table to join
-        self.on = on # expression defining join condition
-        self.type = type # join type. if empty - INNER JOIN
+        self.model = model  # table to join
+        self.on = on  # expression defining join condition
+        self.type = type  # join type. if empty - INNER JOIN
 
 
 class LeftJoin(Join):
@@ -27,8 +26,7 @@ class LeftJoin(Join):
         super().__init__(table, on, 'left')
 
 
-
-class ModelMeta(type):
+class ModelBase(type):
     """Metaclass for all tables (models).
     It gives names to all fields and makes instances for fields for each of the models. 
     It has some class methods for models.
@@ -62,19 +60,29 @@ class ModelMeta(type):
 
             # recreate the field - to handle correctly inheritance of Models
             try:
-                newField = field.__class__(fieldName = fieldName, model = NewModel)
+                newField = field.__class__(uninitField = field, fieldName = fieldName, model = NewModel)
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
             # each class has its own field object. Inherited and parent tables do not share field attributes
             setattr(NewModel, fieldName, newField)
 
+        # analyze indexes
+        assert isinstance(NewModel._indexes, (list, tuple))
+        for index in NewModel._indexes:
+            assert isinstance(index, orm.Index)
+        if isinstance(index, bool):
+            index = 'index' if index else ''
+        if isinstance(index, str):  # index type name is given
+            index = orm.Index([orm.IndexField(self)], index)
+        assert isinstance(index, orm.Index)    
+        self.model._indexes.append(index)
         indexesDict = OrderedDict() # to filter duplicate indexes by index name
         for index in NewModel._indexes:
-            if index.table is not NewModel: # inherited index
+            if index.model is not NewModel: # inherited index
                 if not isinstance(index, orm.Index):
                     raise orm.ModelError('Found a non Index in the _indexes.')
-                if index.table is not NewModel:
+                if index.model is not NewModel:
                     # index was inherited from parent model - recreate it with fields from new model
                     indexFields = [orm.IndexField(NewModel[indexField.field.name], indexField.sortOrder, indexField.prefixLength)
                                    for indexField in index.indexFields] # replace fields by name with fields from new model
@@ -118,22 +126,16 @@ class ModelMeta(type):
     def __str__(self):
         return self._name
 
-    def delete(self, db, where):
-        """Delete records in this table which fall under the given condition.
-        """
-        self.checkTable(db)
-        db.delete(self, where = where)
-        db.commit()
 
 
-
-class Model(metaclass = ModelMeta):
+class Model(metaclass = ModelBase):
     """Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields.
     """
+    objects = orm.QueryManager()
+
     _indexes = [] # list of db table indexes (Index instances); each model will have its own copy - i.e. it's not inherited by subclasses (metaclass assures this)
     _ordering = [] # default order for select when not specified - overriden
-    _checkedDbs = set() # ids of database adapters this model was successfully checked against
 
     _name = None # db table name
 

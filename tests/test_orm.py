@@ -27,14 +27,14 @@ class TestModel(orm.Model):
 
 
 
-class Authors(orm.Model):
+class Author(orm.Model):
     """Authors catalog"""
     # id field is already present 
     name = orm.CharField(maxLength = 100, comment='Author\'s name')
     created_at = orm.DateTimeField()
 
 
-class Books(orm.Model):
+class Book(orm.Model):
     """Books catalog"""
     # id field is already present 
     name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
@@ -75,7 +75,7 @@ class TestModelsPostgresql(unittest.TestCase):
     def testCreateTableFromModel(self):
 
         db = self.db
-        for model in (Authors, Books):
+        for model in (Author, Book):
             db.execute(db._dropTable(model))
             for query in db.getCreateTableQuery(model):
                 db.execute(query)

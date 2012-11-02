@@ -2,6 +2,7 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
+
 import orm
 from orm import Nil, Column, logger
 
@@ -106,33 +107,38 @@ class Field(Expression):
         Should not be overriden in subclasses. Overide `_init_` method.
         """
         Field._fieldsCount += 1
-        self._id = Field._fieldsCount # creation order
+        self._id = Field._fieldsCount  # creation order
 
-        self.name = kwargs.pop('fieldName', None) # attribute name of the field
-        self.model = kwargs.pop('model', None) # part of which table is this field
+        uninitField = kwargs.get('uninitField')
+#        if isinstance(self, IdField):
+#            import ipdb; from pprint import pprint; ipdb.set_trace()
 
-        if self.model:
+        if uninitField:
+            self.name = kwargs['fieldName']  # attribute name of the field in the model
+            self.model = kwargs['model']  # part of which table is this field
             # it called by the metaclass
-            self._init_(*self._initArgs, **self._initKwargs) # and initialize it
+            self._init_(*uninitField._initArgs, **uninitField._initKwargs) # and initialize it
             #del self._initArgs, self._initKwargs
         else:
-            self._initArgs = args # field will be initalized using these params later, when the class is created
+            # field will be initalized using these params later, when the class is created
+            self._initArgs = args
             self._initKwargs = kwargs # for later _init
 
     def _init_(self, column, index = '', label = ''):
-        """Base initialization method. Called by subclasses.
+        """Base initialization method. Called from subclasses.
         @param column: Column instance
         @param index: 
         """
+        assert isinstance(column, Column)
+        assert isinstance(index, (str, bool, orm.Index))
+        assert isinstance(label, str)
         self.column = column
         self.label = label or self.name.replace('_', ' ').capitalize()
-
-        if index: # index type name is given
-            self.table._indexes.append(orm.Index([orm.IndexField(self)], index))
+        self.index = index
 
     def __str__(self, db = None):
         #db = db or orm.GenericAdapter # we do not use adapter here
-        return '%s.%s' % (self.table, self.column.name)
+        return '%s.%s' % (self.model, self.column.name)
 
     def __call__(self, value):
         """You can use Field(...)(value) to return a tuple for INSERT.
@@ -155,27 +161,26 @@ class CharField(Field):
         """
         super()._init_(
             Column('CHAR', self, precision = maxLength, default = default, comment = comment),
-            index,
-            label
-        )
+            index, label)
 
 
 class TextField(Field):
     """Field for storing strings of any length."""
-    def _init_(self, default = None):
-        super()._init_(Column('TEXT', self, default = default), default, None)
+    def _init_(self, default = None, index = '', label = ''):
+        if index:
+            assert isinstance(index, orm.Index)
+        super()._init_(Column('TEXT', self, default = default), index, label)
 
 
 class IntegerField(Field):
 
-    def _init_(self, maxDigits = 9, default = None, autoincrement = False, index = ''):
+    def _init_(self, maxDigits = 9, default = None, autoincrement = False, index = '', label = ''):
         self.maxDigits = maxDigits
         self.autoincrement = autoincrement
         super()._init_(
             Column('INT', self, precision = self.maxDigits, unsigned = True, default = default,
                    autoincrement = autoincrement),
-            default,
-            index
+            index, label
         )
 
     def __set__(self, record, value):
@@ -184,13 +189,11 @@ class IntegerField(Field):
 
 class DecimalField(Field):
 
-    def _init_(self, maxDigits, fractionDigits, default = None, index = ''):
+    def _init_(self, maxDigits, fractionDigits, default = None, index = '', label = ''):
         super()._init_(
             Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits,
                    default = default),
-            default,
-            index
-        )
+            index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else Decimal(value)
@@ -198,8 +201,8 @@ class DecimalField(Field):
 
 class DateField(Field):
 
-    def _init_(self, default = None, index = ''):
-        super()._init_(Column('DATE', self, default = default), default, index)
+    def _init_(self, default = None, index = '', label = ''):
+        super()._init_(Column('DATE', self, default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -212,12 +215,8 @@ class DateField(Field):
 
 class DateTimeField(Field):
 
-    def _init_(self, default = None, index = ''):
-        super()._init_(
-            Column('DATETIME', self, default = default),
-            default,
-            index
-        )
+    def _init_(self, default = None, index = '', label = ''):
+        super()._init_(Column('DATETIME', self, default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -231,14 +230,12 @@ class DateTimeField(Field):
 class IdField(Field):
     """Primary integer autoincrement key. ID - implicitly present in each table.
     """
-    def _init_(self):
+    def _init_(self, label = ''):
         super()._init_(
             # 9 digits - int32 - should be enough
             Column('INT', self, precision = 9, unsigned = True, nullable = False,
                    autoincrement = True),
-            None,
-            'primary'
-        )
+            'primary', label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else int(value)
@@ -246,11 +243,9 @@ class IdField(Field):
 
 class BooleanField(Field):
 
-    def _init_(self, default = None, index = ''):
+    def _init_(self, default = None, index = '', label = ''):
         super()._init_(
-            Column('INT', self, precision = 1, default = default),
-            default, index
-        )
+            Column('INT', self, precision = 1, default = default), index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else bool(value)
@@ -278,7 +273,7 @@ class _RecordId(int):
 class RecordField(Field):
     """Field for storing ids to referred records.
     """
-    def _init_(self, referTable, index = ''):
+    def _init_(self, referTable, index = '', label = ''):
         """
         @param referTable: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
@@ -288,9 +283,7 @@ class RecordField(Field):
         super()._init_(
             # 9 digits - int32 - ought to be enough for anyone ;)
             Column('INT', self, name = self.name + '_id', precision = 9, unsigned = True),
-            None,
-            index
-        )
+            index, label)
 
     def __get__(self, record, model):
         if record is None: # called as a class attribute
@@ -318,7 +311,7 @@ class RecordField(Field):
 
     @orm.LazyProperty
     def referTable(self):
-        if isinstance(self._referTable, orm.ModelMeta):
+        if orm.isModel(self._referTable):
             return self._referTable
         elif isinstance(self._referTable, str):
             return orm.getObjectByPath(self._referTable, self.table.__module__)

@@ -16,7 +16,7 @@ logger.addHandler(strm_out)
 logger.setLevel(logging.DEBUG) # logging level
 
 
-def getObjectByPath(objectPath, packagePath= None):
+def getObjectByPath(objectPath, packagePath = None):
     """Given the path in form 'some.module.object' return the object.
     @param objectPath: path to an object
     @param packagePath: if objectPath is relative or only object name in it is given, packagePath should be given.
@@ -27,28 +27,15 @@ def getObjectByPath(objectPath, packagePath= None):
         (objectName, modulePath, packagePath) = (objectPath, packagePath, None)
     module = importlib.import_module(modulePath, packagePath)
     return getattr(module, objectName)
-    
+
 def isModel(obj):
-    return isinstance(obj, ModelMeta)
+    return isinstance(obj, ModelBase)
 
 def listify(obj):
     """Assure that obj is a list."""
-    if hasattr(obj, '__iter__') and not isinstance(obj, (str, ModelMeta)):
+    if hasattr(obj, '__iter__') and not isinstance(obj, (str, ModelBase)):
         return list(obj)
     return [obj]
-
-
-def metamethod(method):
-    """Decorator for Model methods.
-    When calling the method on an instance - calls its implemetation in the class.
-    When calling the method on a class - calls the method in metaclass with the same name.
-    """
-    def wrapped(obj, *args, **kwargs):
-        _method = method
-        if isinstance(obj, type): # is a class
-            _method = getattr(obj.__class__, method.__name__) # use metaclass's method instead
-        return _method(obj, *args, **kwargs)
-    return wrapped        
 
 
 class LazyProperty():
@@ -71,14 +58,15 @@ class LazyProperty():
             return self # when the descriptor is accessed as a class attribute
 
 
-class Nil():
-    """Custom None"""
+# Custom None
+Nil = object()
 
 
 from .exceptions import *
 from .adapters import *
 from .fields import *
 from .models import *
+from .manager import QueryManager
 
 
 def connect(uri):
@@ -88,7 +76,7 @@ def connect(uri):
     for AdapterClass in adapters.__dict__.values():
         if isinstance(AdapterClass, type) \
                 and issubclass(AdapterClass, GenericAdapter) \
-                and AdapterClass is not GenericAdapter: 
+                and AdapterClass is not GenericAdapter:
             uriStart = AdapterClass.protocol + '://'
             if uri.startswith(uriStart):
                 dbAdapter = AdapterClass(uri[len(uriStart):])

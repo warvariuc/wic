@@ -70,16 +70,18 @@ class Index():
         """
         assert isinstance(indexFields, (list, tuple)) and indexFields, \
             'Pass a list of indexed fields.'
-        table = None
+        model = None
         for indexField in indexFields:
             assert isinstance(indexField, IndexField), 'Pass IndexField instances.'
-            table = table or indexField.field.table
-            assert indexField.field.table is table, 'Indexed fields should be from the same table!'
+            model = model or indexField.field.model
+            assert indexField.field.model is model, 'Indexed fields should be from the same table!'
 
-        self.table = table
+        self.model = model
 
         if type is True:
             type = 'index'
+            
+        assert isinstance(type, str) and type
 
         if name == '':
             # if name was not given compose it from the names of all fields involved in the index
@@ -349,11 +351,12 @@ class GenericAdapter():
         return columns
 
     @classmethod
-    def _getCreateTableIndexes(cls, table):
+    def _getCreateTableIndexes(cls, model):
         """Get indexes declarations for CREATE TABLE statement.
         """
+        assert orm.isModel(model)
         indexes = []
-        for index in table._indexes:
+        for index in model._indexes:
             if index.type == 'primary':
                 indexType = 'PRIMARY KEY'
             elif index.type == 'unique':
@@ -373,7 +376,7 @@ class GenericAdapter():
         return indexes
 
     @classmethod
-    def _getCreateTableOther(cls, table):
+    def _getCreateTableOther(cls, model):
         return []
 
     @classmethod
@@ -621,7 +624,7 @@ class GenericAdapter():
         texts = []
 
         for arg in orm.listify(from_):
-            if isinstance(arg, orm.ModelMeta):
+            if orm.isModel(arg):
                 tables.append(str(arg))
             elif isinstance(arg, orm.Join):
                 joins.append('%s JOIN %s ON %s' % (arg.type.upper(), arg.model,
@@ -812,9 +815,10 @@ class SqliteAdapter(GenericAdapter):
                 "DELETE FROM sqlite_sequence WHERE name='%s';" % tableName]
 
     @classmethod
-    def _getCreateTableIndexes(cls, table):
+    def _getCreateTableIndexes(cls, model):
+        assert orm.isModel(model)
         indexes = []
-        for index in table._indexes:
+        for index in model._indexes:
             if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'
@@ -833,9 +837,10 @@ class SqliteAdapter(GenericAdapter):
         return indexes
 
     @classmethod
-    def _getCreateTableOther(cls, table):
+    def _getCreateTableOther(cls, model):
+        assert orm.isModel(model)
         indexes = []
-        for index in table._indexes:
+        for index in model._indexes:
             if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             elif index.type == 'unique':
@@ -1122,9 +1127,10 @@ class PostgreSqlAdapter(GenericAdapter):
         return value
 
     @classmethod
-    def _getCreateTableIndexes(cls, table):
+    def _getCreateTableIndexes(cls, model):
+        assert orm.isModel(model)
         indexes = []
-        for index in table._indexes:
+        for index in model._indexes:
             if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'
@@ -1143,18 +1149,20 @@ class PostgreSqlAdapter(GenericAdapter):
         return indexes
 
     @classmethod
-    def _getCreateTableOther(cls, table):
+    def _getCreateTableOther(cls, model):
+        assert orm.isModel(model)
         queries = []
-        for index in table._indexes:
-            if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+        for index in model._indexes:
+            if index.type.lower() == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
-            elif index.type == 'unique':
+            elif index.type.lower() == 'unique':
                 indexType = 'UNIQUE'
             else:
                 indexType = 'INDEX'
             columns = []
             for indexField in index.indexFields:
                 column = indexField.field.column.name
+                import ipdb; from pprint import pprint; ipdb.set_trace()
 #                prefixLength = index.prefixLengths[i] 
 #                if prefixLength:
 #                    column += '(%i)' % prefixLength
@@ -1162,16 +1170,16 @@ class PostgreSqlAdapter(GenericAdapter):
                 column += ' %s' % sortOrder.upper()
                 columns.append(column)
                 # all fields are checked to have the same table, so take the first one
-            table = index.indexFields[0].field.table
+            model = index.indexFields[0].field.model
             queries.append('CREATE %s "%s" ON "%s" (%s)'
-                           % (indexType, index.name, table, ', '.join(columns)))
+                           % (indexType, index.name, model, ', '.join(columns)))
 
-        for field in table:
+        for field in model:
             column = field.column
             if column is not None and column.comment:
                 queries.append(
                     "COMMENT ON COLUMN %s.%s IS %s" % (
-                        table._name, column.name, cls.escape(column.comment)
+                        model._name, column.name, cls.escape(column.comment)
                     )
                 )
 
