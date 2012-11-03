@@ -13,22 +13,22 @@ import pprint
 import orm
 from orm import logger
 
-# TODO: merge Column into Field, as they have references to each other and are closely related
+
 class Column():
     """Information about database table column.
     """
     def __init__(self, type, field, name = '', default = None, precision = None, scale = None,
                  unsigned = None, nullable = True, autoincrement = False, comment = ''):
-        self.name = name or field.name # column name
-        self.type = type # string with the name of data type (decimal, varchar, bigint...)
-        self.field = field # model field related to this column
-        self.default = default # column default value
-        self.precision = precision # char max length or decimal/int max digits
-        self.scale = scale # for decimals
-        self.unsigned = unsigned # for decimals, integers
+        self.name = name or field.name  # column name
+        self.type = type  # string with the name of data type (decimal, varchar, bigint...)
+        self.field = field  # model field related to this column
+        self.default = default  # column default value
+        self.precision = precision  # char max length or decimal/int max digits
+        self.scale = scale  # for decimals
+        self.unsigned = unsigned  # for decimals, integers
         # assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
-        self.nullable = nullable # can contain NULL values?
-        self.autoincrement = autoincrement # for primary integer
+        self.nullable = nullable  # can contain NULL values?
+        self.autoincrement = autoincrement  # for primary integer
         self.comment = comment
 
     def __str__(self, db = None):
@@ -43,68 +43,6 @@ class Column():
         attrs = self.__dict__.copy()
         name = attrs.pop('name')
         return '%s(%s)' % (name, ', '.join('%s= %s' % attr for attr in attrs.items()))
-
-
-
-class IndexField():
-    """Helper class for defining a field for index
-    """
-    def __init__(self, field, sortOrder = 'asc', prefixLength = None):
-        assert isinstance(field, orm.fields.Field), 'Pass Field instances.'
-        assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
-        assert isinstance(prefixLength, int) or prefixLength is None, \
-            'Index prefix length must None or int.'
-        self.field = field
-        self.sortOrder = sortOrder
-        self.prefixLength = prefixLength
-
-
-class Index():
-    """A database table index.
-    """
-    def __init__(self, indexFields, type = 'index', name = '', method = '', **kwargs):
-        """
-        @param indexFields: list of IndexField instances
-        @param type: index, primary, unique, fulltext, spatial - specific fot the db
-        @param method: btree, hash, gist, gin - specific fot the db
-        """
-        assert isinstance(indexFields, (list, tuple)) and indexFields, \
-            'Pass a list of indexed fields.'
-        model = None
-        for indexField in indexFields:
-            assert isinstance(indexField, IndexField), 'Pass IndexField instances.'
-            model = model or indexField.field.model
-            assert indexField.field.model is model, 'Indexed fields should be from the same table!'
-
-        self.model = model
-
-        if type is True:
-            type = 'index'
-            
-        assert isinstance(type, str) and type
-
-        if name == '':
-            # if name was not given compose it from the names of all fields involved in the index
-            for indexField in indexFields:
-                name += indexField.field.name + '_'
-            name += type # and add index type at the end
-        self.name = name
-
-        self.indexFields = list(indexFields) # fields involved in this index
-        self.type = type # index type: unique, primary, etc.
-        self.method = method # if empty - will be used default for this type of DB
-        self.other = kwargs # other parameters for a specific DB adapter
-
-    def __str__(self):
-        return '{} `{}` ON ({}) {}'.format(self.type, self.name,
-            ', '.join(str(indexField.field) for indexField in self.indexFields), self.method)
-
-#    def _copy(self, model):
-#        """Create a copy of the index with copy of fields in the index with the given model."""
-#        assert isinstance(model, orm.ModelMeta), 'Pass a Model.'
-#        indexFields = [indexField for indexField in self.indexFields]
-#        return Index(indexFields, self.type, self.name, self.method, **self.other)
-
 
 
 class GenericAdapter():
@@ -135,7 +73,7 @@ class GenericAdapter():
     def connect(self):
         """Connect to the DB and return the connection. To be overridden in subclasses.
         """
-        return None # DB connection
+        return None  # DB connection
 
     def disconnect(self):
         return self.connection.close()
@@ -218,7 +156,7 @@ class GenericAdapter():
         return "(%s LIKE '%s')" % (cls.render(expression), pattern)
 
     @classmethod
-    def _CONCAT(cls, expressions): # ((expression1) || (expression2) || ...)
+    def _CONCAT(cls, expressions):  # ((expression1) || (expression2) || ...)
         "Concatenate two or more expressions."
         renderedExpressions = []
         for expression in expressions:
@@ -285,15 +223,15 @@ class GenericAdapter():
         """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for
         operations with castField in the DB.
         """
-        if isinstance(value, orm.Expression): # it's an Expression or Field
+        if isinstance(value, orm.Expression):  # it's an Expression or Field
             if isinstance(value, orm.DateTimeField):
                 pass
             return value.__str__(cls) # render sub-expression
-        else: # it's a value for a DB column
+        else:  # it's a value for a DB column
             if value is not None and castField is not None:
                 assert isinstance(castField, orm.Expression), 'Cast field must be an Expression.'
-                if castField.__class__ is orm.Expression: # Field - subclass of Expression
-                    castField = castField.type # expression right operand type
+                if castField.__class__ is orm.Expression:  # Field - subclass of Expression
+                    castField = castField.type  # expression right operand type
                 value = castField.cast(value)
                 try:
                     return cls._render(value, castField.column)
@@ -329,7 +267,7 @@ class GenericAdapter():
     def escape(cls, value):
         """Convert a value to string, escape single quotes and enclose it in single quotes.
         """
-        return "'%s'" % str(value).replace("'", "''") # escaping single quotes
+        return "'%s'" % str(value).replace("'", "''")  # escaping single quotes
 
     @classmethod
     def IntegrityError(cls):
@@ -401,7 +339,7 @@ class GenericAdapter():
         """
         maxInt = int('9' * column.precision)
         # TODO: check for column.unsigned
-        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
+        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8)  # add one bit for sign
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
                 break
@@ -441,7 +379,7 @@ class GenericAdapter():
 
     @classmethod
     def _DECIMAL(cls, column):
-        """The declaration syntax for a DECIMAL column is DECIMAL(M,D). 
+        """The declaration syntax for a DECIMAL column is DECIMAL(M,D).
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
         D is the number of digits to the right of the decimal point (the scale). 
@@ -819,7 +757,7 @@ class SqliteAdapter(GenericAdapter):
         assert orm.isModel(model)
         indexes = []
         for index in model._indexes:
-            if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+            if index.type != 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'
             columns = []
@@ -841,7 +779,7 @@ class SqliteAdapter(GenericAdapter):
         assert orm.isModel(model)
         indexes = []
         for index in model._indexes:
-            if index.type == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+            if index.type == 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             elif index.type == 'unique':
                 indexType = 'UNIQUE INDEX'
@@ -871,7 +809,7 @@ class SqliteAdapter(GenericAdapter):
     def _INT(cls, column):
         """INTEGER column type for Sqlite."""
         maxInt = int('9' * column.precision)
-        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
+        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8)  # add one bit for sign
         if bytesCount > 8:
             raise Exception('Too many digits specified.')
         return 'INTEGER'
@@ -915,7 +853,7 @@ class SqliteAdapter(GenericAdapter):
 
     def getColumns(self, tableName):
         """Get columns of a table"""
-        self.execute("PRAGMA table_info('%s')" % tableName) # name, type, notnull, dflt_value, pk
+        self.execute("PRAGMA table_info('%s')" % tableName)  # name, type, notnull, dflt_value, pk
         columns = {}
         for row in self.cursor.fetchall():
             logger.debug('Found table column: %s, %s' % (tableName, row))
@@ -923,7 +861,7 @@ class SqliteAdapter(GenericAdapter):
             # INTEGER PRIMARY KEY fields are auto-generated in sqlite
             # INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
             autoincrement = bool(typeName == 'integer' and row[5])
-            if 'int' in typeName or 'bool' in typeName: # booleans are sotred as ints in sqlite
+            if 'int' in typeName or 'bool' in typeName:  # booleans are sotred as ints in sqlite
                 typeName = 'int'
             elif typeName not in ('blob', 'text'):
                 raise TypeError('Unexpected data type: %s' % typeName)
@@ -955,7 +893,7 @@ class SqliteAdapter(GenericAdapter):
 #        if isinstance(value, DateTime):
 #            return value.strftime("'%Y-%m-%d %H:%M:%S.%f'")
 #        raise SyntaxError('Expected datetime.datetime.')
-#    
+#
 #    def _decodeDATETIME(self, value, **kwargs):
 #        return DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
 #
@@ -1010,7 +948,7 @@ class MysqlAdapter(GenericAdapter):
         return 'RAND()'
 
     @classmethod
-    def _CONCAT(cls, expressions): # CONCAT(str1,str2,...)
+    def _CONCAT(cls, expressions):  # CONCAT(str1,str2,...)
         "Concatenate two or more expressions."
         renderedExpressions = []
         for expression in expressions:
@@ -1088,7 +1026,7 @@ class PostgreSqlAdapter(GenericAdapter):
         """Render declaration of INT column type.
         """
         maxInt = int('9' * column.precision)
-        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8) # add one bit for sign
+        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8)  # add one bit for sign
         for _bytesCount, _columnType in intMap:
             if bytesCount <= _bytesCount:
                 break
@@ -1131,7 +1069,7 @@ class PostgreSqlAdapter(GenericAdapter):
         assert orm.isModel(model)
         indexes = []
         for index in model._indexes:
-            if index.type != 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+            if index.type != 'primary':  # only primary index in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'
             columns = []
@@ -1153,7 +1091,7 @@ class PostgreSqlAdapter(GenericAdapter):
         assert orm.isModel(model)
         queries = []
         for index in model._indexes:
-            if index.type.lower() == 'primary': # Sqlite has only primary indexes in the CREATE TABLE query
+            if index.type.lower() == 'primary':  # primary index is in the CREATE TABLE query
                 continue
             elif index.type.lower() == 'unique':
                 indexType = 'UNIQUE'
@@ -1162,7 +1100,6 @@ class PostgreSqlAdapter(GenericAdapter):
             columns = []
             for indexField in index.indexFields:
                 column = indexField.field.column.name
-                import ipdb; from pprint import pprint; ipdb.set_trace()
 #                prefixLength = index.prefixLengths[i] 
 #                if prefixLength:
 #                    column += '(%i)' % prefixLength

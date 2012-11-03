@@ -24,17 +24,41 @@ class TestModel(orm.Model):
     author = orm.RecordField('TestModel', index = True)
     date_field = orm.fields.DateField()
     date_time_field = orm.fields.DateTimeField()
-    
-    class Meta:
-        db_table = 'my_table'
+
+    _meta = orm.ModelOptions(
+        db_table = 'my_table',
+    )
 
 
 
 class Author(orm.Model):
     """Authors catalog"""
     # id field is already present 
-    name = orm.CharField(maxLength = 100, comment='Author\'s name')
+    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
+    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
     created_at = orm.DateTimeField()
+
+    _meta = orm.ModelOptions(
+        db_table = 'authors',
+        indexes = [
+            orm.Index(
+                [orm.IndexField(last_name), orm.IndexField(first_name)],
+                'unique'
+            )
+        ],
+        # or
+        indexes1 = (
+            orm.Index(last_name, first_name, 'unique'),
+        ),
+        # or
+        indexes2 = (
+            (last_name, first_name, 'unique'),
+        ),
+        # or
+        indexes2 = (
+            orm.Unique(last_name, first_name),
+        ),
+    )
 
 
 class Book(orm.Model):

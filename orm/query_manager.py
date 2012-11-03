@@ -4,7 +4,7 @@ from orm import signals, logger, exceptions
 
 class QueryManager():
     """
-    Class through which a Model makes queries to a DB.
+    Through this manager a Model interfaces with a database.
     """
     def __init__(self, model = None):
         if model is None:
@@ -20,7 +20,7 @@ class QueryManager():
         """
         assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
         if db.uri in self._checkedDbs:
-            # this db was already checked 
+            # this db was already checked
             return
         model = self.model
         logger.debug('Model.checkTable: checking db table %s' % model)
@@ -51,7 +51,7 @@ class QueryManager():
             where = (self.model.id == id)
 
         records = list(self.model.get(db, where, limit = 2, select_related = select_related))
-        if not records: # not found
+        if not records:  # not found
             raise orm.RecordNotFound(db.render(where))
         if len(records) == 1:
             return records[0]
@@ -101,12 +101,6 @@ class QueryManager():
         self.checkTable(db)
         db.delete(self, where = where)
         db.commit()
-
-    def COUNT(self, where = None):
-        """Get COUNT expression for this table.
-        @param where: WHERE expression
-        """
-        return orm.COUNT(where or self.model)  # COUNT expression
 
     def getCount(self, db, where = None):
         """Request number of records in this table.

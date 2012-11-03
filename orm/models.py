@@ -133,15 +133,16 @@ class Model(metaclass = ModelBase):
     Instance attributes - the values for the corresponding table fields.
     """
     objects = orm.QueryManager()
+    _meta = orm.ModelOptions()
 
-    _indexes = [] # list of db table indexes (Index instances); each model will have its own copy - i.e. it's not inherited by subclasses (metaclass assures this)
-    _ordering = [] # default order for select when not specified - overriden
+    _indexes = []  # list of db table indexes (Index instances); each model will have its own copy - i.e. it's not inherited by subclasses (metaclass assures this)
+    _ordering = []  # default order for select when not specified - overriden
 
-    _name = None # db table name
+    _name = None  # db table name
 
     # default fields
-    id = orm.IdField() # row id. This field is present in all tables
-    timestamp = orm.DateTimeField() # version of the record - datetime (with milliseconds) of the last update of this record
+    id = orm.IdField()  # row id. This field is present in all tables
+    timestamp = orm.DateTimeField()  # version of the record - datetime (with milliseconds) of the last update of this record
 
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
@@ -164,7 +165,7 @@ class Model(metaclass = ModelBase):
             assert table is _table, 'Pass fields from the same table'
             kwargs[field.name] = value
 
-        for field in self.__class__: # make values for fields
+        for field in self.__class__:  # make values for fields
             setattr(self, field.name, kwargs.pop(field.name, field.default))
 
         if kwargs:
@@ -185,7 +186,6 @@ class Model(metaclass = ModelBase):
             raise TypeError('Pass either a Field or its name.')
         return getattr(self, attrName)
 
-    @orm.metamethod
     def delete(self):
         """Delete this record.
         """
@@ -198,69 +198,12 @@ class Model(metaclass = ModelBase):
         self.id = None
         signals.post_delete.send(sender = model, record = self)
 
-    @classmethod
-    def getOne(cls, db, where = None, id = None, select_related = False):
-        """Get a single record which falls under the given condition.
-        @param db: db adapter to use to getting the record
-        @param where: expression to use for filter
-        @param id: id of the record, if you want to fetch one record by its id
-        """
-        cls.checkTable(db)
-
-        if id:
-            where = (cls.id == id)
-
-        records = list(cls.get(db, where, limit = 2, select_related = select_related))
-        if not records: # not found
-            raise orm.RecordNotFound(db.render(where))
-        if len(records) == 1:
-            return records[0]
-        raise orm.TooManyRecords
-
-    @classmethod
-    def get(cls, db, where, orderby = False, limit = False, select_related = False):
-        """Get records from this table which fall under the given condition.
-        @param db: adapter to use
-        @param where: condition to filter
-        @param order: list of field to sort by
-        @param limit: tuple (from, to)
-        @param select_related: whether to retrieve objects related by foreign keys in the same query
-        """
-        logger.debug("Model.get('%s', db= %s, where= %s, limit= %s)" % (cls, db, where, limit))
-        cls.checkTable(db)
-        orderby = orderby or cls._ordering # use default table ordering if no ordering passed
-        fields = list(cls)
-        from_ = [cls]
-        recordFields = []
-        if select_related:
-            for i, field in enumerate(cls):
-                if isinstance(field, orm.RecordField):
-                    recordFields.append((i, field))
-                    fields.extend(field.referTable)
-                    from_.append(orm.LeftJoin(field.referTable, field == field.referTable.id))
-        #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
-        rows = db.select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit)
-        for row in rows:
-            record = cls(db, *zip(cls, row))
-            if select_related:
-                fieldOffset = len(cls)
-                for i, recordField in recordFields:
-                    referTable = recordField.referTable
-                    if row[i] is None: 
-                        referRecord = None
-                    else:
-                        # if referRecord.id is None: # missing record !!! integrity error
-                        referRecord = referTable(db, *zip(referTable, row[fieldOffset:]))
-                    setattr(record, recordField.name, referRecord)
-                    fieldOffset += len(referTable)
-            yield record
-
     def save(self):
         db = self._db
         self.checkTable(db)
         model = self.__class__
         self.timestamp = DateTime.now()
-        values = [] # list of tuples (Field, value)
+        values = []  # list of tuples (Field, value)
         for field in model:
             value = self[field]
             values.append(field(value))
@@ -268,9 +211,9 @@ class Model(metaclass = ModelBase):
         signals.pre_save.send(sender = model, record = self)
 
         isNew = not self.id
-        if isNew: # new record
+        if isNew:  # new record
             self.id = db.insert(*values)
-        else: # existing record
+        else:  # existing record
             rowsCount = db.update(*values, where = (model.id == self.id))
             if not rowsCount:
                 raise orm.exceptions.SaveError(
@@ -296,46 +239,4 @@ class Model(metaclass = ModelBase):
         """Get COUNT expression for this table.
         @param where: WHERE expression
         """
-        return orm.COUNT(where or cls) # COUNT expression
-
-    @classmethod
-    def getCount(cls, db, where = None):
-        """Request number of records in this table.
-        """
-        cls.checkTable(db)
-        count = cls.COUNT(where)
-        count = db.select(count, from_ = cls).value(0, count)
-        logger.debug('Model.getCount(%s, db= %s, where= %s) = %s' % (cls, db, where, count))
-        return count
-
-    @classmethod
-    def _handleTableMissing(cls, db):
-        """Default implementation of situation when upon checking
-        there was not found the table corresponding to this model in the db.
-        """
-        raise exceptions.TableMissing(db, cls)
-
-    @classmethod
-    def checkTable(cls, db):
-        """Check if corresponding table for this model exists in the db and has all necessary columns.
-        Add checkTable call in very model method that uses a db.
-        """
-        assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
-        if db.uri in cls._checkedDbs:
-            # this db was already checked 
-            return
-        logger.debug('Model.checkTable: checking db table %s' % cls)
-        tableName = cls._name
-        if tableName not in db.getTables():
-            cls._handleTableMissing(db)
-#        import pprint
-        modelColumns = {field.column.name: field.column for field in cls}
-        dbColumns = db.getColumns(tableName)
-#        logger.debug(pprint.pformat(list(column.str() for column in dbColumns.values())))
-#        logger.debug(pprint.pformat(list(column.str() for column in modelColumns.values())))
-        for columnName, column in modelColumns.items():
-            dbColumn = dbColumns.pop(columnName, None)
-            if not dbColumn: # model column is not found in the db
-                print('Column in the db not found: %s' % column.str())
-        logger.debug('CREATE TABLE query:\n%s' % db.getCreateTableQuery(cls))
-        cls._checkedDbs.add(db.uri)
+        return orm.COUNT(where or cls)  # COUNT expression

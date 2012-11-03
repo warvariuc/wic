@@ -9,11 +9,12 @@ if sys.version < pythonRequiredVersion:
 
 import logging, inspect, importlib
 
+
 logger = logging.getLogger('orm')
 strm_out = logging.StreamHandler(sys.__stdout__)
 strm_out.setFormatter(logging.Formatter())
 logger.addHandler(strm_out)
-logger.setLevel(logging.DEBUG) # logging level
+logger.setLevel(logging.DEBUG)  # logging level
 
 
 def getObjectByPath(objectPath, packagePath = None):
@@ -22,14 +23,16 @@ def getObjectByPath(objectPath, packagePath = None):
     @param packagePath: if objectPath is relative or only object name in it is given, packagePath should be given.
     """
     modulePath, sep, objectName = objectPath.rpartition('.')
-    if not sep: # '.' not present - only object name is given in the path
+    if not sep:  # '.' not present - only object name is given in the path
         assert packagePath, "You've given the object name, but haven't specified the module in which i can find it. " + objectPath
         (objectName, modulePath, packagePath) = (objectPath, packagePath, None)
     module = importlib.import_module(modulePath, packagePath)
     return getattr(module, objectName)
 
+
 def isModel(obj):
     return isinstance(obj, ModelBase)
+
 
 def listify(obj):
     """Assure that obj is a list."""
@@ -51,11 +54,11 @@ class LazyProperty():
         """When the descriptor is accessed, it will calculate the value by calling the function and save the calculated value back to the object's dict.
         Saving back to the object's dict has the additional benefit of preventing the descriptor from being called the next time the property is accessed.
         """
-        if instance is not None: # when the descriptor is accessed as an instance attribute
+        if instance is not None:  # when the descriptor is accessed as an instance attribute
             result = instance.__dict__[self.__name__] = self._func(instance)
             return result
         else:
-            return self # when the descriptor is accessed as a class attribute
+            return self  # when the descriptor is accessed as a class attribute
 
 
 # Custom None
@@ -63,6 +66,7 @@ Nil = object()
 
 
 from .exceptions import *
+from .indexes import *
 from .adapters import *
 from .fields import *
 from .models import *
@@ -71,15 +75,16 @@ from .model_options import ModelOptions
 
 
 def connect(uri):
-    """Search for suitable adapter by protocol
+    """Search for suitable adapter by protocol in the given URI
+    @param uri: database URI. Its form depends on the adapter, but generally is
+        like 'protocol://username:password@host:port/db_name'
+    @return: adapter instance, which handles the specified protocol
     """
-    from . import adapters
-    for AdapterClass in adapters.__dict__.values():
+    for AdapterClass in globals().values():
         if isinstance(AdapterClass, type) \
-                and issubclass(AdapterClass, GenericAdapter) \
-                and AdapterClass is not GenericAdapter:
+                and issubclass(AdapterClass, GenericAdapter):
             uriStart = AdapterClass.protocol + '://'
             if uri.startswith(uriStart):
                 dbAdapter = AdapterClass(uri[len(uriStart):])
                 return dbAdapter
-    raise AdapterNotFound('Could not find a suitable adapter for the URI ""%s' % uri)
+    raise AdapterNotFound('Could not find a suitable adapter for the URI `%s`' % uri)
