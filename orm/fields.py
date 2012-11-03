@@ -156,7 +156,7 @@ class CharField(Field):
         @param default: default value to store in the DB
         @param index: index type to be applied on the corresponding column in the DB
         @param name: name of the column in the DB table
-        @param label: short description of the fields (e.g.for for forms)
+        @param label: short description of the field (e.g.for for forms)
         @param comment: comment for the field
         """
         super()._init_(

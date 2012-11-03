@@ -66,7 +66,8 @@ from .exceptions import *
 from .adapters import *
 from .fields import *
 from .models import *
-from .manager import QueryManager
+from .query_manager import QueryManager
+from .model_options import ModelOptions
 
 
 def connect(uri):

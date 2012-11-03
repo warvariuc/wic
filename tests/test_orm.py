@@ -24,6 +24,9 @@ class TestModel(orm.Model):
     author = orm.RecordField('TestModel', index = True)
     date_field = orm.fields.DateField()
     date_time_field = orm.fields.DateTimeField()
+    
+    class Meta:
+        db_table = 'my_table'
 
 
 
