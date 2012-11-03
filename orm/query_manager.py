@@ -6,13 +6,21 @@ class QueryManager():
     """
     Through this manager a Model interfaces with a database.
     """
-    def __init__(self, model = None):
-        if model is None:
-            return  # model is passed by the Model metaclass
+    def __init__(self, *args, **kwargs):
+        model = kwargs.pop('model', None)
+        if not model:  # model is passed by the Model metaclass
+            self._initArgs = args
+            self._initKwwargs = kwargs
+            return
+
+        # model was passed by Model metaclass
         assert orm.isModel(model)
         self.model = model
+        self._init_(*self._initArgs, **self._initKwargs)  # real initialization
+
+    def _init_(self):
         # URIs of database adapters the model was successfully checked against
-        _checkedDbs = set()
+        self._checkedDbs = set()
 
     def checkTable(self, db):
         """Check if corresponding table for this model exists in the db and has all necessary columns.
@@ -86,7 +94,7 @@ class QueryManager():
                 fieldOffset = len(model)
                 for i, recordField in recordFields:
                     referTable = recordField.referTable
-                    if row[i] is None: 
+                    if row[i] is None:
                         referRecord = None
                     else:
                         # if referRecord.id is None: # missing record !!! integrity error

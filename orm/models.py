@@ -36,6 +36,9 @@ class ModelBase(type):
 
         NewModel._name = NewModel.__dict__.get('_name', name.lower()) # db table name
 
+        assert isinstance(NewModel._meta, orm.ModelOptions), \
+            '`_meta` attribute should be a ModelOptions instance'
+
         if NewModel._name is None: # we need only Model subclasses; if db table name is None - __new__ is called for Model itself
             return NewModel # return without any processing
 
@@ -60,42 +63,12 @@ class ModelBase(type):
 
             # recreate the field - to handle correctly inheritance of Models
             try:
-                newField = field.__class__(uninitField = field, fieldName = fieldName, model = NewModel)
+                newField = field.__class__(field = field, fieldName = fieldName, model = NewModel)
             except Exception:
                 print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
                 raise
             # each class has its own field object. Inherited and parent tables do not share field attributes
             setattr(NewModel, fieldName, newField)
-
-        # analyze indexes
-        assert isinstance(NewModel._indexes, (list, tuple))
-        for index in NewModel._indexes:
-            assert isinstance(index, orm.Index)
-        if isinstance(index, bool):
-            index = 'index' if index else ''
-        if isinstance(index, str):  # index type name is given
-            index = orm.Index([orm.IndexField(self)], index)
-        assert isinstance(index, orm.Index)    
-        self.model._indexes.append(index)
-        indexesDict = OrderedDict() # to filter duplicate indexes by index name
-        for index in NewModel._indexes:
-            if index.model is not NewModel: # inherited index
-                if not isinstance(index, orm.Index):
-                    raise orm.ModelError('Found a non Index in the _indexes.')
-                if index.model is not NewModel:
-                    # index was inherited from parent model - recreate it with fields from new model
-                    indexFields = [orm.IndexField(NewModel[indexField.field.name], indexField.sortOrder, indexField.prefixLength)
-                                   for indexField in index.indexFields] # replace fields by name with fields from new model
-                    index = orm.Index(indexFields, index.type, index.name, index.method, **index.other)
-                for indexField in index.indexFields:
-                    if issubclass(NewModel, indexField.field.model):
-                        indexField.field = NewModel[indexField.field.name] # to assure that field from this model, and from parent, is used
-                    else:
-                        raise orm.ModelError('Field `%s` in index is not from model `%s`.' % (indexField.field, NewModel))
-            indexesDict[index.name] = index
-        NewModel._indexes = indexesDict.values()
-        NewModel._ordering = list()
-        NewModel._checkedDbs = set()
 
         return NewModel
 
@@ -134,11 +107,6 @@ class Model(metaclass = ModelBase):
     """
     objects = orm.QueryManager()
     _meta = orm.ModelOptions()
-
-    _indexes = []  # list of db table indexes (Index instances); each model will have its own copy - i.e. it's not inherited by subclasses (metaclass assures this)
-    _ordering = []  # default order for select when not specified - overriden
-
-    _name = None  # db table name
 
     # default fields
     id = orm.IdField()  # row id. This field is present in all tables

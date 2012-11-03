@@ -109,20 +109,20 @@ class Field(Expression):
         Field._fieldsCount += 1
         self._id = Field._fieldsCount  # creation order
 
-        uninitField = kwargs.get('uninitField')
-#        if isinstance(self, IdField):
-#            import ipdb; from pprint import pprint; ipdb.set_trace()
-
-        if uninitField:
-            self.name = kwargs['fieldName']  # attribute name of the field in the model
-            self.model = kwargs['model']  # part of which table is this field
-            # it called by the metaclass
-            self._init_(*uninitField._initArgs, **uninitField._initKwargs) # and initialize it
-            #del self._initArgs, self._initKwargs
-        else:
-            # field will be initalized using these params later, when the class is created
+        model = kwargs.pop('model', None)
+        if not model:  
+            # the field will be initalized using these params later, when the class is created
             self._initArgs = args
-            self._initKwargs = kwargs # for later _init
+            self._initKwargs = kwargs  # for later _init
+            return
+
+        # model was passed by Model metaclass
+        assert orm.isModel(model)
+        self.model = model  # part of which table is this field
+        field = kwargs.pop('field')
+        self.name = kwargs.pop('fieldName')  # attribute name of the field in the model
+        self._init_(*field._initArgs, **field._initKwargs) # and initialize it
+        #del self._initArgs, self._initKwargs
 
     def _init_(self, column, index = '', label = ''):
         """Base initialization method. Called from subclasses.
