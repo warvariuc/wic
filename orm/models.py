@@ -1,11 +1,13 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
 import inspect
+import copy
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
 from collections import OrderedDict
 import orm
-from orm import signals, logger, exceptions
+query_manager = orm.import_('orm.query_manager')
+from . import fields, signals, logger, exceptions, model_options, query_manager
 
 
 class Join():
@@ -26,6 +28,63 @@ class LeftJoin(Join):
         super().__init__(table, on, 'left')
 
 
+class ModelAttrInfo():
+    """Information about an attribute of a Model
+    """
+    def __init__(self, model, attrName):
+        assert orm.isModel(model)
+        assert isinstance(attrName, str) and attrName
+        assert hasattr(model, attrName)
+        self.model = model
+        self.attrName = attrName
+
+
+class ModelAttrStub():
+    """Temporary attribute for a Model, which holds information about what object with which
+    initialization arguments should be put instead of it, after the model is completely defined.
+    It's created by a Model attribute in its `__new__` method and replaced with a real object by the
+    Model metaclass using `createObject` method.
+    """
+    __creationCounter = 0 # will be used to track the definition order of the attributes in models 
+
+    def __init__(self, cls, args, kwargs):
+        """
+        @param cls: class of the object to be created after the Model is completely defined
+        @param args: object initilization arguments 
+        @param kwargs: object initilization keyword arguments
+        """
+        self.cls = cls
+        self.args = args
+        self.kwargs = kwargs
+        # track creation order
+        ModelAttrStub.__creationCounter += 1
+        self.creationOrder = ModelAttrStub.__creationCounter
+
+    def createObject(self, modelAttrInfo):
+        """Create and return a real object instance using the initialization arguments supplied
+        earlier. Usually called by the Model metaclass, after the model was already completely
+        defined.
+        @param modelAttrInfo: ModelAttrInfo instance which holds info about the model the real
+            object belongs to and object attribute name.
+        """
+        assert isinstance(modelAttrInfo, ModelAttrInfo)
+        return self.cls(*self.args, modelAttrInfo = modelAttrInfo, **self.kwargs)
+
+
+class ModelAttrStubMixin():
+
+    def __new__(cls, *args, modelAttrInfo = None, **kwargs):
+        """Return a ModelAttributeStub instance if `model` argument is not there (meaning that the
+        model is not yet completely defined), otherwise do it as usually.
+        """
+        if not modelAttrInfo:
+            return ModelAttrStub(cls, args, kwargs)
+
+        assert isinstance(modelAttrInfo, ModelAttrInfo)
+        # create the object normally
+        return super().__new__(cls, *args, modelAttrInfo = modelAttrInfo, **kwargs)
+    
+
 class ModelBase(type):
     """Metaclass for all tables (models).
     It gives names to all fields and makes instances for fields for each of the models. 
@@ -34,41 +93,35 @@ class ModelBase(type):
     def __new__(cls, name, bases, attrs):
         NewModel = type.__new__(cls, name, bases, attrs)
 
-        NewModel._name = NewModel.__dict__.get('_name', name.lower()) # db table name
-
-        assert isinstance(NewModel._meta, orm.ModelOptions), \
+        assert isinstance(NewModel._meta, model_options.ModelOptions), \
             '`_meta` attribute should be a ModelOptions instance'
 
-        if NewModel._name is None: # we need only Model subclasses; if db table name is None - __new__ is called for Model itself
-            return NewModel # return without any processing
+#        if NewModel._meta.db_table is None:  # we need only Model subclasses
+#            # if db table name is None - __new__ is called for Model itself
+#            return NewModel  # return without any processing
 
-        logger.debug('Finishing initialization of model `%s`' % NewModel)
+        logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
 
-        # assure each class has its own attribute, because by default _indexes is inherited from the parent class
-        NewModel._indexes = list(NewModel._indexes)
+        stubAttributes = {}
+        for attrName, attr in inspect.getmembers(NewModel):
+            if isinstance(attr, ModelAttrStub):
+                stubAttributes[attrName] = attr
+            elif isinstance(attr, orm.Field):
+                subclassField = copy.deepcopy(attr)
+                subclassField.model= NewModel
+                setattr(NewModel, attrName, subclassField)
+                
+        # sort by definition order (as __dict__ is unsorted) - for the correct recreation order
+        stubAttributes = OrderedDict(sorted(stubAttributes.items(),
+                                            key = lambda i: i[1].creationOrder))
 
-        attrs = OrderedDict(inspect.getmembers(NewModel))
-        fields = []
-        for fieldName, field in attrs.items():
-            if isinstance(field, orm.fields.Field):
-                fields.append((fieldName, field))
-
-        # sort by definition order (as __dict__ is unsorted) - for field recreation order
-        fields = OrderedDict(sorted(fields, key = lambda f: f[1]._id))
-
-        for fieldName, field in fields.items():
-            if not fieldName.islower() or fieldName.startswith('_'):
-                raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
-                                     'must not start with `_`.' % (fieldName, name))
-
-            # recreate the field - to handle correctly inheritance of Models
+        for stubAttrName, stubAttr in stubAttributes.items():
             try:
-                newField = field.__class__(field = field, fieldName = fieldName, model = NewModel)
+                realObject = stubAttr.createObject(ModelAttrInfo(NewModel, stubAttrName))
             except Exception:
-                print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
+                print('Failed to init a model attribute:', stubAttrName)
                 raise
-            # each class has its own field object. Inherited and parent tables do not share field attributes
-            setattr(NewModel, fieldName, newField)
+            setattr(NewModel, stubAttrName, realObject)
 
         return NewModel
 
@@ -97,7 +150,7 @@ class ModelBase(type):
         return len(list(self.__iter__()))
 
     def __str__(self):
-        return self._name
+        return self._meta.db_name
 
 
 
@@ -105,12 +158,12 @@ class Model(metaclass = ModelBase):
     """Base class for all tables. Class attributes - the fields. 
     Instance attributes - the values for the corresponding table fields.
     """
-    objects = orm.QueryManager()
-    _meta = orm.ModelOptions()
+    objects = query_manager.QueryManager()
+    _meta = model_options.ModelOptions()
 
     # default fields
-    id = orm.IdField()  # row id. This field is present in all tables
-    timestamp = orm.DateTimeField()  # version of the record - datetime (with milliseconds) of the last update of this record
+    id = fields.IdField()  # row id. This field is present in all tables
+    timestamp = fields.DateTimeField()  # version of the record - datetime (with milliseconds) of the last update of this record
 
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
@@ -127,7 +180,7 @@ class Model(metaclass = ModelBase):
             field, value = arg
             if isinstance(field, str):
                 field = self.__class__[field]
-            assert isinstance(field, orm.Field), 'First arg must be a Field.'
+            assert isinstance(field, fields.Field), 'First arg must be a Field.'
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
@@ -144,7 +197,7 @@ class Model(metaclass = ModelBase):
         key: either a Field instance or name of the field.
         """
         model = self.__class__
-        if isinstance(field, orm.Field):
+        if isinstance(field, fields.Field):
             assert field.table is model, 'This field is from another model.'
             attrName = field.name
         elif isinstance(field, str):

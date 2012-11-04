@@ -17,6 +17,16 @@ logger.addHandler(strm_out)
 logger.setLevel(logging.DEBUG)  # logging level
 
 
+def getObjectPath(obj):
+    """Having an object return path to its class in form of `path.to.module.ClassName`
+    """
+    if isinstance(obj, type):
+        objClass = obj
+    else:
+        objClass = obj.__class__
+    return objClass.__module__ + '.' + objClass.__name__
+
+
 def getObjectByPath(objectPath, packagePath = None):
     """Given the path in form 'some.module.object' return the object.
     @param objectPath: path to an object
@@ -31,12 +41,12 @@ def getObjectByPath(objectPath, packagePath = None):
 
 
 def isModel(obj):
-    return isinstance(obj, ModelBase)
+    return isinstance(obj, sys.modules['orm.models'].ModelBase)
 
 
 def listify(obj):
     """Assure that obj is a list."""
-    if hasattr(obj, '__iter__') and not isinstance(obj, (str, ModelBase)):
+    if isinstance(obj, (list, tuple)):
         return list(obj)
     return [obj]
 
@@ -61,6 +71,9 @@ class LazyProperty():
             return self  # when the descriptor is accessed as a class attribute
 
 
+def import_(modulePath):
+    return __import__(modulePath)
+
 # Custom None
 Nil = object()
 
@@ -68,10 +81,10 @@ Nil = object()
 from .exceptions import *
 from .indexes import *
 from .adapters import *
-from .fields import *
-from .models import *
 from .query_manager import QueryManager
 from .model_options import ModelOptions
+from .models import *
+from .fields import *
 
 
 def connect(uri):

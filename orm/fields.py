@@ -2,9 +2,50 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
+import sys
 
 import orm
 from orm import Nil, Column, logger
+
+import orm.adapters
+orm_adapters = sys.modules['orm.adapters']
+import orm.models
+orm_models = sys.modules['orm.models']
+import orm.model_options
+orm.model_options = sys.modules['orm.model_options']
+import orm.indexes
+orm_indexes = sys.modules['orm.indexes']
+
+
+class Column():
+    """Information about database table column.
+    """
+    def __init__(self, type, name = '', default = None, precision = None, scale = None,
+                 unsigned = None, nullable = True, autoincrement = False, comment = ''):
+        self.name = name  # db table column name
+        self.type = type  # string with the name of data type (decimal, varchar, bigint...)
+        self.default = default  # column default value
+        self.precision = precision  # char max length or decimal/int max digits
+        self.scale = scale  # for decimals
+        self.unsigned = unsigned  # for decimals, integers
+        # assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
+        self.nullable = nullable  # can contain NULL values?
+        self.autoincrement = autoincrement  # for primary integer
+        self.comment = comment
+
+    def __str__(self, db = None):
+        db = db or adapters.GenericAdapter
+        assert isinstance(db, adapters.GenericAdapter) or \
+            (isinstance(db, type) and issubclass(db, adapters.GenericAdapter)), \
+            'Must be GenericAdapter class or instance'
+        colFunc = getattr(db, '_' + self.type.upper())
+        columnType = colFunc(self)
+        return '%s %s' % (self.name, columnType)
+
+    def str(self):
+        attrs = self.__dict__.copy()
+        name = attrs.pop('name')
+        return '%s(%s)' % (name, ', '.join('%s= %s' % attr for attr in attrs.items()))
 
 
 class Expression():
@@ -96,45 +137,26 @@ class Expression():
 
 
 
-class Field(Expression):
+class Field(Expression, orm.ModelAttrStubMixin):
     """Abstract ORM table field.
     """
-
-    _fieldsCount = 0 # will be used to track the definition order of the fields in models 
-
-    def __init__(self, *args, **kwargs):
-        """
-        Should not be overriden in subclasses. Overide `_init_` method.
-        """
-        Field._fieldsCount += 1
-        self._id = Field._fieldsCount  # creation order
-
-        model = kwargs.pop('model', None)
-        if not model:  
-            # the field will be initalized using these params later, when the class is created
-            self._initArgs = args
-            self._initKwargs = kwargs  # for later _init
-            return
-
-        # model was passed by Model metaclass
-        assert orm.isModel(model)
-        self.model = model  # part of which table is this field
-        field = kwargs.pop('field')
-        self.name = kwargs.pop('fieldName')  # attribute name of the field in the model
-        self._init_(*field._initArgs, **field._initKwargs) # and initialize it
-        #del self._initArgs, self._initKwargs
-
-    def _init_(self, column, index = '', label = ''):
+    def __init__(self, modelAttrInfo, column, index = '', label = '', db_name = ''):
         """Base initialization method. Called from subclasses.
         @param column: Column instance
         @param index: 
         """
+        assert isinstance(modelAttrInfo, sys.modules['orm.models'].ModelAttrInfo)
+        self.model = modelAttrInfo.model
+        self.name = modelAttrInfo.attrName
+        if not self.name.islower() or self.name.startswith('_'):
+            raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
+                                 'must not start with `_`.' % (self.name, self.model))
         assert isinstance(column, Column)
-        assert isinstance(index, (str, bool, orm.Index))
-        assert isinstance(label, str)
         self.column = column
-        self.label = label or self.name.replace('_', ' ').capitalize()
+        assert isinstance(index, (str, bool, orm.Index))
         self.index = index
+        assert isinstance(label, str)
+        self.label = label or self.name.replace('_', ' ').capitalize()
 
     def __str__(self, db = None):
         #db = db or orm.GenericAdapter # we do not use adapter here
@@ -145,12 +167,28 @@ class Field(Expression):
         """
         return (self, value)
 
+####################################################################################################
+
+class IdField(Field):
+    """Primary integer autoincrement key. ID - implicitly present in each table.
+    """
+    def __init__(self, db_name = '', label = '', modelAttrInfo = None):
+        super().__init__(
+            modelAttrInfo,
+            # 9 digits - int32 - should be enough
+            Column('INT', precision = 9, unsigned = True, nullable = False,
+                   autoincrement = True),
+            'primary', label, db_name = db_name)
+
+    def __set__(self, record, value):
+        record.__dict__[self.name] = None if value is None else int(value)
 
 
 class CharField(Field):
     """Field for storing strings of certain length.
     """
-    def _init_(self, maxLength, default = None, index = '', name = '', label = '', comment = ''):
+    def __init__(self, maxLength, default = None, index = '', db_name = '', label = '',comment = '',
+               modelAttrInfo = None):
         """Initialize a CHAR field.
         @param maxLength: maximum length in bytes of the string to be stored in the DB
         @param default: default value to store in the DB
@@ -159,26 +197,28 @@ class CharField(Field):
         @param label: short description of the field (e.g.for for forms)
         @param comment: comment for the field
         """
-        super()._init_(
-            Column('CHAR', self, precision = maxLength, default = default, comment = comment),
-            index, label)
+        super().__init__(
+            modelAttrInfo,
+            Column('CHAR', precision = maxLength, default = default, comment = comment),
+            index, label, db_name = db_name)
 
 
 class TextField(Field):
     """Field for storing strings of any length."""
-    def _init_(self, default = None, index = '', label = ''):
+    def __init__(self, default = None, index = '', db_name = '', label = '', modelAttrInfo = None):
         if index:
             assert isinstance(index, orm.Index)
-        super()._init_(Column('TEXT', self, default = default), index, label)
+        super().__init__(modelAttrInfo, Column('TEXT', default = default),
+                         index, label, db_name = db_name)
 
 
 class IntegerField(Field):
 
-    def _init_(self, maxDigits = 9, default = None, autoincrement = False, index = '', label = ''):
-        self.maxDigits = maxDigits
-        self.autoincrement = autoincrement
-        super()._init_(
-            Column('INT', self, precision = self.maxDigits, unsigned = True, default = default,
+    def __init__(self, maxDigits = 9, default = None, autoincrement = False, index = '',
+                 label = '', modelAttrInfo = None):
+        super().__init__(
+            modelAttrInfo,
+            Column('INT', precision = self.maxDigits, unsigned = True, default = default,
                    autoincrement = autoincrement),
             index, label
         )
@@ -189,9 +229,11 @@ class IntegerField(Field):
 
 class DecimalField(Field):
 
-    def _init_(self, maxDigits, fractionDigits, default = None, index = '', label = ''):
-        super()._init_(
-            Column('DECIMAL', self, precision = maxDigits, scale = fractionDigits,
+    def __init__(self, maxDigits, fractionDigits, default = None, index = '', label = '',
+                 modelAttrInfo = None):
+        super().__init__(
+            modelAttrInfo,
+            Column('DECIMAL', precision = maxDigits, scale = fractionDigits,
                    default = default),
             index, label)
 
@@ -201,8 +243,8 @@ class DecimalField(Field):
 
 class DateField(Field):
 
-    def _init_(self, default = None, index = '', label = ''):
-        super()._init_(Column('DATE', self, default = default), index, label)
+    def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
+        super().__init__(modelAttrInfo, Column('DATE', default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -215,8 +257,8 @@ class DateField(Field):
 
 class DateTimeField(Field):
 
-    def _init_(self, default = None, index = '', label = ''):
-        super()._init_(Column('DATETIME', self, default = default), index, label)
+    def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
+        super().__init__(modelAttrInfo, Column('DATETIME', default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -227,25 +269,11 @@ class DateTimeField(Field):
         record.__dict__[self.name] = value
 
 
-class IdField(Field):
-    """Primary integer autoincrement key. ID - implicitly present in each table.
-    """
-    def _init_(self, label = ''):
-        super()._init_(
-            # 9 digits - int32 - should be enough
-            Column('INT', self, precision = 9, unsigned = True, nullable = False,
-                   autoincrement = True),
-            'primary', label)
-
-    def __set__(self, record, value):
-        record.__dict__[self.name] = None if value is None else int(value)
-
-
 class BooleanField(Field):
 
-    def _init_(self, default = None, index = '', label = ''):
+    def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
         super()._init_(
-            Column('INT', self, precision = 1, default = default), index, label)
+            modelAttrInfo, Column('INT', precision = 1, default = default), index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else bool(value)
@@ -273,17 +301,19 @@ class _RecordId(int):
 class RecordField(Field):
     """Field for storing ids to referred records.
     """
-    def _init_(self, referTable, index = '', label = ''):
+    def __init__(self, referTable, index = '', label = '', modelAttrInfo = None):
         """
         @param referTable: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
-        self._referTable = referTable # path to the model
-        self._name = '__' + self.name # name of the attribute which keeps the referred record or its id
-        super()._init_(
+        assert isinstance(modelAttrInfo, sys.modules['orm.models'].ModelAttrInfo)
+        super().__init__(
+            modelAttrInfo,
             # 9 digits - int32 - ought to be enough for anyone ;)
-            Column('INT', self, name = self.name + '_id', precision = 9, unsigned = True),
+            Column('INT', name = modelAttrInfo.attrName + '_id', precision = 9, unsigned = True),
             index, label)
+        self._referTable = referTable  # path to the model
+        self._name = '__' + self.name  # name of the attribute which keeps the referred record or its id
 
     def __get__(self, record, model):
         if record is None: # called as a class attribute

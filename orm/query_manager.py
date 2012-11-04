@@ -1,24 +1,10 @@
-import orm
-from orm import signals, logger, exceptions
+from . import models, adapters, fields, exceptions, signals, logger
 
 
-class QueryManager():
+class QueryManager(models.ModelAttrStubMixin):
+    """Through this manager a Model interfaces with a database.
     """
-    Through this manager a Model interfaces with a database.
-    """
-    def __init__(self, *args, **kwargs):
-        model = kwargs.pop('model', None)
-        if not model:  # model is passed by the Model metaclass
-            self._initArgs = args
-            self._initKwwargs = kwargs
-            return
-
-        # model was passed by Model metaclass
-        assert orm.isModel(model)
-        self.model = model
-        self._init_(*self._initArgs, **self._initKwargs)  # real initialization
-
-    def _init_(self):
+    def __init__(self, modelAtrrinfo):
         # URIs of database adapters the model was successfully checked against
         self._checkedDbs = set()
 
@@ -26,7 +12,7 @@ class QueryManager():
         """Check if corresponding table for this model exists in the db and has all necessary columns.
         Add checkTable call in very model method that uses a db.
         """
-        assert isinstance(db, orm.GenericAdapter), 'Need a database adapter'
+        assert isinstance(db, adapters.GenericAdapter), 'Need a database adapter'
         if db.uri in self._checkedDbs:
             # this db was already checked
             return
@@ -60,10 +46,10 @@ class QueryManager():
 
         records = list(self.model.get(db, where, limit = 2, select_related = select_related))
         if not records:  # not found
-            raise orm.RecordNotFound(db.render(where))
+            raise exceptions.RecordNotFound(db.render(where))
         if len(records) == 1:
             return records[0]
-        raise orm.TooManyRecords
+        raise exceptions.TooManyRecords
 
     def get(self, db, where, orderby = False, limit = False, select_related = False):
         """Get records from this table which fall under the given condition.
@@ -82,10 +68,10 @@ class QueryManager():
         recordFields = []
         if select_related:
             for i, field in enumerate(model):
-                if isinstance(field, orm.RecordField):
+                if isinstance(field, fields.RecordField):
                     recordFields.append((i, field))
                     fields.extend(field.referTable)
-                    from_.append(orm.LeftJoin(field.referTable, field == field.referTable.id))
+                    from_.append(models.LeftJoin(field.referTable, field == field.referTable.id))
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
         rows = db.select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit)
         for row in rows:

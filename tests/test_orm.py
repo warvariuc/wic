@@ -30,9 +30,9 @@ class TestModel(orm.Model):
     )
 
 
-
 class Author(orm.Model):
-    """Authors catalog"""
+    """Authors catalog
+    """
     # id field is already present 
     last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
     first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
@@ -40,24 +40,7 @@ class Author(orm.Model):
 
     _meta = orm.ModelOptions(
         db_table = 'authors',
-        indexes = [
-            orm.Index(
-                [orm.IndexField(last_name), orm.IndexField(first_name)],
-                'unique'
-            )
-        ],
-        # or
-        indexes1 = (
-            orm.Index(last_name, first_name, 'unique'),
-        ),
-        # or
-        indexes2 = (
-            (last_name, first_name, 'unique'),
-        ),
-        # or
-        indexes2 = (
-            orm.Unique(last_name, first_name),
-        ),
+        indexes = orm.Unique(last_name, first_name),
     )
 
 
@@ -65,7 +48,8 @@ class Book(orm.Model):
     """Books catalog"""
     # id field is already present 
     name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
-    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00', index = True) # 2 decimal places
+    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
+                                    index = True)  # 2 decimal places
     author = orm.RecordField('Authors', index = True)
     publication_date = orm.fields.DateField()
                                             

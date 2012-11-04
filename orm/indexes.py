@@ -17,17 +17,19 @@ class IndexField():
 class Index():
     """A database table index.
     """
-    def __init__(self, indexFields, type = 'index', name = '', method = '', **kwargs):
+    def __init__(self, *indexFields, type = 'index', name = '', method = ''):
         """
         @param indexFields: list of IndexField instances
         @param type: index, primary, unique, fulltext, spatial - specific fot the db
         @param method: btree, hash, gist, gin - specific fot the db
         """
-        assert isinstance(indexFields, (list, tuple)) and indexFields, \
-            'Pass a list of indexed fields.'
+        assert indexFields, 'Need at least one Field or IndexField'
         model = None
         for indexField in indexFields:
-            assert isinstance(indexField, IndexField), 'Pass IndexField instances.'
+            if isinstance(indexField, orm.Field):
+                indexField = IndexField(indexField)
+            else:
+                assert isinstance(indexField, IndexField), 'Pass Field or IndexField instances.'
             model = model or indexField.field.model
             assert indexField.field.model is model, 'Indexed fields should be from the same table!'
 
@@ -42,13 +44,12 @@ class Index():
             # if name was not given compose it from the names of all fields involved in the index
             for indexField in indexFields:
                 name += indexField.field.name + '_'
-            name += type # and add index type at the end
+            name += type  # and add index type at the end
         self.name = name
 
-        self.indexFields = list(indexFields) # fields involved in this index
-        self.type = type # index type: unique, primary, etc.
-        self.method = method # if empty - will be used default for this type of DB
-        self.other = kwargs # other parameters for a specific DB adapter
+        self.indexFields = list(indexFields)  # fields involved in this index
+        self.type = type  # index type: unique, primary, etc.
+        self.method = method  # if empty - will be used default for this type of DB
 
     def __str__(self):
         return '{} `{}` ON ({}) {}'.format(self.type, self.name,
@@ -64,6 +65,9 @@ class Index():
 class Unique(Index):
     """Convenience class for defining a unique index.
     """
-    def __init__(self, *args, **kwargs):
-        kwargs['type'] = 'unique'
-        super().__init__(*args, **kwargs)
+    def __init__(self, *indexFields, name = '', method = ''):
+        """
+        @param indexFields: list of IndexField instances
+        @param method: btree, hash, gist, gin - specific fot the db
+        """
+        super().__init__(*indexFields, type = 'unique', name = name, method = method)
