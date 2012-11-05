@@ -6,8 +6,6 @@ from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
 from collections import OrderedDict
 import orm
-query_manager = orm.import_('orm.query_manager')
-from . import fields, signals, logger, exceptions, model_options, query_manager
 
 
 class Join():
@@ -28,63 +26,6 @@ class LeftJoin(Join):
         super().__init__(table, on, 'left')
 
 
-class ModelAttrInfo():
-    """Information about an attribute of a Model
-    """
-    def __init__(self, model, attrName):
-        assert orm.isModel(model)
-        assert isinstance(attrName, str) and attrName
-        assert hasattr(model, attrName)
-        self.model = model
-        self.attrName = attrName
-
-
-class ModelAttrStub():
-    """Temporary attribute for a Model, which holds information about what object with which
-    initialization arguments should be put instead of it, after the model is completely defined.
-    It's created by a Model attribute in its `__new__` method and replaced with a real object by the
-    Model metaclass using `createObject` method.
-    """
-    __creationCounter = 0 # will be used to track the definition order of the attributes in models 
-
-    def __init__(self, cls, args, kwargs):
-        """
-        @param cls: class of the object to be created after the Model is completely defined
-        @param args: object initilization arguments 
-        @param kwargs: object initilization keyword arguments
-        """
-        self.cls = cls
-        self.args = args
-        self.kwargs = kwargs
-        # track creation order
-        ModelAttrStub.__creationCounter += 1
-        self.creationOrder = ModelAttrStub.__creationCounter
-
-    def createObject(self, modelAttrInfo):
-        """Create and return a real object instance using the initialization arguments supplied
-        earlier. Usually called by the Model metaclass, after the model was already completely
-        defined.
-        @param modelAttrInfo: ModelAttrInfo instance which holds info about the model the real
-            object belongs to and object attribute name.
-        """
-        assert isinstance(modelAttrInfo, ModelAttrInfo)
-        return self.cls(*self.args, modelAttrInfo = modelAttrInfo, **self.kwargs)
-
-
-class ModelAttrStubMixin():
-
-    def __new__(cls, *args, modelAttrInfo = None, **kwargs):
-        """Return a ModelAttributeStub instance if `model` argument is not there (meaning that the
-        model is not yet completely defined), otherwise do it as usually.
-        """
-        if not modelAttrInfo:
-            return ModelAttrStub(cls, args, kwargs)
-
-        assert isinstance(modelAttrInfo, ModelAttrInfo)
-        # create the object normally
-        return super().__new__(cls, *args, modelAttrInfo = modelAttrInfo, **kwargs)
-    
-
 class ModelBase(type):
     """Metaclass for all tables (models).
     It gives names to all fields and makes instances for fields for each of the models. 
@@ -93,7 +34,7 @@ class ModelBase(type):
     def __new__(cls, name, bases, attrs):
         NewModel = type.__new__(cls, name, bases, attrs)
 
-        assert isinstance(NewModel._meta, model_options.ModelOptions), \
+        assert fields.isStubInstance(NewModel._meta, model_options.ModelOptions), \
             '`_meta` attribute should be a ModelOptions instance'
 
 #        if NewModel._meta.db_table is None:  # we need only Model subclasses
@@ -104,20 +45,20 @@ class ModelBase(type):
 
         stubAttributes = {}
         for attrName, attr in inspect.getmembers(NewModel):
-            if isinstance(attr, ModelAttrStub):
+            if isinstance(attr, fields.ModelAttrStub):
                 stubAttributes[attrName] = attr
-            elif isinstance(attr, orm.Field):
+            elif isinstance(attr, fields.Field):
                 subclassField = copy.deepcopy(attr)
-                subclassField.model= NewModel
+                subclassField.model = NewModel
                 setattr(NewModel, attrName, subclassField)
-                
+
         # sort by definition order (as __dict__ is unsorted) - for the correct recreation order
         stubAttributes = OrderedDict(sorted(stubAttributes.items(),
                                             key = lambda i: i[1].creationOrder))
 
         for stubAttrName, stubAttr in stubAttributes.items():
             try:
-                realObject = stubAttr.createObject(ModelAttrInfo(NewModel, stubAttrName))
+                realObject = stubAttr.createObject(fields.ModelAttrInfo(NewModel, stubAttrName))
             except Exception:
                 print('Failed to init a model attribute:', stubAttrName)
                 raise
@@ -138,11 +79,11 @@ class ModelBase(type):
         """
         fields = []
         for attrName in self.__dict__:
-            try: # there maybe non Field attributes as well
+            try:  # there maybe non Field attributes as well
                 fields.append(self[attrName])
             except KeyError:
                 pass
-        fields.sort(key = lambda field: field._id) # sort by creation order - because __dict__ is unordered
+        fields.sort(key = lambda field: field._id)  # sort by creation order - because __dict__ is unordered
         for field in fields:
             yield field
 
@@ -152,6 +93,8 @@ class ModelBase(type):
     def __str__(self):
         return self._meta.db_name
 
+
+from . import fields, signals, logger, exceptions, model_options, query_manager
 
 
 class Model(metaclass = ModelBase):

@@ -26,7 +26,7 @@ class TestModel(orm.Model):
     date_time_field = orm.fields.DateTimeField()
 
     _meta = orm.ModelOptions(
-        db_table = 'my_table',
+        db_name = 'my_table',
     )
 
 
@@ -39,7 +39,7 @@ class Author(orm.Model):
     created_at = orm.DateTimeField()
 
     _meta = orm.ModelOptions(
-        db_table = 'authors',
+        db_name = 'authors',
         indexes = orm.Unique(last_name, first_name),
     )
 

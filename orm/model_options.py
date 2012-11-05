@@ -1,9 +1,10 @@
 import sys
 
 import orm
+from . import fields
 
 
-class ModelOptions(sys.modules['orm.models'].ModelAttrStubMixin):
+class ModelOptions(fields.ModelAttrStubMixin):
 
     def __init__(self, db_name = '', indexes = None, ordering = None, modelAttrInfo = None):
         self.db_name = db_name  # db table name

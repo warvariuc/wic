@@ -1,11 +1,12 @@
-from . import models, adapters, fields, exceptions, signals, logger
+from . import fields
 
 
-class QueryManager(models.ModelAttrStubMixin):
+class QueryManager(fields.ModelAttrStubMixin):
     """Through this manager a Model interfaces with a database.
     """
-    def __init__(self, modelAtrrinfo):
+    def __init__(self, modelAttrInfo):
         # URIs of database adapters the model was successfully checked against
+        self.model = modelAttrInfo.model
         self._checkedDbs = set()
 
     def checkTable(self, db):
@@ -111,3 +112,5 @@ class QueryManager(models.ModelAttrStubMixin):
         there was not found the table corresponding to this model in the db.
         """
         raise exceptions.TableMissing(db, self.model)
+
+from . import adapters, models, exceptions, signals, logger

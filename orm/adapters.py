@@ -14,6 +14,37 @@ import orm
 from orm import logger
 
 
+class Column():
+    """Information about database table column.
+    """
+    def __init__(self, type, name = '', default = None, precision = None, scale = None,
+                 unsigned = None, nullable = True, autoincrement = False, comment = ''):
+        self.name = name  # db table column name
+        self.type = type  # string with the name of data type (decimal, varchar, bigint...)
+        self.default = default  # column default value
+        self.precision = precision  # char max length or decimal/int max digits
+        self.scale = scale  # for decimals
+        self.unsigned = unsigned  # for decimals, integers
+        # assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
+        self.nullable = nullable  # can contain NULL values?
+        self.autoincrement = autoincrement  # for primary integer
+        self.comment = comment
+
+    def __str__(self, db = None):
+        db = db or GenericAdapter
+        assert isinstance(db, GenericAdapter) or \
+            (isinstance(db, type) and issubclass(db, GenericAdapter)), \
+            'Must be GenericAdapter class or instance'
+        colFunc = getattr(db, '_' + self.type.upper())
+        columnType = colFunc(self)
+        return '%s %s' % (self.name, columnType)
+
+    def str(self):
+        attrs = self.__dict__.copy()
+        name = attrs.pop('name')
+        return '%s(%s)' % (name, ', '.join('%s= %s' % attr for attr in attrs.items()))
+
+
 class GenericAdapter():
     """Generic DB adapter.
     """

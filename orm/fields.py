@@ -5,54 +5,80 @@ from decimal import Decimal
 import sys
 
 import orm
-from orm import Nil, Column, logger
-
-import orm.adapters
-orm_adapters = sys.modules['orm.adapters']
-import orm.models
-orm_models = sys.modules['orm.models']
-import orm.model_options
-orm.model_options = sys.modules['orm.model_options']
-import orm.indexes
-orm_indexes = sys.modules['orm.indexes']
+from orm import Nil, logger
+from . import adapters, indexes
 
 
-class Column():
-    """Information about database table column.
+class ModelAttrInfo():
+    """Information about an attribute of a Model
     """
-    def __init__(self, type, name = '', default = None, precision = None, scale = None,
-                 unsigned = None, nullable = True, autoincrement = False, comment = ''):
-        self.name = name  # db table column name
-        self.type = type  # string with the name of data type (decimal, varchar, bigint...)
-        self.default = default  # column default value
-        self.precision = precision  # char max length or decimal/int max digits
-        self.scale = scale  # for decimals
-        self.unsigned = unsigned  # for decimals, integers
-        # assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
-        self.nullable = nullable  # can contain NULL values?
-        self.autoincrement = autoincrement  # for primary integer
-        self.comment = comment
+    def __init__(self, model, attrName):
+        assert orm.isModel(model)
+        assert isinstance(attrName, str) and attrName
+        assert hasattr(model, attrName)
+        self.model = model
+        self.attrName = attrName
 
-    def __str__(self, db = None):
-        db = db or adapters.GenericAdapter
-        assert isinstance(db, adapters.GenericAdapter) or \
-            (isinstance(db, type) and issubclass(db, adapters.GenericAdapter)), \
-            'Must be GenericAdapter class or instance'
-        colFunc = getattr(db, '_' + self.type.upper())
-        columnType = colFunc(self)
-        return '%s %s' % (self.name, columnType)
 
-    def str(self):
-        attrs = self.__dict__.copy()
-        name = attrs.pop('name')
-        return '%s(%s)' % (name, ', '.join('%s= %s' % attr for attr in attrs.items()))
+class ModelAttrStub():
+    """Temporary attribute for a Model, which holds information about what object with which
+    initialization arguments should be put instead of it, after the model is completely defined.
+    It's created by a Model attribute in its `__new__` method and replaced with a real object by the
+    Model metaclass using `createObject` method.
+    """
+    __creationCounter = 0  # will be used to track the definition order of the attributes in models 
+
+    def __init__(self, cls, args, kwargs):
+        """
+        @param cls: class of the object to be created after the Model is completely defined
+        @param args: object initilization arguments
+        @param kwargs: object initilization keyword arguments
+        """
+        self.cls = cls
+        self.args = args
+        self.kwargs = kwargs
+        # track creation order
+        ModelAttrStub.__creationCounter += 1
+        self.creationOrder = ModelAttrStub.__creationCounter
+
+    def createObject(self, modelAttrInfo):
+        """Create and return a real object instance using the initialization arguments supplied
+        earlier. Usually called by the Model metaclass, after the model was already completely
+        defined.
+        @param modelAttrInfo: ModelAttrInfo instance which holds info about the model the real
+            object belongs to and object attribute name.
+        """
+        assert isinstance(modelAttrInfo, ModelAttrInfo)
+        try:
+            return self.cls(*self.args, modelAttrInfo = modelAttrInfo, **self.kwargs)
+        except Exception:
+            print('Failed to create a real object of class %r from stub' % self.cls, self.args, modelAttrInfo, self.kwargs)
+            raise
+
+
+def isStubInstance(obj, cls):
+    return isinstance(obj, cls) or (isinstance(obj, ModelAttrStub) and issubclass(obj.cls, cls))
+
+
+class ModelAttrStubMixin():
+
+    def __new__(cls, *args, modelAttrInfo = None, **kwargs):
+        """Return a ModelAttributeStub instance if `model` argument is not there (meaning that the
+        model is not yet completely defined), otherwise do it as usually.
+        """
+        if not modelAttrInfo:
+            return ModelAttrStub(cls, args, kwargs)
+
+        assert isinstance(modelAttrInfo, ModelAttrInfo)
+        # create the object normally
+        return super().__new__(cls, *args, modelAttrInfo = modelAttrInfo, **kwargs)
 
 
 class Expression():
     """Expression - pair of operands and operation on them.
     """
 
-    sort = 'ASC' # default sorting
+    sort = 'ASC'  # default sorting
 
     def __init__(self, operation, left = Nil, right = Nil, type = None, **kwargs):
         """Create an expression.
@@ -73,9 +99,9 @@ class Expression():
         else:
             self.type = type
         self.operation = operation
-        self.left = left # left operand
-        self.right = right # right operand
-        self.__dict__.update(kwargs) # additional arguments
+        self.left = left  # left operand
+        self.right = right  # right operand
+        self.__dict__.update(kwargs)  # additional arguments
 
     def __and__(self, other):
         return Expression('_AND', self, other)
@@ -98,7 +124,7 @@ class Expression():
 
     def __neg__(self):
         """-Field: sort DESC"""
-        self.sort = 'DESC' # TODO: should return new Expression
+        self.sort = 'DESC'  # TODO: should return new Expression
         return self
     def __pos__(self):
         """+Field: sort ASC"""
@@ -123,12 +149,12 @@ class Expression():
         """Construct the text of the WHERE clause from this Expression.
         @param db: GenericAdapter subclass to use for rendering.
         """
-        args = [arg for arg in (self.left, self.right) if arg is not Nil] # filter nil operands
-        if not args: # no args - treat operation as representation of the entire operation
+        args = [arg for arg in (self.left, self.right) if arg is not Nil]  # filter nil operands
+        if not args:  # no args - treat operation as representation of the entire operation
             return self.operation
         db = db or orm.GenericAdapter
-        operation = getattr(db, self.operation) # get the operation function from adapter
-        return operation(*args) # execute the operation
+        operation = getattr(db, self.operation)  # get the operation function from adapter
+        return operation(*args)  # execute the operation
 
     def cast(self, value):
         """Converts a value to Field's comparable type. Default implementation.
@@ -136,8 +162,7 @@ class Expression():
         return value
 
 
-
-class Field(Expression, orm.ModelAttrStubMixin):
+class Field(Expression, ModelAttrStubMixin):
     """Abstract ORM table field.
     """
     def __init__(self, modelAttrInfo, column, index = '', label = '', db_name = ''):
@@ -145,15 +170,15 @@ class Field(Expression, orm.ModelAttrStubMixin):
         @param column: Column instance
         @param index: 
         """
-        assert isinstance(modelAttrInfo, sys.modules['orm.models'].ModelAttrInfo)
+        assert isinstance(modelAttrInfo, ModelAttrInfo)
         self.model = modelAttrInfo.model
         self.name = modelAttrInfo.attrName
         if not self.name.islower() or self.name.startswith('_'):
             raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
                                  'must not start with `_`.' % (self.name, self.model))
-        assert isinstance(column, Column)
+        assert isinstance(column, adapters.Column)
         self.column = column
-        assert isinstance(index, (str, bool, orm.Index))
+        assert isinstance(index, (str, bool, indexes.Index))
         self.index = index
         assert isinstance(label, str)
         self.label = label or self.name.replace('_', ' ').capitalize()
@@ -176,7 +201,7 @@ class IdField(Field):
         super().__init__(
             modelAttrInfo,
             # 9 digits - int32 - should be enough
-            Column('INT', precision = 9, unsigned = True, nullable = False,
+            adapters.Column('INT', precision = 9, unsigned = True, nullable = False,
                    autoincrement = True),
             'primary', label, db_name = db_name)
 
@@ -199,7 +224,7 @@ class CharField(Field):
         """
         super().__init__(
             modelAttrInfo,
-            Column('CHAR', precision = maxLength, default = default, comment = comment),
+            adapters.Column('CHAR', precision = maxLength, default = default, comment = comment),
             index, label, db_name = db_name)
 
 
@@ -208,7 +233,7 @@ class TextField(Field):
     def __init__(self, default = None, index = '', db_name = '', label = '', modelAttrInfo = None):
         if index:
             assert isinstance(index, orm.Index)
-        super().__init__(modelAttrInfo, Column('TEXT', default = default),
+        super().__init__(modelAttrInfo, adapters.Column('TEXT', default = default),
                          index, label, db_name = db_name)
 
 
@@ -218,7 +243,7 @@ class IntegerField(Field):
                  label = '', modelAttrInfo = None):
         super().__init__(
             modelAttrInfo,
-            Column('INT', precision = self.maxDigits, unsigned = True, default = default,
+            adapters.Column('INT', precision = self.maxDigits, unsigned = True, default = default,
                    autoincrement = autoincrement),
             index, label
         )
@@ -233,7 +258,7 @@ class DecimalField(Field):
                  modelAttrInfo = None):
         super().__init__(
             modelAttrInfo,
-            Column('DECIMAL', precision = maxDigits, scale = fractionDigits,
+            adapters.Column('DECIMAL', precision = maxDigits, scale = fractionDigits,
                    default = default),
             index, label)
 
@@ -244,7 +269,7 @@ class DecimalField(Field):
 class DateField(Field):
 
     def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
-        super().__init__(modelAttrInfo, Column('DATE', default = default), index, label)
+        super().__init__(modelAttrInfo, adapters.Column('DATE', default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -258,7 +283,7 @@ class DateField(Field):
 class DateTimeField(Field):
 
     def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
-        super().__init__(modelAttrInfo, Column('DATETIME', default = default), index, label)
+        super().__init__(modelAttrInfo, adapters.Column('DATETIME', default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -273,7 +298,7 @@ class BooleanField(Field):
 
     def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
         super()._init_(
-            modelAttrInfo, Column('INT', precision = 1, default = default), index, label)
+            modelAttrInfo, adapters.Column('INT', precision = 1, default = default), index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else bool(value)
@@ -306,17 +331,17 @@ class RecordField(Field):
         @param referTable: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
-        assert isinstance(modelAttrInfo, sys.modules['orm.models'].ModelAttrInfo)
+        assert isinstance(modelAttrInfo, ModelAttrInfo)
         super().__init__(
             modelAttrInfo,
             # 9 digits - int32 - ought to be enough for anyone ;)
-            Column('INT', name = modelAttrInfo.attrName + '_id', precision = 9, unsigned = True),
+            adapters.Column('INT', name = modelAttrInfo.attrName + '_id', precision = 9, unsigned = True),
             index, label)
         self._referTable = referTable  # path to the model
         self._name = '__' + self.name  # name of the attribute which keeps the referred record or its id
 
     def __get__(self, record, model):
-        if record is None: # called as a class attribute
+        if record is None:  # called as a class attribute
             return self
         # called as an instance attribute
         referRecord = getattr(record, self._name)
@@ -337,7 +362,7 @@ class RecordField(Field):
         assert isinstance(value, (int, self.referTable)) or value is None, \
             'You can assign only records of model `%s`, an integer id of the record or None' \
             % self.referTable
-        setattr(record, self._name, value) # _name will contain the referred record
+        setattr(record, self._name, value)  # _name will contain the referred record
 
     @orm.LazyProperty
     def referTable(self):
@@ -346,7 +371,7 @@ class RecordField(Field):
         elif isinstance(self._referTable, str):
             return orm.getObjectByPath(self._referTable, self.table.__module__)
         else:
-            raise orm.ModelError('Referred model must be a Model or a string with its path.')
+            raise exceptions.ModelError('Referred model must be a Model or a string with its path.')
 
     def cast(self, value):
         """Convert a value into another value which is ok for this Field.
@@ -356,7 +381,7 @@ class RecordField(Field):
         try:
             return int(value)
         except ValueError:
-            raise orm.QueryError('Record ID must be an integer.')
+            raise exceptions.QueryError('Record ID must be an integer.')
 
 
 #class TableIdField(Field):
@@ -427,3 +452,6 @@ def CONCAT(*expressions):
         assert isinstance(expression, (str, Expression)), \
             'Argument must be a Field or an Expression or a str.'
     return Expression('_CONCAT', expressions)
+
+
+from . import models, model_options, exceptions

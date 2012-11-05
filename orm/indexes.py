@@ -5,7 +5,7 @@ class IndexField():
     """Helper class for defining a field for index
     """
     def __init__(self, field, sortOrder = 'asc', prefixLength = None):
-        assert isinstance(field, orm.fields.Field), 'Pass Field instances.'
+        assert fields.isStubInstance(field, fields.Field), 'Pass Field instances.'
         assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
         assert isinstance(prefixLength, int) or prefixLength is None, \
             'Index prefix length must None or int.'
@@ -26,10 +26,10 @@ class Index():
         assert indexFields, 'Need at least one Field or IndexField'
         model = None
         for indexField in indexFields:
-            if isinstance(indexField, orm.Field):
+            if fields.isStubInstance(indexField, fields.Field):
                 indexField = IndexField(indexField)
             else:
-                assert isinstance(indexField, IndexField), 'Pass Field or IndexField instances.'
+                assert fields.isStubInstance(indexField, IndexField), 'Pass Field or IndexField instances.'
             model = model or indexField.field.model
             assert indexField.field.model is model, 'Indexed fields should be from the same table!'
 
@@ -57,7 +57,7 @@ class Index():
 
 #    def _copy(self, model):
 #        """Create a copy of the index with copy of fields in the index with the given model."""
-#        assert isinstance(model, orm.ModelMeta), 'Pass a Model.'
+#        assert isinstance(model, models.ModelMeta), 'Pass a Model.'
 #        indexFields = [indexField for indexField in self.indexFields]
 #        return Index(indexFields, self.type, self.name, self.method, **self.other)
 
@@ -71,3 +71,6 @@ class Unique(Index):
         @param method: btree, hash, gist, gin - specific fot the db
         """
         super().__init__(*indexFields, type = 'unique', name = name, method = method)
+
+
+from . import fields, models

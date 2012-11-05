@@ -7,6 +7,24 @@ if sys.version < pythonRequiredVersion:
     sys.exit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
 
 
+def _import(name, globals=None, locals=None, fromlist=None, level=-1):
+
+    module = _baseimport(name, globals, locals, fromlist, level)
+    for attr in fromlist or []:
+        sub_name = module.__name__ + '.' + attr
+        sub_module = sys.modules.get(sub_name)
+        if sub_module:
+            # the key moment:
+            # if subpackage is already being imported, even if not finished
+            # inject its name into the parent package
+            setattr(module, attr, sub_module)
+#    print(module)
+    return module
+
+_baseimport = __builtins__['__import__']
+__builtins__['__import__'] = _import
+
+
 import logging, inspect, importlib
 
 
@@ -41,7 +59,7 @@ def getObjectByPath(objectPath, packagePath = None):
 
 
 def isModel(obj):
-    return isinstance(obj, sys.modules['orm.models'].ModelBase)
+    return isinstance(obj, models.ModelBase)
 
 
 def listify(obj):
@@ -81,9 +99,9 @@ Nil = object()
 from .exceptions import *
 from .indexes import *
 from .adapters import *
-from .query_manager import QueryManager
-from .model_options import ModelOptions
 from .models import *
+from .model_options import ModelOptions
+from .query_manager import QueryManager
 from .fields import *
 
 
