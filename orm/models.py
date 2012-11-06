@@ -12,6 +12,9 @@ class Join():
     """Object holding parameters for a join.
     """
     def __init__(self, model, on, type = ''):
+        """
+        @param on: join condition
+        """
         assert orm.isModel(model), 'Pass a model class.'
         assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
         self.model = model  # table to join
@@ -34,7 +37,7 @@ class ModelBase(type):
     def __new__(cls, name, bases, attrs):
         NewModel = type.__new__(cls, name, bases, attrs)
 
-        assert fields.isStubInstance(NewModel._meta, model_options.ModelOptions), \
+        assert isinstance(NewModel._meta, model_options.ModelOptions), \
             '`_meta` attribute should be a ModelOptions instance'
 
 #        if NewModel._meta.db_table is None:  # we need only Model subclasses
@@ -45,7 +48,7 @@ class ModelBase(type):
 
         stubAttributes = {}
         for attrName, attr in inspect.getmembers(NewModel):
-            if isinstance(attr, fields.ModelAttrStub):
+            if isinstance(attr, fields.ModelAttrMixin):
                 stubAttributes[attrName] = attr
             elif isinstance(attr, fields.Field):
                 subclassField = copy.deepcopy(attr)

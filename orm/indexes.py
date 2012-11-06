@@ -5,7 +5,7 @@ class IndexField():
     """Helper class for defining a field for index
     """
     def __init__(self, field, sortOrder = 'asc', prefixLength = None):
-        assert fields.isStubInstance(field, fields.Field), 'Pass Field instances.'
+        assert isinstance(field, fields.Field), 'Pass Field instances.'
         assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
         assert isinstance(prefixLength, int) or prefixLength is None, \
             'Index prefix length must None or int.'
@@ -26,10 +26,10 @@ class Index():
         assert indexFields, 'Need at least one Field or IndexField'
         model = None
         for indexField in indexFields:
-            if fields.isStubInstance(indexField, fields.Field):
+            if isinstance(indexField, fields.Field):
                 indexField = IndexField(indexField)
             else:
-                assert fields.isStubInstance(indexField, IndexField), 'Pass Field or IndexField instances.'
+                assert isinstance(indexField, IndexField), 'Pass Field or IndexField instances.'
             model = model or indexField.field.model
             assert indexField.field.model is model, 'Indexed fields should be from the same table!'
 

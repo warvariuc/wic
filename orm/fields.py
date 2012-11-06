@@ -12,66 +12,47 @@ from . import adapters, indexes
 class ModelAttrInfo():
     """Information about an attribute of a Model
     """
-    def __init__(self, model, attrName):
+    def __init__(self, model, name):
         assert orm.isModel(model)
-        assert isinstance(attrName, str) and attrName
-        assert hasattr(model, attrName)
+        assert isinstance(name, str) and name
+        assert hasattr(model, name)
         self.model = model
-        self.attrName = attrName
+        self.name = name
 
 
-class ModelAttrStub():
-    """Temporary attribute for a Model, which holds information about what object with which
-    initialization arguments should be put instead of it, after the model is completely defined.
-    It's created by a Model attribute in its `__new__` method and replaced with a real object by the
-    Model metaclass using `createObject` method.
+class ModelAttrMixin():
+    """Mixin class for Model attributes, which holds information about initialization arguments,
+    `__init__` being called only after the model is completely defined.
+    Usually `__init__` is called  by the Model metaclass.
     """
-    __creationCounter = 0  # will be used to track the definition order of the attributes in models 
+    __creationCounter = 0  # will be used to track the definition order of the attributes in models
+    _modelAttrInfo = None  # model attribute information, set by `_init_` 
 
-    def __init__(self, cls, args, kwargs):
-        """
-        @param cls: class of the object to be created after the Model is completely defined
-        @param args: object initilization arguments
-        @param kwargs: object initilization keyword arguments
-        """
-        self.cls = cls
-        self.args = args
-        self.kwargs = kwargs
-        # track creation order
-        ModelAttrStub.__creationCounter += 1
-        self.creationOrder = ModelAttrStub.__creationCounter
-
-    def createObject(self, modelAttrInfo):
-        """Create and return a real object instance using the initialization arguments supplied
-        earlier. Usually called by the Model metaclass, after the model was already completely
-        defined.
-        @param modelAttrInfo: ModelAttrInfo instance which holds info about the model the real
-            object belongs to and object attribute name.
-        """
-        assert isinstance(modelAttrInfo, ModelAttrInfo)
-        try:
-            return self.cls(*self.args, modelAttrInfo = modelAttrInfo, **self.kwargs)
-        except Exception:
-            print('Failed to create a real object of class %r from stub' % self.cls, self.args, modelAttrInfo, self.kwargs)
-            raise
-
-
-def isStubInstance(obj, cls):
-    return isinstance(obj, cls) or (isinstance(obj, ModelAttrStub) and issubclass(obj.cls, cls))
-
-
-class ModelAttrStubMixin():
-
-    def __new__(cls, *args, modelAttrInfo = None, **kwargs):
+    def __new__(cls, *args, **kwargs):
         """Return a ModelAttributeStub instance if `model` argument is not there (meaning that the
         model is not yet completely defined), otherwise do it as usually.
         """
-        if not modelAttrInfo:
-            return ModelAttrStub(cls, args, kwargs)
-
-        assert isinstance(modelAttrInfo, ModelAttrInfo)
         # create the object normally
-        return super().__new__(cls, *args, modelAttrInfo = modelAttrInfo, **kwargs)
+        obj = super().__new__(cls)
+        obj._initArgs = args
+        obj._initKwargs = kwargs
+        ModelAttrMixin.__creationCounter += 1
+        obj._creationOrder = ModelAttrMixin.__creationCounter
+        obj.__orig__init__ = cls.__init__  # original __init__
+        cls.__init__ =  ModelAttrMixin._init_  # monkey patching with our version
+        return obj
+    
+    def _init_(self, *args, **kwargs):
+        """This will replace `__init__` method of a Model attribute, willl remember initialization
+        attributes and will call the original `__init__` when information about the model attribute
+        is passed.
+        """
+#        print('ModelAttrStubMixin.__init__', args, kwargs)
+        modelAttrInfo = kwargs.pop('modelAttrInfo', None)
+        if modelAttrInfo:
+            assert isinstance(modelAttrInfo, ModelAttrInfo)
+            self._modelAttrInfo = modelAttrInfo
+            self.__orig__init__(self, *self._initArgs, **self._initKwargs)
 
 
 class Expression():
@@ -162,17 +143,16 @@ class Expression():
         return value
 
 
-class Field(Expression, ModelAttrStubMixin):
+class Field(Expression, ModelAttrMixin):
     """Abstract ORM table field.
     """
-    def __init__(self, modelAttrInfo, column, index = '', label = '', db_name = ''):
+    def __init__(self, column, index = '', label = '', db_name = ''):
         """Base initialization method. Called from subclasses.
         @param column: Column instance
         @param index: 
         """
-        assert isinstance(modelAttrInfo, ModelAttrInfo)
-        self.model = modelAttrInfo.model
-        self.name = modelAttrInfo.attrName
+        self.model = self._modelAttrInfo.model
+        self.name = self._modelAttrInfo.name
         if not self.name.islower() or self.name.startswith('_'):
             raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
                                  'must not start with `_`.' % (self.name, self.model))
@@ -197,9 +177,8 @@ class Field(Expression, ModelAttrStubMixin):
 class IdField(Field):
     """Primary integer autoincrement key. ID - implicitly present in each table.
     """
-    def __init__(self, db_name = '', label = '', modelAttrInfo = None):
+    def __init__(self, db_name = '', label = ''):
         super().__init__(
-            modelAttrInfo,
             # 9 digits - int32 - should be enough
             adapters.Column('INT', precision = 9, unsigned = True, nullable = False,
                    autoincrement = True),
@@ -212,8 +191,8 @@ class IdField(Field):
 class CharField(Field):
     """Field for storing strings of certain length.
     """
-    def __init__(self, maxLength, default = None, index = '', db_name = '', label = '',comment = '',
-               modelAttrInfo = None):
+    def __init__(self, maxLength, default = None, index = '', db_name = '', label = '',
+                 comment = ''):
         """Initialize a CHAR field.
         @param maxLength: maximum length in bytes of the string to be stored in the DB
         @param default: default value to store in the DB
@@ -223,7 +202,6 @@ class CharField(Field):
         @param comment: comment for the field
         """
         super().__init__(
-            modelAttrInfo,
             adapters.Column('CHAR', precision = maxLength, default = default, comment = comment),
             index, label, db_name = db_name)
 
@@ -233,16 +211,15 @@ class TextField(Field):
     def __init__(self, default = None, index = '', db_name = '', label = '', modelAttrInfo = None):
         if index:
             assert isinstance(index, orm.Index)
-        super().__init__(modelAttrInfo, adapters.Column('TEXT', default = default),
+        super().__init__(adapters.Column('TEXT', default = default),
                          index, label, db_name = db_name)
 
 
 class IntegerField(Field):
 
     def __init__(self, maxDigits = 9, default = None, autoincrement = False, index = '',
-                 label = '', modelAttrInfo = None):
+                 label = ''):
         super().__init__(
-            modelAttrInfo,
             adapters.Column('INT', precision = self.maxDigits, unsigned = True, default = default,
                    autoincrement = autoincrement),
             index, label
@@ -254,10 +231,8 @@ class IntegerField(Field):
 
 class DecimalField(Field):
 
-    def __init__(self, maxDigits, fractionDigits, default = None, index = '', label = '',
-                 modelAttrInfo = None):
+    def __init__(self, maxDigits, fractionDigits, default = None, index = '', label = ''):
         super().__init__(
-            modelAttrInfo,
             adapters.Column('DECIMAL', precision = maxDigits, scale = fractionDigits,
                    default = default),
             index, label)
@@ -268,8 +243,8 @@ class DecimalField(Field):
 
 class DateField(Field):
 
-    def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
-        super().__init__(modelAttrInfo, adapters.Column('DATE', default = default), index, label)
+    def __init__(self, default = None, index = '', label = ''):
+        super().__init__(adapters.Column('DATE', default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -282,8 +257,8 @@ class DateField(Field):
 
 class DateTimeField(Field):
 
-    def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
-        super().__init__(modelAttrInfo, adapters.Column('DATETIME', default = default), index, label)
+    def __init__(self, default = None, index = '', label = ''):
+        super().__init__(adapters.Column('DATETIME', default = default), index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -296,9 +271,8 @@ class DateTimeField(Field):
 
 class BooleanField(Field):
 
-    def __init__(self, default = None, index = '', label = '', modelAttrInfo = None):
-        super()._init_(
-            modelAttrInfo, adapters.Column('INT', precision = 1, default = default), index, label)
+    def __init__(self, default = None, index = '', label = ''):
+        super()._init_(adapters.Column('INT', precision = 1, default = default), index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else bool(value)
@@ -326,16 +300,14 @@ class _RecordId(int):
 class RecordField(Field):
     """Field for storing ids to referred records.
     """
-    def __init__(self, referTable, index = '', label = '', modelAttrInfo = None):
+    def __init__(self, referTable, index = '', label = ''):
         """
         @param referTable: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
-        assert isinstance(modelAttrInfo, ModelAttrInfo)
         super().__init__(
-            modelAttrInfo,
             # 9 digits - int32 - ought to be enough for anyone ;)
-            adapters.Column('INT', name = modelAttrInfo.attrName + '_id', precision = 9, unsigned = True),
+            adapters.Column('INT', name = self.name + '_id', precision = 9, unsigned = True),
             index, label)
         self._referTable = referTable  # path to the model
         self._name = '__' + self.name  # name of the attribute which keeps the referred record or its id

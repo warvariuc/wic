@@ -4,9 +4,9 @@ import orm
 from . import fields
 
 
-class ModelOptions(fields.ModelAttrStubMixin):
+class ModelOptions(fields.ModelAttrMixin):
 
-    def __init__(self, db_name = '', indexes = None, ordering = None, modelAttrInfo = None):
+    def __init__(self, db_name = '', indexes = None, ordering = None):
         self.db_name = db_name  # db table name
 
         self.ordering = ordering or []  # default order for select when not specified - overriden

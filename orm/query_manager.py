@@ -1,12 +1,12 @@
 from . import fields
 
 
-class QueryManager(fields.ModelAttrStubMixin):
+class QueryManager(fields.ModelAttrMixin):
     """Through this manager a Model interfaces with a database.
     """
-    def __init__(self, modelAttrInfo):
+    def __init__(self):
         # URIs of database adapters the model was successfully checked against
-        self.model = modelAttrInfo.model
+        self.model = self._modelAttrInfo.model
         self._checkedDbs = set()
 
     def checkTable(self, db):
