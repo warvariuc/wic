@@ -50,23 +50,39 @@ class ModelBase(type):
         for attrName, attr in inspect.getmembers(NewModel):
             if isinstance(attr, fields.ModelAttrMixin):
                 stubAttributes[attrName] = attr
-            elif isinstance(attr, fields.Field):
-                subclassField = copy.deepcopy(attr)
-                subclassField.model = NewModel
-                setattr(NewModel, attrName, subclassField)
 
-        # sort by definition order (as __dict__ is unsorted) - for the correct recreation order
-        stubAttributes = OrderedDict(sorted(stubAttributes.items(),
-                                            key = lambda i: i[1].creationOrder))
+        # sort by definition order - for the correct recreation order
+        stubAttributes = sorted(stubAttributes.items(), key = lambda i: i[1].creationOrder)
 
-        for stubAttrName, stubAttr in stubAttributes.items():
+        for attrName, attr in stubAttributes:
+            if isinstance(attr, fields.Fiels):
+                # Field instances are special - we recreate them for each of the models
+                # that inherited models would have there own field, not parent's
+                pass
             try:
-                realObject = stubAttr.createObject(fields.ModelAttrInfo(NewModel, stubAttrName))
+                attr.__init__(modelAttrInfo=fields.ModelAttrInfo(NewModel, attrName))
             except Exception:
-                print('Failed to init a model attribute:', stubAttrName)
+                print('Failed to init a model attribute:', attrName)
                 raise
-            setattr(NewModel, stubAttrName, realObject)
+            setattr(NewModel, attrName, attr)
 
+
+#        for fieldName, field in fields.items():
+#            if not fieldName.islower() or fieldName.startswith('_'):
+#                raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
+#                                     'must not start with `_`.' % (fieldName, name))
+#
+#            # recreate the field - to handle correctly inheritance of Tables
+#            newField = field.__class__(name = fieldName, table = NewModel, label = field.label)
+#            try:
+#                newField._init_(*field._initArgs, **field._initKwargs) # and initialize it
+#            except Exception:
+#                print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
+#                raise
+#            # each class has its own field object. Inherited and parent tables do not share field attributes
+#            setattr(NewModel, fieldName, newField)        
+        
+        
         return NewModel
 
     def __getitem__(self, key):

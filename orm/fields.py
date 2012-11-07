@@ -13,9 +13,10 @@ class ModelAttrInfo():
     """Information about an attribute of a Model
     """
     def __init__(self, model, name):
-        assert orm.isModel(model)
-        assert isinstance(name, str) and name
-        assert hasattr(model, name)
+        if model:
+            assert orm.isModel(model)
+            assert isinstance(name, str) and name
+            assert hasattr(model, name)
         self.model = model
         self.name = name
 
@@ -26,7 +27,7 @@ class ModelAttrMixin():
     Usually `__init__` is called  by the Model metaclass.
     """
     __creationCounter = 0  # will be used to track the definition order of the attributes in models
-    _modelAttrInfo = None  # model attribute information, set by `_init_` 
+    _modelAttrInfo = ModelAttrInfo(None, None)  # model attribute information, set by `_init_` 
 
     def __new__(cls, *args, **kwargs):
         """Return a ModelAttributeStub instance if `model` argument is not there (meaning that the
