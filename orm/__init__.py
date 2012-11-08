@@ -32,7 +32,7 @@ logger = logging.getLogger('orm')
 strm_out = logging.StreamHandler(sys.__stdout__)
 strm_out.setFormatter(logging.Formatter())
 logger.addHandler(strm_out)
-logger.setLevel(logging.DEBUG)  # logging level
+logger.setLevel(logging.ERROR)  # logging level
 
 
 def getObjectPath(obj):

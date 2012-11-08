@@ -5,9 +5,11 @@ Unit tests for ORM
 import sys
 import os
 import unittest
+import logging
 
 import orm
 
+orm.logger.setLevel(logging.WARNING)
 
 def setUpModule():
     pass

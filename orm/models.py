@@ -11,7 +11,9 @@ class Join():
     """
     def __init__(self, model, on, type = ''):
         """
+        @param model: table to join 
         @param on: join condition
+        @param type: join type. if empty - INNER JOIN 
         """
         assert orm.isModel(model), 'Pass a model class.'
         assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
@@ -60,7 +62,8 @@ class ModelBase(type):
             try:
                 attr.__init__(modelAttrInfo=fields.ModelAttrInfo(NewModel, attrName))
             except Exception:
-                print('Failed to init a model attribute: %s.%s' % (NewModel.__name__, attrName))
+                logger.debug('Failed to init a model attribute: %s.%s'
+                              % (NewModel.__name__, attrName))
                 raise
             setattr(NewModel, attrName, attr)
 
