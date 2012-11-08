@@ -33,27 +33,28 @@ class ModelAttrMixin():
         """Return a ModelAttributeStub instance if `model` argument is not there (meaning that the
         model is not yet completely defined), otherwise do it as usually.
         """
+        if cls.__init__ != ModelAttrMixin.__proxy__init__:
+            cls.__orig__init__ = cls.__init__  # original __init__
+            cls.__init__ =  ModelAttrMixin.__proxy__init__  # monkey patching with our version
+
         # create the object normally
         obj = super().__new__(cls)
         obj._initArgs = args
         obj._initKwargs = kwargs
         ModelAttrMixin.__creationCounter += 1
         obj._creationOrder = ModelAttrMixin.__creationCounter
-        obj.__orig__init__ = cls.__init__  # original __init__
-        cls.__init__ =  ModelAttrMixin._init_  # monkey patching with our version
         return obj
     
-    def _init_(self, *args, **kwargs):
-        """This will replace `__init__` method of a Model attribute, willl remember initialization
-        attributes and will call the original `__init__` when information about the model attribute
+    def __proxy__init__(self, *args, **kwargs):
+        """This will replace `__init__` method of a Model attribute, will remember initialization
+        arguments and will call the original `__init__` when information about the model attribute
         is passed.
         """
 #        print('ModelAttrStubMixin.__init__', args, kwargs)
         modelAttrInfo = kwargs.pop('modelAttrInfo', None)
         if modelAttrInfo:
-            assert isinstance(modelAttrInfo, ModelAttrInfo)
             self._modelAttrInfo = modelAttrInfo
-            self.__orig__init__(self, *self._initArgs, **self._initKwargs)
+            self.__orig__init__(*self._initArgs, **self._initKwargs)
 
 
 class Expression():
@@ -308,7 +309,7 @@ class RecordField(Field):
         """
         super().__init__(
             # 9 digits - int32 - ought to be enough for anyone ;)
-            adapters.Column('INT', name = self.name + '_id', precision = 9, unsigned = True),
+            adapters.Column('INT', name = self._modelAttrInfo.name + '_id', precision = 9, unsigned = True),
             index, label)
         self._referTable = referTable  # path to the model
         self._name = '__' + self.name  # name of the attribute which keeps the referred record or its id

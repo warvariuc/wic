@@ -1,10 +1,8 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
 import inspect
-import copy
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
-from collections import OrderedDict
 import orm
 
 
@@ -46,43 +44,26 @@ class ModelBase(type):
 
         logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
 
-        stubAttributes = {}
+        stubAttributes = []
         for attrName, attr in inspect.getmembers(NewModel):
             if isinstance(attr, fields.ModelAttrMixin):
-                stubAttributes[attrName] = attr
+                stubAttributes.append((attrName, attr))
 
         # sort by definition order - for the correct recreation order
-        stubAttributes = sorted(stubAttributes.items(), key = lambda i: i[1].creationOrder)
+        stubAttributes.sort(key = lambda i: i[1]._creationOrder)
 
         for attrName, attr in stubAttributes:
-            if isinstance(attr, fields.Fiels):
+            if isinstance(attr, fields.Field):
                 # Field instances are special - we recreate them for each of the models
                 # that inherited models would have there own field, not parent's
-                pass
+                attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
             try:
                 attr.__init__(modelAttrInfo=fields.ModelAttrInfo(NewModel, attrName))
             except Exception:
-                print('Failed to init a model attribute:', attrName)
+                print('Failed to init a model attribute: %s.%s' % (NewModel.__name__, attrName))
                 raise
             setattr(NewModel, attrName, attr)
 
-
-#        for fieldName, field in fields.items():
-#            if not fieldName.islower() or fieldName.startswith('_'):
-#                raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
-#                                     'must not start with `_`.' % (fieldName, name))
-#
-#            # recreate the field - to handle correctly inheritance of Tables
-#            newField = field.__class__(name = fieldName, table = NewModel, label = field.label)
-#            try:
-#                newField._init_(*field._initArgs, **field._initKwargs) # and initialize it
-#            except Exception:
-#                print('Failed to init a field:', fieldName, field._initArgs, field._initKwargs)
-#                raise
-#            # each class has its own field object. Inherited and parent tables do not share field attributes
-#            setattr(NewModel, fieldName, newField)        
-        
-        
         return NewModel
 
     def __getitem__(self, key):
@@ -102,7 +83,7 @@ class ModelBase(type):
                 fields.append(self[attrName])
             except KeyError:
                 pass
-        fields.sort(key = lambda field: field._id)  # sort by creation order - because __dict__ is unordered
+        fields.sort(key = lambda field: field._creationOrder)  # sort by creation order - because __dict__ is unordered
         for field in fields:
             yield field
 
