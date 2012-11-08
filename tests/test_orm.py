@@ -17,41 +17,41 @@ def tearDownModule():
     pass
 
 
-class TestModel(orm.Model):
-    char_field = orm.CharField(maxLength = 100)
-    text_field = orm.TextField()
-    decimal_field = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00')
-    author = orm.RecordField('TestModel', index = True)
-    date_field = orm.fields.DateField()
-    date_time_field = orm.fields.DateTimeField()
-
-    _meta = orm.ModelOptions(
-        db_name = 'my_table',
-    )
-
-
-class Author(orm.Model):
-    """Authors catalog
-    """
-    # id field is already present 
-    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
-    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
-    created_at = orm.DateTimeField()
-
-    _meta = orm.ModelOptions(
-        db_name = 'authors',
-        indexes = orm.Unique(last_name, first_name),
-    )
-
-
-class Book(orm.Model):
-    """Books catalog"""
-    # id field is already present 
-    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
-    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
-                                    index = True)  # 2 decimal places
-    author = orm.RecordField('Authors', index = True)
-    publication_date = orm.fields.DateField()
+#class TestModel(orm.Model):
+#    char_field = orm.CharField(maxLength = 100)
+#    text_field = orm.TextField()
+#    decimal_field = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00')
+#    author = orm.RecordField('TestModel', index = True)
+#    date_field = orm.fields.DateField()
+#    date_time_field = orm.fields.DateTimeField()
+#
+#    _meta = orm.ModelOptions(
+#        db_name = 'my_table',
+#    )
+#
+#
+#class Author(orm.Model):
+#    """Authors catalog
+#    """
+#    # id field is already present 
+#    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
+#    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
+#    created_at = orm.DateTimeField()
+#
+#    _meta = orm.ModelOptions(
+#        db_name = 'authors',
+#        indexes = orm.Unique(last_name, first_name),
+#    )
+#
+#
+#class Book(orm.Model):
+#    """Books catalog"""
+#    # id field is already present 
+#    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
+#    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
+#                                    index = True)  # 2 decimal places
+#    author = orm.RecordField('Authors', index = True)
+#    publication_date = orm.fields.DateField()
                                             
 #
 #class TestModelsSqlite(unittest.TestCase):
@@ -70,26 +70,26 @@ class Book(orm.Model):
 #            self.db.execute(_query)
 
 
-class TestModelsPostgresql(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-#        CREATE USER test WITH PASSWORD 'test';
-#        CREATE DATABASE test;
-#        GRANT ALL PRIVILEGES ON DATABASE test TO test;
-        cls.db = orm.connect('postgresql://test:test@localhost/test')
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.db = None  # disconnect?
-
-    def testCreateTableFromModel(self):
-
-        db = self.db
-        for model in (Author, Book):
-            db.execute(db._dropTable(model))
-            for query in db.getCreateTableQuery(model):
-                db.execute(query)
+#class TestModelsPostgresql(unittest.TestCase):
+#
+#    @classmethod
+#    def setUpClass(cls):
+##        CREATE USER test WITH PASSWORD 'test';
+##        CREATE DATABASE test;
+##        GRANT ALL PRIVILEGES ON DATABASE test TO test;
+#        cls.db = orm.connect('postgresql://test:test@localhost/test')
+#
+#    @classmethod
+#    def tearDownClass(cls):
+#        cls.db = None  # disconnect?
+#
+#    def testCreateTableFromModel(self):
+#
+#        db = self.db
+#        for model in (Author, Book):
+#            db.execute(db._dropTable(model))
+#            for query in db.getCreateTableQuery(model):
+#                db.execute(query)
 
 
 class TestModels(unittest.TestCase):
@@ -110,6 +110,18 @@ class TestModels(unittest.TestCase):
             field_1 = orm.IntegerField()
 
         self.assertEqual(TestModel2.field_1.name, 'field_1')
+        
+    def testModelInheritance(self):
+
+        class TestModel1(orm.Model):
+            field1 = orm.CharField(maxLength = 100)
+
+        class TestModel2(TestModel1):
+            field2 = orm.CharField(maxLength = 100)
+            
+        assert TestModel2.field1 is not TestModel1.field1
+        assert TestModel1.field1.model is TestModel1
+        assert TestModel2.field1.model is TestModel2
 
 #        self.assertRaises(SyntaxError, Field, '_abc', 'string')
 #

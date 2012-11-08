@@ -222,7 +222,7 @@ class IntegerField(Field):
     def __init__(self, maxDigits = 9, default = None, autoincrement = False, index = '',
                  label = ''):
         super().__init__(
-            adapters.Column('INT', precision = self.maxDigits, unsigned = True, default = default,
+            adapters.Column('INT', precision = maxDigits, unsigned = True, default = default,
                    autoincrement = autoincrement),
             index, label
         )
