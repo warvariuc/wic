@@ -1179,7 +1179,7 @@ class PostgreSqlAdapter(GenericAdapter):
         @param table_name: table name or a model describing the table
         """
         if orm.isModel(tableName):
-            tableName = tableName._name
+            tableName = tableName._meta.db_name
         elif not isinstance(tableName, str):
             raise AssertionError('Expecting a str or a Model')
         return 'DROP TABLE IF EXISTS %s' % tableName

@@ -1,10 +1,10 @@
 import sys
 
 import orm
-from . import fields
+from . import models
 
 
-class ModelOptions(fields.ModelAttrMixin):
+class ModelOptions(models.ModelAttrMixin):
 
     def __init__(self, db_name = '', indexes = None, ordering = None):
         self.db_name = db_name  # db table name
@@ -14,6 +14,7 @@ class ModelOptions(fields.ModelAttrMixin):
         # analyze indexes
         for index in indexes:
             assert isinstance(index, orm.Index)
+            index.__init__(modelAttrInfo=self._modelAttrInfo)
 
 #        if isinstance(index, bool):
 #            index = 'index' if index else ''

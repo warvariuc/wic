@@ -6,55 +6,7 @@ import sys
 
 import orm
 from orm import Nil, logger
-from . import adapters, indexes
-
-
-class ModelAttrInfo():
-    """Information about an attribute of a Model
-    """
-    def __init__(self, model, name):
-        if model:
-            assert orm.isModel(model)
-            assert isinstance(name, str) and name
-            assert hasattr(model, name)
-        self.model = model
-        self.name = name
-
-
-class ModelAttrMixin():
-    """Mixin class for Model attributes, which holds information about initialization arguments,
-    `__init__` being called only after the model is completely defined.
-    Usually `__init__` is called  by the Model metaclass.
-    """
-    __creationCounter = 0  # will be used to track the definition order of the attributes in models
-    _modelAttrInfo = ModelAttrInfo(None, None)  # model attribute information, set by `_init_` 
-
-    def __new__(cls, *args, **kwargs):
-        """Return a ModelAttributeStub instance if `model` argument is not there (meaning that the
-        model is not yet completely defined), otherwise do it as usually.
-        """
-        if cls.__init__ != ModelAttrMixin.__proxy__init__:
-            cls.__orig__init__ = cls.__init__  # original __init__
-            cls.__init__ =  ModelAttrMixin.__proxy__init__  # monkey patching with our version
-
-        # create the object normally
-        obj = super().__new__(cls)
-        obj._initArgs = args
-        obj._initKwargs = kwargs
-        ModelAttrMixin.__creationCounter += 1
-        obj._creationOrder = ModelAttrMixin.__creationCounter
-        return obj
-    
-    def __proxy__init__(self, *args, **kwargs):
-        """This will replace `__init__` method of a Model attribute, will remember initialization
-        arguments and will call the original `__init__` when information about the model attribute
-        is passed.
-        """
-#        print('ModelAttrStubMixin.__init__', args, kwargs)
-        modelAttrInfo = kwargs.pop('modelAttrInfo', None)
-        if modelAttrInfo:
-            self._modelAttrInfo = modelAttrInfo
-            self.__orig__init__(*self._initArgs, **self._initKwargs)
+from . import adapters, models
 
 
 class Expression():
@@ -145,7 +97,7 @@ class Expression():
         return value
 
 
-class Field(Expression, ModelAttrMixin):
+class Field(Expression, models.ModelAttrMixin):
     """Abstract ORM table field.
     """
     def __init__(self, column, index = '', label = '', db_name = ''):
@@ -157,7 +109,7 @@ class Field(Expression, ModelAttrMixin):
         self.name = self._modelAttrInfo.name
         if not self.name.islower() or self.name.startswith('_'):
             raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
-                                 'must not start with `_`.' % (self.name, self.model))
+                                 'must not start with `_`.' % (self.name, orm.getObjectPath(self.model)))
         assert isinstance(column, adapters.Column)
         self.column = column
         assert isinstance(index, (str, bool, indexes.Index))
@@ -174,6 +126,8 @@ class Field(Expression, ModelAttrMixin):
         """
         return (self, value)
 
+####################################################################################################
+# Fields
 ####################################################################################################
 
 class IdField(Field):
@@ -428,4 +382,4 @@ def CONCAT(*expressions):
     return Expression('_CONCAT', expressions)
 
 
-from . import models, model_options, exceptions
+from . import indexes, exceptions

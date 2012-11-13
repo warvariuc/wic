@@ -8,6 +8,8 @@ import unittest
 import logging
 
 import orm
+from orm import models, model_options
+
 
 orm.logger.setLevel(logging.WARNING)
 
@@ -19,42 +21,42 @@ def tearDownModule():
     pass
 
 
-#class TestModel(orm.Model):
-#    char_field = orm.CharField(maxLength = 100)
-#    text_field = orm.TextField()
-#    decimal_field = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00')
-#    author = orm.RecordField('TestModel', index = True)
-#    date_field = orm.fields.DateField()
-#    date_time_field = orm.fields.DateTimeField()
-#
-#    _meta = orm.ModelOptions(
-#        db_name = 'my_table',
-#    )
-#
-#
-#class Author(orm.Model):
-#    """Authors catalog
-#    """
-#    # id field is already present 
-#    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
-#    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
-#    created_at = orm.DateTimeField()
-#
-#    _meta = orm.ModelOptions(
-#        db_name = 'authors',
-#        indexes = orm.Unique(last_name, first_name),
-#    )
-#
-#
-#class Book(orm.Model):
-#    """Books catalog"""
-#    # id field is already present 
-#    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
-#    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
-#                                    index = True)  # 2 decimal places
-#    author = orm.RecordField('Authors', index = True)
-#    publication_date = orm.fields.DateField()
-                                            
+class TestModel(orm.Model):
+    char_field = orm.CharField(maxLength = 100)
+    text_field = orm.TextField()
+    decimal_field = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00')
+    author = orm.RecordField('TestModel', index = True)
+    date_field = orm.fields.DateField()
+    date_time_field = orm.fields.DateTimeField()
+
+    _meta = orm.ModelOptions(
+        db_name = 'my_table',
+    )
+
+
+class Author(orm.Model):
+    """Authors catalog
+    """
+    # id field is already present 
+    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
+    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
+    created_at = orm.DateTimeField()
+
+    _meta = orm.ModelOptions(
+        db_name = 'authors',
+        indexes = orm.Unique(last_name, first_name),
+    )
+
+
+class Book(orm.Model):
+    """Books catalog"""
+    # id field is already present 
+    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
+    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
+                                    index = True)  # 2 decimal places
+    author = orm.RecordField('Authors', index = True)
+    publication_date = orm.fields.DateField()
+
 #
 #class TestModelsSqlite(unittest.TestCase):
 #    @classmethod
@@ -72,22 +74,22 @@ def tearDownModule():
 #            self.db.execute(_query)
 
 
-#class TestModelsPostgresql(unittest.TestCase):
-#
-#    @classmethod
-#    def setUpClass(cls):
-##        CREATE USER test WITH PASSWORD 'test';
-##        CREATE DATABASE test;
-##        GRANT ALL PRIVILEGES ON DATABASE test TO test;
-#        cls.db = orm.connect('postgresql://test:test@localhost/test')
-#
-#    @classmethod
-#    def tearDownClass(cls):
-#        cls.db = None  # disconnect?
-#
-#    def testCreateTableFromModel(self):
-#
-#        db = self.db
+class TestModelsPostgresql(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+#        CREATE USER test WITH PASSWORD 'test';
+#        CREATE DATABASE test;
+#        GRANT ALL PRIVILEGES ON DATABASE test TO test;
+        cls.db = orm.connect('postgresql://test:test@localhost/test')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.disconnect()
+
+    def testCreateTableFromModel(self):
+
+        db = self.db
 #        for model in (Author, Book):
 #            db.execute(db._dropTable(model))
 #            for query in db.getCreateTableQuery(model):
@@ -96,7 +98,18 @@ def tearDownModule():
 
 class TestModels(unittest.TestCase):
 
+    def testModelOptions(self):
+        class TestModel(orm.Model):
+            _meta = orm.ModelOptions(
+                db_name = 'test1234',
+            )
+        self.assertIsInstance(TestModel._meta, model_options.ModelOptions)
+        self.assertEqual(TestModel._meta.db_name, 'test1234')
 
+        class TestModel2(orm.Model):
+            pass
+
+        self.assertEqual(TestModel._meta.db_name, 'test_models')
 
     def testFieldName(self):
 

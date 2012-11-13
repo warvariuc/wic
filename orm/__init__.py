@@ -97,11 +97,11 @@ Nil = object()
 
 
 from .exceptions import *
-from .indexes import *
 from .adapters import *
 from .models import *
 from .model_options import ModelOptions
 from .query_manager import QueryManager
+from .indexes import *
 from .fields import *
 
 

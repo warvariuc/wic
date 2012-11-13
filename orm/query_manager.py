@@ -1,7 +1,7 @@
-from . import fields
+from . import models
 
 
-class QueryManager(fields.ModelAttrMixin):
+class QueryManager(models.ModelAttrMixin):
     """Through this manager a Model interfaces with a database.
     """
     def __init__(self):
@@ -64,17 +64,17 @@ class QueryManager(fields.ModelAttrMixin):
         logger.debug("Model.get('%s', db= %s, where= %s, limit= %s)" % (model, db, where, limit))
         self.checkTable(db)
         orderby = orderby or model._ordering  # use default table ordering if no ordering passed
-        fields = list(model)
+        fields_ = list(model)
         from_ = [model]
         recordFields = []
         if select_related:
             for i, field in enumerate(model):
                 if isinstance(field, fields.RecordField):
                     recordFields.append((i, field))
-                    fields.extend(field.referTable)
+                    fields_.extend(field.referTable)
                     from_.append(models.LeftJoin(field.referTable, field == field.referTable.id))
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
-        rows = db.select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit)
+        rows = db.select(*fields_, from_ = from_, where = where, orderby = orderby, limit = limit)
         for row in rows:
             record = model(db, *zip(model, row))
             if select_related:
@@ -113,4 +113,4 @@ class QueryManager(fields.ModelAttrMixin):
         """
         raise exceptions.TableMissing(db, self.model)
 
-from . import adapters, models, exceptions, signals, logger
+from . import adapters, fields, exceptions, signals, logger

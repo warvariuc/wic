@@ -6,27 +6,54 @@ from decimal import Decimal
 import orm
 
 
-class Join():
-    """Object holding parameters for a join.
+class ModelAttrInfo():
+    """Information about an attribute of a Model
     """
-    def __init__(self, model, on, type = ''):
-        """
-        @param model: table to join 
-        @param on: join condition
-        @param type: join type. if empty - INNER JOIN 
-        """
-        assert orm.isModel(model), 'Pass a model class.'
-        assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
-        self.model = model  # table to join
-        self.on = on  # expression defining join condition
-        self.type = type  # join type. if empty - INNER JOIN
+    def __init__(self, model, name):
+        if model:
+            assert orm.isModel(model)
+            assert isinstance(name, str) and name
+            assert hasattr(model, name)
+        self.model = model
+        self.name = name
 
 
-class LeftJoin(Join):
-    """Left join parameters.
+class ModelAttrMixin():
+    """Mixin class for Model attributes, which holds information about initialization arguments,
+    `__init__` being called only after the model is completely defined.
+    Usually `__init__` is called  by the Model metaclass.
     """
-    def __init__(self, table, on):
-        super().__init__(table, on, 'left')
+    __creationCounter = 0  # will be used to track the definition order of the attributes in models
+    _modelAttrInfo = ModelAttrInfo(None, None)  # model attribute information, set by `_init_` 
+
+    def __new__(cls, *args, **kwargs):
+        """Create the object, but prevent calling its `__init__` method, montkey patching it with a
+        stub, remembering the initizalization arguments. The real `__init__` can be called later.
+        """
+        if cls.__init__ != ModelAttrMixin.__proxy__init__:
+            cls.__orig__init__ = cls.__init__  # original __init__
+            cls.__init__ =  ModelAttrMixin.__proxy__init__  # monkey patching with our version
+
+        # create the object normally
+        obj = super().__new__(cls)
+        obj._initArgs = args
+        obj._initKwargs = kwargs
+        ModelAttrMixin.__creationCounter += 1
+        obj._creationOrder = ModelAttrMixin.__creationCounter
+#        print('ModelAttrMixin.__new__', cls)
+        return obj
+    
+    def __proxy__init__(self, *args, **kwargs):
+        """This will replace `__init__` method of a Model attribute, will remember initialization
+        arguments and will call the original `__init__` when information about the model attribute
+        is passed.
+        """
+#        print('ModelAttrStubMixin.__init__', self.__class__.__name__, args, kwargs)
+        modelAttrInfo = kwargs.pop('modelAttrInfo', None)
+        if modelAttrInfo:
+            self._modelAttrInfo = modelAttrInfo
+            self.__orig__init__(*self._initArgs, **self._initKwargs)
+            
 
 
 class ModelBase(type):
@@ -48,10 +75,11 @@ class ModelBase(type):
 
         stubAttributes = []
         for attrName, attr in inspect.getmembers(NewModel):
-            if isinstance(attr, fields.ModelAttrMixin):
+            if isinstance(attr, ModelAttrMixin):
                 stubAttributes.append((attrName, attr))
 
         # sort by definition order - for the correct recreation order
+#        import ipdb; from pprint import pprint; ipdb.set_trace()
         stubAttributes.sort(key = lambda i: i[1]._creationOrder)
 
         for attrName, attr in stubAttributes:
@@ -59,8 +87,10 @@ class ModelBase(type):
                 # Field instances are special - we recreate them for each of the models
                 # that inherited models would have there own field, not parent's
                 attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
+            elif attr._modelAttrInfo:
+                continue
             try:
-                attr.__init__(modelAttrInfo=fields.ModelAttrInfo(NewModel, attrName))
+                attr.__init__(modelAttrInfo=ModelAttrInfo(NewModel, attrName))
             except Exception:
                 logger.debug('Failed to init a model attribute: %s.%s'
                               % (NewModel.__name__, attrName))
@@ -207,3 +237,26 @@ class Model(metaclass = ModelBase):
         @param where: WHERE expression
         """
         return orm.COUNT(where or cls)  # COUNT expression
+
+
+class Join():
+    """Object holding parameters for a join.
+    """
+    def __init__(self, model, on, type = ''):
+        """
+        @param model: table to join 
+        @param on: join condition
+        @param type: join type. if empty - INNER JOIN 
+        """
+        assert orm.isModel(model), 'Pass a model class.'
+        assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
+        self.model = model  # table to join
+        self.on = on  # expression defining join condition
+        self.type = type  # join type. if empty - INNER JOIN
+
+
+class LeftJoin(Join):
+    """Left join parameters.
+    """
+    def __init__(self, table, on):
+        super().__init__(table, on, 'left')

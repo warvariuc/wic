@@ -1,5 +1,7 @@
 import orm
 
+from . import models
+
 
 class IndexField():
     """Helper class for defining a field for index
@@ -14,7 +16,7 @@ class IndexField():
         self.prefixLength = prefixLength
 
 
-class Index():
+class Index(models.ModelAttrMixin):
     """A database table index.
     """
     def __init__(self, *indexFields, type = 'index', name = '', method = ''):
@@ -24,6 +26,7 @@ class Index():
         @param method: btree, hash, gist, gin - specific fot the db
         """
         assert indexFields, 'Need at least one Field or IndexField'
+
         model = None
         for indexField in indexFields:
             if isinstance(indexField, fields.Field):
@@ -32,8 +35,6 @@ class Index():
                 assert isinstance(indexField, IndexField), 'Pass Field or IndexField instances.'
             model = model or indexField.field.model
             assert indexField.field.model is model, 'Indexed fields should be from the same table!'
-
-        self.model = model
 
         if type is True:
             type = 'index'
@@ -73,4 +74,4 @@ class Unique(Index):
         super().__init__(*indexFields, type = 'unique', name = name, method = method)
 
 
-from . import fields, models
+from . import fields
