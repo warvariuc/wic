@@ -1,4 +1,4 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
+__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import inspect
 from datetime import datetime as DateTime, date as Date
@@ -13,12 +13,13 @@ class ModelAttrInfo():
         if model:
             assert orm.isModel(model)
             assert isinstance(name, str) and name
-            assert hasattr(model, name)
+            assert hasattr(model, name), 'Model %s does not have an attribute with name %s' \
+                % (orm.getObjectPath(model), name)
         self.model = model
         self.name = name
 
 
-class ModelAttrMixin():
+class ModelAttr():
     """Mixin class for Model attributes, which holds information about initialization arguments,
     `__init__` being called only after the model is completely defined.
     Usually `__init__` is called  by the Model metaclass.
@@ -30,19 +31,19 @@ class ModelAttrMixin():
         """Create the object, but prevent calling its `__init__` method, montkey patching it with a
         stub, remembering the initizalization arguments. The real `__init__` can be called later.
         """
-        if cls.__init__ != ModelAttrMixin.__proxy__init__:
+        if cls.__init__ != ModelAttr.__proxy__init__:
             cls.__orig__init__ = cls.__init__  # original __init__
-            cls.__init__ =  ModelAttrMixin.__proxy__init__  # monkey patching with our version
+            cls.__init__ = ModelAttr.__proxy__init__  # monkey patching with our version
 
         # create the object normally
         obj = super().__new__(cls)
         obj._initArgs = args
         obj._initKwargs = kwargs
-        ModelAttrMixin.__creationCounter += 1
-        obj._creationOrder = ModelAttrMixin.__creationCounter
+        ModelAttr.__creationCounter += 1
+        obj._creationOrder = ModelAttr.__creationCounter
 #        print('ModelAttrMixin.__new__', cls)
         return obj
-    
+
     def __proxy__init__(self, *args, **kwargs):
         """This will replace `__init__` method of a Model attribute, will remember initialization
         arguments and will call the original `__init__` when information about the model attribute
@@ -53,7 +54,7 @@ class ModelAttrMixin():
         if modelAttrInfo:
             self._modelAttrInfo = modelAttrInfo
             self.__orig__init__(*self._initArgs, **self._initKwargs)
-            
+
 
 
 class ModelBase(type):
@@ -62,7 +63,7 @@ class ModelBase(type):
     It has some class methods for models.
     """
     def __new__(cls, name, bases, attrs):
-        NewModel = type.__new__(cls, name, bases, attrs)
+        NewModel = super().__new__(cls, name, bases, attrs)
 
         assert isinstance(NewModel._meta, model_options.ModelOptions), \
             '`_meta` attribute should be a ModelOptions instance'
@@ -73,29 +74,37 @@ class ModelBase(type):
 
         logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
 
+        _meta = None
         stubAttributes = []
         for attrName, attr in inspect.getmembers(NewModel):
-            if isinstance(attr, ModelAttrMixin):
-                stubAttributes.append((attrName, attr))
+            if isinstance(attr, ModelAttr):
+                if attrName == '_meta':
+                    assert isinstance(attr, model_options.ModelOptions), \
+                        '`_meta` attribute should be instance of ModelOptions'
+                    _meta = attr
+                else:
+                    stubAttributes.append((attrName, attr))
 
+        assert _meta is not None, 'Could not find `_meta` attribute'
         # sort by definition order - for the correct recreation order
-#        import ipdb; from pprint import pprint; ipdb.set_trace()
         stubAttributes.sort(key = lambda i: i[1]._creationOrder)
 
         for attrName, attr in stubAttributes:
-            if isinstance(attr, fields.Field):
-                # Field instances are special - we recreate them for each of the models
-                # that inherited models would have there own field, not parent's
+            if attr._modelAttrInfo.model:
                 attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
-            elif attr._modelAttrInfo:
-                continue
             try:
-                attr.__init__(modelAttrInfo=ModelAttrInfo(NewModel, attrName))
+                attr.__init__(modelAttrInfo = ModelAttrInfo(NewModel, attrName))
             except Exception:
                 logger.debug('Failed to init a model attribute: %s.%s'
-                              % (NewModel.__name__, attrName))
+                              % (orm.getObjectPath(NewModel), attrName))
                 raise
             setattr(NewModel, attrName, attr)
+
+        # process _meta at the end, when all fields should have been initialized
+        if _meta._modelAttrInfo.model is not None:  # inherited
+            _meta = model_options.ModelOptions()  # override
+        _meta.__init__(modelAttrInfo = ModelAttrInfo(NewModel, '_meta'))
+        NewModel._meta = _meta
 
         return NewModel
 
@@ -103,9 +112,9 @@ class ModelBase(type):
         """Get a Table Field by name - Table['field_name'].
         """
         attr = getattr(self, key, None)
-        if isinstance(attr, orm.fields.Field):
-            return attr
-        raise KeyError('Could not find field %s in table %s' % (key, self.__class__))
+        if isinstance(attr, fields.ModelField):
+            return attr.field
+        raise KeyError('Could not find field %s in table %s' % (key, orm.getObjectPath(self)))
 
     def __iter__(self):
         """Get Table fields.
@@ -156,7 +165,7 @@ class Model(metaclass = ModelBase):
             field, value = arg
             if isinstance(field, str):
                 field = self.__class__[field]
-            assert isinstance(field, fields.Field), 'First arg must be a Field.'
+            assert isinstance(field, fields.ModelField), 'First arg must be a Field.'
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
@@ -173,7 +182,7 @@ class Model(metaclass = ModelBase):
         key: either a Field instance or name of the field.
         """
         model = self.__class__
-        if isinstance(field, fields.Field):
+        if isinstance(field, fields.ModelField):
             assert field.table is model, 'This field is from another model.'
             attrName = field.name
         elif isinstance(field, str):
@@ -189,11 +198,11 @@ class Model(metaclass = ModelBase):
         db = self._db
         self.checkTable(db)
         model = self.__class__
-        signals.post_delete.send(sender = model, record = self)
+        signals.pre_delete.send(sender = model, record = self)
         db.delete(model, where = (model.id == self.id))
         db.commit()
-        self.id = None
         signals.post_delete.send(sender = model, record = self)
+        self.id = None
 
     def save(self):
         db = self._db

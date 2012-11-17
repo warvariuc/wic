@@ -8,7 +8,7 @@ import unittest
 import logging
 
 import orm
-from orm import models, model_options
+from orm import models, fields, model_options
 
 
 orm.logger.setLevel(logging.WARNING)
@@ -38,13 +38,13 @@ class Author(orm.Model):
     """Authors catalog
     """
     # id field is already present 
-    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
-    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
+    last_name = orm.CharField(maxLength = 100, comment = 'Author\'s last name')
+    first_name = orm.CharField(maxLength = 100, comment = 'Author\'s first name')
     created_at = orm.DateTimeField()
 
     _meta = orm.ModelOptions(
         db_name = 'authors',
-        indexes = orm.Unique(last_name, first_name),
+        indexes = orm.Unique('last_name', 'first_name'),
     )
 
 
@@ -99,19 +99,32 @@ class TestModelsPostgresql(unittest.TestCase):
 class TestModels(unittest.TestCase):
 
     def testModelOptions(self):
+
         class TestModel(orm.Model):
+            field1 = orm.IntegerField()
             _meta = orm.ModelOptions(
                 db_name = 'test1234',
             )
+
         self.assertIsInstance(TestModel._meta, model_options.ModelOptions)
         self.assertEqual(TestModel._meta.db_name, 'test1234')
 
-        class TestModel2(orm.Model):
+        class TestModel2(TestModel):
             pass
 
-        self.assertEqual(TestModel._meta.db_name, 'test_models')
+        # _meta should be per Model, as each model contains its own fields, name, etc.
+        self.assertIsNot(TestModel._meta, TestModel2._meta)
+        self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
+        
+        # Model._meta.fields should be a {fieldName: Field, ...}
+        self.assertIsInstance(TestModel._meta.fields, dict)
+        for fieldName, field in TestModel._meta.fields.items():
+            self.assertIsInstance(fieldName, str)
+            self.assertIsInstance(field, fields.ModelField)
+        # test indexes in _meta
+        self.assertIsInstance(TestModel._meta.indexes, list)
 
-    def testFieldName(self):
+    def testModelField(self):
 
         try:
             class TestModel1(orm.Model):
@@ -122,21 +135,26 @@ class TestModels(unittest.TestCase):
             self.fail('Models should not accept fields with names starting with `_`')
 
         class TestModel2(orm.Model):
-            field_1 = orm.IntegerField()
+            field1 = orm.IntegerField()
 
-        self.assertEqual(TestModel2.field_1.name, 'field_1')
-        
+        self.assertEqual(TestModel2.field1.left.name, 'field1')
+        # Model.field returns Expression, not Field
+        self.assertIsInstance(TestModel2.field1, fields.FieldExpression)
+
     def testModelInheritance(self):
 
         class TestModel1(orm.Model):
             field1 = orm.CharField(maxLength = 100)
 
         class TestModel2(TestModel1):
+            field1 = orm.IntegerField()
             field2 = orm.CharField(maxLength = 100)
-            
-        assert TestModel2.field1 is not TestModel1.field1
-        assert TestModel1.field1.model is TestModel1
-        assert TestModel2.field1.model is TestModel2
+
+        self.assertIsNot(TestModel2.field1, TestModel1.field1)
+        self.assertIsInstance(TestModel1.field1.left, orm.CharField)
+        self.assertIsInstance(TestModel2.field1.left, orm.IntegerField)
+        self.assertIs(TestModel1.field1.left.model, TestModel1)
+        self.assertIs(TestModel2.field1.left.model, TestModel2)
 
 #        self.assertRaises(SyntaxError, Field, '_abc', 'string')
 #

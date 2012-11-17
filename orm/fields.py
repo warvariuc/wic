@@ -23,7 +23,7 @@ class Expression():
         @param type: cast type field
         """
         if left is not Nil and not type:
-            if isinstance(left, Field):
+            if isinstance(left, FieldExpression):
                 self.type = left
             elif isinstance(left, Expression):
                 self.type = left.type
@@ -91,25 +91,30 @@ class Expression():
         operation = getattr(db, self.operation)  # get the operation function from adapter
         return operation(*args)  # execute the operation
 
-    def cast(self, value):
-        """Converts a value to Field's comparable type. Default implementation.
-        """
-        return value
+
+class FieldExpression(Expression):
+    """Expression which holds a single field.
+    """
+    def __init__(self, field, model):
+        assert isinstance(field, ModelField)
+        super().__init__('ModelField', field)
 
 
-class Field(Expression, models.ModelAttrMixin):
-    """Abstract ORM table field.
+class ModelField(Expression, models.ModelAttr):
+    """Abstract ORM table field. It's inherited from Expression just for the sake of autocomplete
+    in Python IDEs.
     """
     def __init__(self, column, index = '', label = '', db_name = ''):
         """Base initialization method. Called from subclasses.
         @param column: Column instance
         @param index: 
         """
-        self.model = self._modelAttrInfo.model
         self.name = self._modelAttrInfo.name
+        self.model = self._modelAttrInfo.model
         if not self.name.islower() or self.name.startswith('_'):
             raise orm.ModelError('Field `%s` in model `%s`: field names must be lowercase and '
-                                 'must not start with `_`.' % (self.name, orm.getObjectPath(self.model)))
+                                 'must not start with `_`.'
+                                 % (self.name, orm.getObjectPath(self._modelAttrInfo.model)))
         assert isinstance(column, adapters.Column)
         self.column = column
         assert isinstance(index, (str, bool, indexes.Index))
@@ -117,20 +122,35 @@ class Field(Expression, models.ModelAttrMixin):
         assert isinstance(label, str)
         self.label = label or self.name.replace('_', ' ').capitalize()
 
-    def __str__(self, db = None):
-        #db = db or orm.GenericAdapter # we do not use adapter here
-        return '%s.%s' % (self.model, self.column.name)
+    def __get__(self, record, model):
+        if record is not None:  # called as an instance attribute
+            return record.__dict__[self.name]
+
+        # called as a class attribute
+        return FieldExpression(self, model = model)
 
     def __call__(self, value):
         """You can use Field(...)(value) to return a tuple for INSERT.
         """
         return (self, value)
 
+    def _cast(self, value):
+        """Converts a value to Field's comparable type. Default implementation.
+        """
+        return value
+
+
+# remove Expression from Field base classes, which was put for IDE autocomplete to work
+__fieldBaseClasses = list(ModelField.__bases__)
+__fieldBaseClasses.remove(Expression)
+ModelField.__bases__ = tuple(__fieldBaseClasses)
+
+
 ####################################################################################################
 # Fields
 ####################################################################################################
 
-class IdField(Field):
+class IdField(ModelField):
     """Primary integer autoincrement key. ID - implicitly present in each table.
     """
     def __init__(self, db_name = '', label = ''):
@@ -144,7 +164,7 @@ class IdField(Field):
         record.__dict__[self.name] = None if value is None else int(value)
 
 
-class CharField(Field):
+class CharField(ModelField):
     """Field for storing strings of certain length.
     """
     def __init__(self, maxLength, default = None, index = '', db_name = '', label = '',
@@ -162,7 +182,7 @@ class CharField(Field):
             index, label, db_name = db_name)
 
 
-class TextField(Field):
+class TextField(ModelField):
     """Field for storing strings of any length."""
     def __init__(self, default = None, index = '', db_name = '', label = '', modelAttrInfo = None):
         if index:
@@ -171,7 +191,7 @@ class TextField(Field):
                          index, label, db_name = db_name)
 
 
-class IntegerField(Field):
+class IntegerField(ModelField):
 
     def __init__(self, maxDigits = 9, default = None, autoincrement = False, index = '',
                  label = ''):
@@ -185,7 +205,7 @@ class IntegerField(Field):
         record.__dict__[self.name] = int(value)
 
 
-class DecimalField(Field):
+class DecimalField(ModelField):
 
     def __init__(self, maxDigits, fractionDigits, default = None, index = '', label = ''):
         super().__init__(
@@ -197,7 +217,7 @@ class DecimalField(Field):
         record.__dict__[self.name] = None if value is None else Decimal(value)
 
 
-class DateField(Field):
+class DateField(ModelField):
 
     def __init__(self, default = None, index = '', label = ''):
         super().__init__(adapters.Column('DATE', default = default), index, label)
@@ -211,7 +231,7 @@ class DateField(Field):
         record.__dict__[self.name] = value
 
 
-class DateTimeField(Field):
+class DateTimeField(ModelField):
 
     def __init__(self, default = None, index = '', label = ''):
         super().__init__(adapters.Column('DATETIME', default = default), index, label)
@@ -225,7 +245,7 @@ class DateTimeField(Field):
         record.__dict__[self.name] = value
 
 
-class BooleanField(Field):
+class BooleanField(ModelField):
 
     def __init__(self, default = None, index = '', label = ''):
         super()._init_(adapters.Column('INT', precision = 1, default = default), index, label)
@@ -253,7 +273,7 @@ class _RecordId(int):
         return getattr(self._record, self._recordIdField.referRecordAttrName)
 
 
-class RecordField(Field):
+class RecordField(ModelField):
     """Field for storing ids to referred records.
     """
     def __init__(self, referTable, index = '', label = ''):
@@ -270,15 +290,16 @@ class RecordField(Field):
 
     def __get__(self, record, model):
         if record is None:  # called as a class attribute
-            return self
+            return super().__get__(None, model)
+
         # called as an instance attribute
         referRecord = getattr(record, self._name)
         if referRecord is None:
             return None
-        elif isinstance(referRecord, self.referTable):
+        elif isinstance(referRecord, self.referModel):
             return referRecord
         elif isinstance(referRecord, int):
-            referRecord = self.referTable.getOne(record._db, id = referRecord)
+            referRecord = self.referModel.getOne(record._db, id = referRecord)
             setattr(record, self._name, referRecord)
             return referRecord
         else:
@@ -287,9 +308,9 @@ class RecordField(Field):
 
     def __set__(self, record, value):
         """You can assign to the field an integer id or the record itself."""
-        assert isinstance(value, (int, self.referTable)) or value is None, \
+        assert isinstance(value, (int, self.referModel)) or value is None, \
             'You can assign only records of model `%s`, an integer id of the record or None' \
-            % self.referTable
+            % self.referModel
         setattr(record, self._name, value)  # _name will contain the referred record
 
     @orm.LazyProperty
@@ -301,7 +322,7 @@ class RecordField(Field):
         else:
             raise exceptions.ModelError('Referred model must be a Model or a string with its path.')
 
-    def cast(self, value):
+    def _cast(self, value):
         """Convert a value into another value which is ok for this Field.
         """
         if isinstance(value, self.referTable):

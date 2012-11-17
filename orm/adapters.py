@@ -109,6 +109,12 @@ class GenericAdapter():
         return self._timings[-1]
 
     @classmethod
+    def _FIELD(cls, left):
+        """Render a table column name."""
+        #db = db or orm.GenericAdapter # we do not use adapter here
+        return '%s.%s' % (left.model, left.field.column.name)
+
+    @classmethod
     def _AND(cls, left, right):
         """Render the AND clause."""
         return '(%s AND %s)' % (cls.render(left), cls.render(right, left))
@@ -222,17 +228,19 @@ class GenericAdapter():
     def render(cls, value, castField = None):
         """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for
         operations with castField in the DB.
+        @param value:
+        @param castField: 
         """
         if isinstance(value, orm.Expression):  # it's an Expression or Field
             if isinstance(value, orm.DateTimeField):
                 pass
-            return value.__str__(cls) # render sub-expression
+            return value.__str__(cls)  # render sub-expression
         else:  # it's a value for a DB column
             if value is not None and castField is not None:
                 assert isinstance(castField, orm.Expression), 'Cast field must be an Expression.'
                 if castField.__class__ is orm.Expression:  # Field - subclass of Expression
                     castField = castField.type  # expression right operand type
-                value = castField.cast(value)
+                value = castField._cast(value)
                 try:
                     return cls._render(value, castField.column)
                 except Exception:

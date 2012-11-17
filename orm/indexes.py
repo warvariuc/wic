@@ -7,7 +7,7 @@ class IndexField():
     """Helper class for defining a field for index
     """
     def __init__(self, field, sortOrder = 'asc', prefixLength = None):
-        assert isinstance(field, fields.Field), 'Pass Field instances.'
+        assert isinstance(field, fields.ModelField), 'Pass Field instances.'
         assert sortOrder in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
         assert isinstance(prefixLength, int) or prefixLength is None, \
             'Index prefix length must None or int.'
@@ -16,7 +16,7 @@ class IndexField():
         self.prefixLength = prefixLength
 
 
-class Index(models.ModelAttrMixin):
+class Index(models.ModelAttr):
     """A database table index.
     """
     def __init__(self, *indexFields, type = 'index', name = '', method = ''):
@@ -28,11 +28,20 @@ class Index(models.ModelAttrMixin):
         assert indexFields, 'Need at least one Field or IndexField'
 
         model = None
-        for indexField in indexFields:
-            if isinstance(indexField, fields.Field):
+        indexFields = list(indexFields)
+        for i, indexField in enumerate(indexFields):
+#            if isinstance(indexField, fields.ModelField):
+#                # some fields could be passed directly, not via descriptor (e.g. in Model body)
+#                # and we create FieldExpression from it by ourselves
+#                indexField = fields.FieldExpression(indexField, self._modelAttrInfo.model)
+            if isinstance(indexField, str):  # field name passed
+                indexField = self._modelAttrInfo.model.__dict__[indexField]
+            if isinstance(indexField, fields.ModelField):  # a field
                 indexField = IndexField(indexField)
+                indexFields[i] = indexField
             else:
-                assert isinstance(indexField, IndexField), 'Pass Field or IndexField instances.'
+                assert isinstance(indexField, IndexField), \
+                    'Pass a field name or Field/IndexField instances.'
             model = model or indexField.field.model
             assert indexField.field.model is model, 'Indexed fields should be from the same table!'
 
@@ -48,7 +57,7 @@ class Index(models.ModelAttrMixin):
             name += type  # and add index type at the end
         self.name = name
 
-        self.indexFields = list(indexFields)  # fields involved in this index
+        self.indexFields = indexFields  # fields involved in this index
         self.type = type  # index type: unique, primary, etc.
         self.method = method  # if empty - will be used default for this type of DB
 

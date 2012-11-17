@@ -1,20 +1,31 @@
-import sys
+import re
 
 import orm
-from . import models
+from . import models, fields
 
 
-class ModelOptions(models.ModelAttrMixin):
+class ModelOptions(models.ModelAttr):
 
     def __init__(self, db_name = '', indexes = None, ordering = None):
+        if not db_name:
+            db_name = self._modelAttrInfo.model.__name__ + 's'
+            db_name = re.sub('(.)([A-Z])', r'\1_\2', db_name).lower()
         self.db_name = db_name  # db table name
 
+        self.fields = {}
+        for attrName, attr in self._modelAttrInfo.model.__dict__.items():
+            if isinstance(attr, fields.ModelField):
+                self.fields[attrName] = attr
+
         self.ordering = ordering or []  # default order for select when not specified - overriden
+
         indexes = orm.listify(indexes or [])
         # analyze indexes
         for index in indexes:
             assert isinstance(index, orm.Index)
-            index.__init__(modelAttrInfo=self._modelAttrInfo)
+            index.__init__(modelAttrInfo = self._modelAttrInfo)
+        self.indexes = indexes
+
 
 #        if isinstance(index, bool):
 #            index = 'index' if index else ''

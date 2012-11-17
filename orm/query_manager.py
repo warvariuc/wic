@@ -1,7 +1,7 @@
 from . import models
 
 
-class QueryManager(models.ModelAttrMixin):
+class QueryManager(models.ModelAttr):
     """Through this manager a Model interfaces with a database.
     """
     def __init__(self):
@@ -22,7 +22,6 @@ class QueryManager(models.ModelAttrMixin):
         tableName = model._name
         if tableName not in db.getTables():
             self._handleTableMissing(db)
-#        import pprint
         modelColumns = {field.column.name: field.column for field in model}
         dbColumns = db.getColumns(tableName)
 #        logger.debug(pprint.pformat(list(column.str() for column in dbColumns.values())))
