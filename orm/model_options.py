@@ -1,5 +1,3 @@
-import re
-
 import orm
 from . import models, fields
 
@@ -9,7 +7,7 @@ class ModelOptions(models.ModelAttr):
     def __init__(self, db_name = '', indexes = None, ordering = None):
         if not db_name:
             db_name = self._modelAttrInfo.model.__name__ + 's'
-            db_name = re.sub('(.)([A-Z])', r'\1_\2', db_name).lower()
+            db_name = ''.join('_' + c.lower() if c.isupper() else c for c in db_name).strip('_')
         self.db_name = db_name  # db table name
 
         self.fields = {}
