@@ -3,6 +3,8 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 import inspect
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
+from collections import OrderedDict
+
 import orm
 
 
@@ -65,46 +67,40 @@ class ModelBase(type):
     def __new__(cls, name, bases, attrs):
         NewModel = super().__new__(cls, name, bases, attrs)
 
-        assert isinstance(NewModel._meta, model_options.ModelOptions), \
-            '`_meta` attribute should be a ModelOptions instance'
+        try:
 
-#        if NewModel._meta.db_table is None:  # we need only Model subclasses
-#            # if db table name is None - __new__ is called for Model itself
-#            return NewModel  # return without any processing
+            logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
+    
+            stubAttributes = OrderedDict()
+            for attrName, attr in inspect.getmembers(NewModel):
+                if isinstance(attr, ModelAttr):
+                    stubAttributes[attrName] = attr
+    
+            _meta = stubAttributes.pop('_meta', None)
+            assert isinstance(_meta, model_options.ModelOptions), \
+                '`_meta` attribute should be instance of ModelOptions'
+            # sort by definition order - for the correct recreation order
+            stubAttributes = sorted(stubAttributes.items(), key = lambda i: i[1]._creationOrder)
+    
+            for attrName, attr in stubAttributes:
+                if attr._modelAttrInfo.model:
+                    attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
+                try:
+                    attr.__init__(modelAttrInfo = ModelAttrInfo(NewModel, attrName))
+                except Exception:
+                    logger.debug('Failed to init a model attribute: %s.%s'
+                                  % (orm.getObjectPath(NewModel), attrName))
+                    raise
+                setattr(NewModel, attrName, attr)
+    
+            # process _meta at the end, when all fields should have been initialized
+            if _meta._modelAttrInfo.model is not None:  # inherited
+                _meta = model_options.ModelOptions()  # override
+            _meta.__init__(modelAttrInfo = ModelAttrInfo(NewModel, '_meta'))
+            NewModel._meta = _meta
 
-        logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
-
-        _meta = None
-        stubAttributes = []
-        for attrName, attr in inspect.getmembers(NewModel):
-            if isinstance(attr, ModelAttr):
-                if attrName == '_meta':
-                    assert isinstance(attr, model_options.ModelOptions), \
-                        '`_meta` attribute should be instance of ModelOptions'
-                    _meta = attr
-                else:
-                    stubAttributes.append((attrName, attr))
-
-        assert _meta is not None, 'Could not find `_meta` attribute'
-        # sort by definition order - for the correct recreation order
-        stubAttributes.sort(key = lambda i: i[1]._creationOrder)
-
-        for attrName, attr in stubAttributes:
-            if attr._modelAttrInfo.model:
-                attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
-            try:
-                attr.__init__(modelAttrInfo = ModelAttrInfo(NewModel, attrName))
-            except Exception:
-                logger.debug('Failed to init a model attribute: %s.%s'
-                              % (orm.getObjectPath(NewModel), attrName))
-                raise
-            setattr(NewModel, attrName, attr)
-
-        # process _meta at the end, when all fields should have been initialized
-        if _meta._modelAttrInfo.model is not None:  # inherited
-            _meta = model_options.ModelOptions()  # override
-        _meta.__init__(modelAttrInfo = ModelAttrInfo(NewModel, '_meta'))
-        NewModel._meta = _meta
+        except Exception:
+            raise exceptions.ModelError()
 
         return NewModel
 

@@ -21,41 +21,7 @@ def tearDownModule():
     pass
 
 
-class TestModel(orm.Model):
-    char_field = orm.CharField(maxLength = 100)
-    text_field = orm.TextField()
-    decimal_field = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00')
-    author = orm.RecordField('TestModel', index = True)
-    date_field = orm.fields.DateField()
-    date_time_field = orm.fields.DateTimeField()
 
-    _meta = orm.ModelOptions(
-        db_name = 'my_table',
-    )
-
-
-class Author(orm.Model):
-    """Authors catalog
-    """
-    # id field is already present 
-    last_name = orm.CharField(maxLength = 100, comment = 'Author\'s last name')
-    first_name = orm.CharField(maxLength = 100, comment = 'Author\'s first name')
-    created_at = orm.DateTimeField()
-
-    _meta = orm.ModelOptions(
-        db_name = 'authors',
-        indexes = orm.Unique('last_name', 'first_name'),
-    )
-
-
-class Book(orm.Model):
-    """Books catalog"""
-    # id field is already present 
-    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
-    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
-                                    index = True)  # 2 decimal places
-    author = orm.RecordField('Authors', index = True)
-    publication_date = orm.fields.DateField()
 
 #
 #class TestModelsSqlite(unittest.TestCase):
@@ -89,40 +55,102 @@ class TestModelsPostgresql(unittest.TestCase):
 
     def testCreateTableFromModel(self):
 
+        class Author(orm.Model):
+            """Authors catalog
+            """
+            # id field already present 
+            last_name = orm.CharField(maxLength = 100, comment = 'Author\'s last name')
+            first_name = orm.CharField(maxLength = 100, comment = 'Author\'s first name')
+            created_at = orm.DateTimeField()
+
+            _meta = orm.ModelOptions(
+                db_name = 'authors',
+                indexes = orm.Unique('last_name', 'first_name'),
+            )
+
+        class Book(orm.Model):
+            """Books catalog
+            """
+            # id field already present 
+            name = orm.CharField(maxLength = 100, default = 'A very good book!!!')
+            price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
+                                            index = True)  # 2 decimal places
+            author = orm.RecordField('Authors', index = True)
+            publication_date = orm.fields.DateField()
+
         db = self.db
-#        for model in (Author, Book):
-#            db.execute(db._dropTable(model))
-#            for query in db.getCreateTableQuery(model):
-#                db.execute(query)
+        for model in (Author, Book):
+            db.execute(db._dropTable(model))
+            for query in db.getCreateTableQuery(model):
+                db.execute(query)
 
 
 class TestModels(unittest.TestCase):
 
     def testModelOptions(self):
 
-        class TestModel(orm.Model):
+        try:
+            class TestModel(orm.Model):
+                _meta = object()
+        except orm.ModelError:
+            pass
+        else:
+            self.fail('`_meta` should be only instance of ModelOptions.')
+
+        class TestModel1(orm.Model):
             field1 = orm.IntegerField()
             _meta = orm.ModelOptions(
                 db_name = 'test1234',
             )
 
-        self.assertIsInstance(TestModel._meta, model_options.ModelOptions)
-        self.assertEqual(TestModel._meta.db_name, 'test1234')
+        self.assertIsInstance(TestModel1._meta, model_options.ModelOptions)
+        self.assertEqual(TestModel1._meta.db_name, 'test1234')
+        # Model._meta.fields should be a {fieldName: Field, ...}
+        self.assertIsInstance(TestModel1._meta.fields, dict)
+        for fieldName, field in TestModel1._meta.fields.items():
+            self.assertIsInstance(fieldName, str)
+            self.assertIsInstance(field, fields.ModelField)
 
-        class TestModel2(TestModel):
+        class TestModel2(TestModel1):
             pass
 
         # _meta should be per Model, as each model contains its own fields, name, etc.
-        self.assertIsNot(TestModel._meta, TestModel2._meta)
+        self.assertIsNot(TestModel1._meta, TestModel2._meta)
         self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
-        
-        # Model._meta.fields should be a {fieldName: Field, ...}
-        self.assertIsInstance(TestModel._meta.fields, dict)
-        for fieldName, field in TestModel._meta.fields.items():
-            self.assertIsInstance(fieldName, str)
-            self.assertIsInstance(field, fields.ModelField)
+
+
+        # you can specify name of the fields in indexes
+        class Author(orm.Model):
+            last_name = orm.CharField(maxLength = 100)
+            first_name = orm.CharField(maxLength = 100)
+            _meta = orm.ModelOptions(
+                indexes = orm.Unique('last_name', 'first_name'),
+            )
+            
         # test indexes in _meta
-        self.assertIsInstance(TestModel._meta.indexes, list)
+        self.assertIsInstance(Author._meta.indexes, list)
+        self.assertEqual(len(Author._meta.indexes), 1)
+        for index in Author._meta.indexes:
+            self.assertIsInstance(index, orm.Index)
+
+        # you can specify fields in indexes
+        class Author1(orm.Model):
+            last_name = orm.CharField(maxLength = 100)
+            first_name = orm.CharField(maxLength = 100)
+            _meta = orm.ModelOptions(
+                indexes = orm.Unique(last_name, first_name)
+            )
+
+        # you can specify more sophisticated indexes
+        class Author2(orm.Model):
+            name = orm.CharField(maxLength = 100)
+            description = orm.TextField()
+            birth_date = orm.DateField()
+            _meta = orm.ModelOptions(
+                indexes = (orm.Index(orm.IndexField(name, 'desc'),
+                                    orm.IndexField(description, prefixLength = 30)),
+                           orm.Index(birth_date))
+            )
 
     def testModelField(self):
 
@@ -137,6 +165,7 @@ class TestModels(unittest.TestCase):
         class TestModel2(orm.Model):
             field1 = orm.IntegerField()
 
+        self.assertIsInstance(TestModel2.field1, fields.FieldExpression)
         self.assertEqual(TestModel2.field1.left.name, 'field1')
         # Model.field returns Expression, not Field
         self.assertIsInstance(TestModel2.field1, fields.FieldExpression)

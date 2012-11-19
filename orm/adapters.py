@@ -1076,7 +1076,8 @@ class PostgreSqlAdapter(GenericAdapter):
     def _getCreateTableIndexes(cls, model):
         assert orm.isModel(model)
         indexes = []
-        for index in model._indexes:
+        import ipdb; from pprint import pprint; ipdb.set_trace()
+        for index in model._meta.indexes:
             if index.type != 'primary':  # only primary index in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'

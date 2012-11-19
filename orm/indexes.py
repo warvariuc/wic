@@ -1,5 +1,3 @@
-import orm
-
 from . import models
 
 
@@ -30,10 +28,6 @@ class Index(models.ModelAttr):
         model = None
         indexFields = list(indexFields)
         for i, indexField in enumerate(indexFields):
-#            if isinstance(indexField, fields.ModelField):
-#                # some fields could be passed directly, not via descriptor (e.g. in Model body)
-#                # and we create FieldExpression from it by ourselves
-#                indexField = fields.FieldExpression(indexField, self._modelAttrInfo.model)
             if isinstance(indexField, str):  # field name passed
                 indexField = self._modelAttrInfo.model.__dict__[indexField]
             if isinstance(indexField, fields.ModelField):  # a field

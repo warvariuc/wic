@@ -65,7 +65,7 @@ def isModel(obj):
 def listify(obj):
     """Assure that obj is a list."""
     if isinstance(obj, (list, tuple)):
-        return list(obj)
+        return obj
     return [obj]
 
 
@@ -88,9 +88,6 @@ class LazyProperty():
         else:
             return self  # when the descriptor is accessed as a class attribute
 
-
-def import_(modulePath):
-    return __import__(modulePath)
 
 # Custom None
 Nil = object()
