@@ -74,7 +74,11 @@ class Unique(Index):
         @param indexFields: list of IndexField instances
         @param method: btree, hash, gist, gin - specific fot the db
         """
+        import ipdb; from pprint import pprint; ipdb.set_trace()
         super().__init__(*indexFields, type = 'unique', name = name, method = method)
+    
+    def test(self):
+        pass
 
 
 from . import fields

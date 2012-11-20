@@ -55,6 +55,7 @@ class ModelAttr():
         modelAttrInfo = kwargs.pop('modelAttrInfo', None)
         if modelAttrInfo:
             self._modelAttrInfo = modelAttrInfo
+        if self._modelAttrInfo.model is not None:
             self.__orig__init__(*self._initArgs, **self._initKwargs)
 
 

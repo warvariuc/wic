@@ -24,6 +24,7 @@ class ModelOptions(models.ModelAttr):
         for index in indexes:
             assert isinstance(index, orm_indexes.Index)
             if index._modelAttrInfo.model is None:
+                import ipdb; from pprint import pprint; ipdb.set_trace()
                 index.__init__(modelAttrInfo = self._modelAttrInfo)
 
         for field in self.fields.values():
