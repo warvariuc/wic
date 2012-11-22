@@ -23,6 +23,7 @@ class Index(models.ModelAttr):
         @param type: index, primary, unique, fulltext, spatial - specific fot the db
         @param method: btree, hash, gist, gin - specific fot the db
         """
+#        print('Index.__init')
         assert indexFields, 'Need at least one Field or IndexField'
 
         model = None
@@ -74,11 +75,8 @@ class Unique(Index):
         @param indexFields: list of IndexField instances
         @param method: btree, hash, gist, gin - specific fot the db
         """
-        import ipdb; from pprint import pprint; ipdb.set_trace()
+#        print('Unique.__init')
         super().__init__(*indexFields, type = 'unique', name = name, method = method)
-    
-    def test(self):
-        pass
 
 
 from . import fields

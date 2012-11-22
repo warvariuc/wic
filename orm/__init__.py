@@ -64,8 +64,10 @@ def isModel(obj):
 
 def listify(obj):
     """Assure that obj is a list."""
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list):
         return obj
+    elif hasattr(obj, '__iter__'):
+        return list(obj)
     return [obj]
 
 

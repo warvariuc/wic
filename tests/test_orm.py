@@ -24,15 +24,20 @@ def tearDownModule():
 #    def testModelAttr(self):
 #        class ModelAttribute(orm.ModelAttr):
 #            def __init__(self):
-#                import ipdb; from pprint import pprint; ipdb.set_trace()
+##                print('ModelAttribute.__init__ real')
+##                import ipdb; from pprint import pprint; ipdb.set_trace()
 #                pass
 #        class ModelAttributeSubclass(ModelAttribute):
 #            def __init__(self):
-#                import ipdb; from pprint import pprint; ipdb.set_trace()
+##                print('ModelAttributeSubclass.__init__ real')
+##                import ipdb; from pprint import pprint; ipdb.set_trace()
+#                assert ModelAttribute is not super(ModelAttributeSubclass)
+##                assert ModelAttributeSubclass.__dict__['__init__'] is not ModelAttribute.__dict__['__init__']
+##                assert ModelAttributeSubclass.__init__ is not ModelAttribute.__init__
 #                super().__init__()
-#        import ipdb; from pprint import pprint; ipdb.set_trace()
 #        class TestModel(orm.Model):
-#            attr = ModelAttributeSubclass()
+#            attr1 = ModelAttribute()
+#            attr2 = ModelAttributeSubclass()
 
 
 #
@@ -101,34 +106,34 @@ class TestModels(unittest.TestCase):
 
     def testModelOptions(self):
 
-        try:
-            class TestModel(orm.Model):
-                _meta = object()
-        except orm.ModelError:
-            pass
-        else:
-            self.fail('`_meta` should be only instance of ModelOptions.')
-
-        class TestModel1(orm.Model):
-            field1 = orm.IntegerField()
-            _meta = orm.ModelOptions(
-                db_name = 'test1234',
-            )
-
-        self.assertIsInstance(TestModel1._meta, orm.ModelOptions)
-        self.assertEqual(TestModel1._meta.db_name, 'test1234')
-        # Model._meta.fields should be a {fieldName: Field, ...}
-        self.assertIsInstance(TestModel1._meta.fields, dict)
-        for fieldName, field in TestModel1._meta.fields.items():
-            self.assertIsInstance(fieldName, str)
-            self.assertIsInstance(field, orm.ModelField)
-
-        class TestModel2(TestModel1):
-            pass
-
-        # _meta should be per Model, as each model contains its own fields, name, etc.
-        self.assertIsNot(TestModel1._meta, TestModel2._meta)
-        self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
+#        try:
+#            class TestModel(orm.Model):
+#                _meta = object()
+#        except orm.ModelError:
+#            pass
+#        else:
+#            self.fail('`_meta` should be only instance of ModelOptions.')
+#
+#        class TestModel1(orm.Model):
+#            field1 = orm.IntegerField()
+#            _meta = orm.ModelOptions(
+#                db_name = 'test1234',
+#            )
+#
+#        self.assertIsInstance(TestModel1._meta, orm.ModelOptions)
+#        self.assertEqual(TestModel1._meta.db_name, 'test1234')
+#        # Model._meta.fields should be a {fieldName: Field, ...}
+#        self.assertIsInstance(TestModel1._meta.fields, dict)
+#        for fieldName, field in TestModel1._meta.fields.items():
+#            self.assertIsInstance(fieldName, str)
+#            self.assertIsInstance(field, orm.ModelField)
+#
+#        class TestModel2(TestModel1):
+#            pass
+#
+#        # _meta should be per Model, as each model contains its own fields, name, etc.
+#        self.assertIsNot(TestModel1._meta, TestModel2._meta)
+#        self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
 
 
         # you can specify name of the fields in indexes
@@ -141,7 +146,8 @@ class TestModels(unittest.TestCase):
             
         # test indexes in _meta
         self.assertIsInstance(Author._meta.indexes, list)
-        self.assertEqual(len(Author._meta.indexes), 1)
+        # rimary index for id and our compound index
+        self.assertEqual(len(Author._meta.indexes), 2)
         for index in Author._meta.indexes:
             self.assertIsInstance(index, orm.Index)
 

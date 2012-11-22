@@ -4,6 +4,7 @@ import inspect
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
 from collections import OrderedDict
+from types import MethodType
 
 import orm
 
@@ -21,6 +22,38 @@ class ModelAttrInfo():
         self.name = name
 
 
+
+class ProxyInit():
+    """A descriptor to hook accesss to `__init__` of a Model attribute, which needs postponed
+    initialiaztion only when the model is fully initialized.
+    """
+    def __init__(self, cls):
+        """
+        @param cls: model attribute class
+        """
+        if not isinstance(cls.__init__, ProxyInit):
+            self.__orig__init__ = cls.__init__  # original __init__
+            cls.__init__ = self
+
+    def __get__(self, obj, cls):
+        if obj is not None:
+            orig_init = self.__orig__init__
+            def __init__(self, *args, **kwargs):
+                """This will replace `__init__` method of a Model attribute, will remember initialization
+                arguments and will call the original `__init__` when information about the model attribute
+                is passed.
+                """
+#                print('ModelAttrStubMixin.__init__', self.__class__.__name__, args, kwargs)
+                modelAttrInfo = kwargs.pop('modelAttrInfo', None)
+                if modelAttrInfo:
+                    self._modelAttrInfo = modelAttrInfo
+                if self._modelAttrInfo.model is not None:
+                    orig_init(self, *self._initArgs, **self._initKwargs)
+            return MethodType(__init__, obj)
+        return self
+
+
+
 class ModelAttr():
     """Mixin class for Model attributes, which holds information about initialization arguments,
     `__init__` being called only after the model is completely defined.
@@ -33,31 +66,15 @@ class ModelAttr():
         """Create the object, but prevent calling its `__init__` method, montkey patching it with a
         stub, remembering the initizalization arguments. The real `__init__` can be called later.
         """
-        if cls.__init__ != ModelAttr.__proxy__init__:
-            cls.__orig__init__ = cls.__init__  # original __init__
-            cls.__init__ = ModelAttr.__proxy__init__  # monkey patching with our version
-
         # create the object normally
         obj = super().__new__(cls)
         obj._initArgs = args
         obj._initKwargs = kwargs
         ModelAttr.__creationCounter += 1
         obj._creationOrder = ModelAttr.__creationCounter
-#        print('ModelAttrMixin.__new__', cls)
+#        print('ModelAttrMixin.__new__', cls, repr(obj))
+        ProxyInit(cls)  # monkey patching with our version
         return obj
-
-    def __proxy__init__(self, *args, **kwargs):
-        """This will replace `__init__` method of a Model attribute, will remember initialization
-        arguments and will call the original `__init__` when information about the model attribute
-        is passed.
-        """
-#        print('ModelAttrStubMixin.__init__', self.__class__.__name__, args, kwargs)
-        modelAttrInfo = kwargs.pop('modelAttrInfo', None)
-        if modelAttrInfo:
-            self._modelAttrInfo = modelAttrInfo
-        if self._modelAttrInfo.model is not None:
-            self.__orig__init__(*self._initArgs, **self._initKwargs)
-
 
 
 class ModelBase(type):
@@ -71,18 +88,18 @@ class ModelBase(type):
         try:
 
             logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
-    
+
             stubAttributes = OrderedDict()
             for attrName, attr in inspect.getmembers(NewModel):
                 if isinstance(attr, ModelAttr):
                     stubAttributes[attrName] = attr
-    
+
             _meta = stubAttributes.pop('_meta', None)
             assert isinstance(_meta, model_options.ModelOptions), \
                 '`_meta` attribute should be instance of ModelOptions'
             # sort by definition order - for the correct recreation order
             stubAttributes = sorted(stubAttributes.items(), key = lambda i: i[1]._creationOrder)
-    
+
             for attrName, attr in stubAttributes:
                 if attr._modelAttrInfo.model:
                     attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
@@ -93,7 +110,7 @@ class ModelBase(type):
                                   % (orm.getObjectPath(NewModel), attrName))
                     raise
                 setattr(NewModel, attrName, attr)
-    
+
             # process _meta at the end, when all fields should have been initialized
             if _meta._modelAttrInfo.model is not None:  # inherited
                 _meta = model_options.ModelOptions()  # override
