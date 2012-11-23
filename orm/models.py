@@ -75,12 +75,12 @@ class ModelAttr():
         stub, remembering the initizalization arguments. The real `__init__` can be called later.
         """
         # create the object normally
-        obj = super().__new__(cls)
+        self = super().__new__(cls)
         ModelAttr.__creationCounter += 1
-        obj._creationOrder = ModelAttr.__creationCounter
-#        print('ModelAttrMixin.__new__', cls, repr(obj))
+        self._creationOrder = ModelAttr.__creationCounter
+#        print('ModelAttrMixin.__new__', cls, repr(self))
         ProxyInit(cls)  # monkey patching `__init__` with our version
-        return obj
+        return self
 
 
 class ModelBase(type):
