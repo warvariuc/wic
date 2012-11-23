@@ -32,13 +32,16 @@ class ProxyInit():
         @param cls: model attribute class
         """
         if not isinstance(cls.__init__, ProxyInit):
-            self.__orig__init__ = cls.__init__  # original __init__
+            self.orig_init = cls.__init__  # original __init__
             cls.__init__ = self
 
     def __get__(self, obj, cls):
+
         if obj is not None:
-            orig_init = self.__orig__init__
-            def __init__(self, *args, **kwargs):
+
+            orig_init = self.orig_init
+
+            def proxy_init(self, *args, **kwargs):
                 """This will replace `__init__` method of a Model attribute, will remember initialization
                 arguments and will call the original `__init__` when information about the model attribute
                 is passed.
@@ -47,11 +50,16 @@ class ProxyInit():
                 modelAttrInfo = kwargs.pop('modelAttrInfo', None)
                 if modelAttrInfo:
                     self._modelAttrInfo = modelAttrInfo
+                else:
+                    obj._initArgs = args
+                    obj._initKwargs = kwargs
                 if self._modelAttrInfo.model is not None:
                     orig_init(self, *self._initArgs, **self._initKwargs)
-            return MethodType(__init__, obj)
-        return self
+#            return MethodType(__init__, obj)
+            # functions are descriptors, to be able to work as bound methods
+            return proxy_init.__get__(obj, cls)
 
+        return self
 
 
 class ModelAttr():
@@ -68,12 +76,10 @@ class ModelAttr():
         """
         # create the object normally
         obj = super().__new__(cls)
-        obj._initArgs = args
-        obj._initKwargs = kwargs
         ModelAttr.__creationCounter += 1
         obj._creationOrder = ModelAttr.__creationCounter
 #        print('ModelAttrMixin.__new__', cls, repr(obj))
-        ProxyInit(cls)  # monkey patching with our version
+        ProxyInit(cls)  # monkey patching `__init__` with our version
         return obj
 
 
