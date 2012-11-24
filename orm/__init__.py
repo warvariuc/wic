@@ -66,7 +66,7 @@ def listify(obj):
     """Assure that obj is a list."""
     if isinstance(obj, list):
         return obj
-    elif hasattr(obj, '__iter__'):
+    elif hasattr(obj, '__iter__') and not isinstance(obj, str):
         return list(obj)
     return [obj]
 

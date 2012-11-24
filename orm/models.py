@@ -13,7 +13,7 @@ class ModelAttrInfo():
     """Information about an attribute of a Model
     """
     def __init__(self, model, name):
-        if model:
+        if model is not None:
             assert orm.isModel(model)
             assert isinstance(name, str) and name
             assert hasattr(model, name), 'Model %s does not have an attribute with name %s' \
@@ -95,20 +95,23 @@ class ModelBase(type):
 
             logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
 
-            stubAttributes = OrderedDict()
+            modelAttrs = OrderedDict()
             for attrName, attr in inspect.getmembers(NewModel):
                 if isinstance(attr, ModelAttr):
-                    stubAttributes[attrName] = attr
+                    modelAttrs[attrName] = attr
 
-            _meta = stubAttributes.pop('_meta', None)
+            _meta = modelAttrs.pop('_meta', None)
             assert isinstance(_meta, model_options.ModelOptions), \
                 '`_meta` attribute should be instance of ModelOptions'
             # sort by definition order - for the correct recreation order
-            stubAttributes = sorted(stubAttributes.items(), key = lambda i: i[1]._creationOrder)
+            modelAttrs = sorted(modelAttrs.items(), key = lambda i: i[1]._creationOrder)
 
-            for attrName, attr in stubAttributes:
-                if attr._modelAttrInfo.model:
-                    attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
+            for attrName, attr in modelAttrs:
+                if attr._modelAttrInfo.model:  # inherited field
+                    # make its copy for the new model
+                    _attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
+                    _attr._creationOrder = attr._creationOrder
+                    attr = _attr
                 try:
                     attr.__init__(modelAttrInfo = ModelAttrInfo(NewModel, attrName))
                 except Exception:
@@ -128,29 +131,21 @@ class ModelBase(type):
 
         return NewModel
 
-    def __getitem__(self, key):
+    def __getitem__(self, fieldName):
         """Get a Table Field by name - Table['field_name'].
         """
-        attr = getattr(self, key, None)
-        if isinstance(attr, fields.ModelField):
-            return attr.field
-        raise KeyError('Could not find field %s in table %s' % (key, orm.getObjectPath(self)))
+        if fieldName in self._meta.fields:
+            return getattr(self, fieldName)  # to ensure descriptor behavior
+        raise KeyError
 
     def __iter__(self):
         """Get Table fields.
         """
-        fields = []
-        for attrName in self.__dict__:
-            try:  # there maybe non Field attributes as well
-                fields.append(self[attrName])
-            except KeyError:
-                pass
-        fields.sort(key = lambda field: field._creationOrder)  # sort by creation order - because __dict__ is unordered
-        for field in fields:
-            yield field
+        for fieldName in self._meta.fields:
+            yield getattr(self, fieldName)  # to ensure descriptor behavior
 
     def __len__(self):
-        return len(list(self.__iter__()))
+        return len(self._meta.fields)
 
     def __str__(self):
         return self._meta.db_name
@@ -178,21 +173,23 @@ class Model(metaclass = ModelBase):
         """
         self._db = db
 
-        table = None
+        model = None
         for arg in args:
             assert isinstance(arg, (list, tuple)) and len(arg) == 2, \
                 'Pass tuples with 2 items: (field, value).'
             field, value = arg
             if isinstance(field, str):
                 field = self.__class__[field]
-            assert isinstance(field, fields.ModelField), 'First arg must be a Field.'
-            _table = field.table
-            table = table or _table
-            assert table is _table, 'Pass fields from the same table'
+            assert isinstance(field, fields.FieldExpression), 'First arg must be a Field.'
+            field = field.left
+            _model = field.model
+            model = model or _model
+            assert model is _model, 'Pass fields from the same table'
             kwargs[field.name] = value
 
-        for field in self.__class__:  # make values for fields
-            setattr(self, field.name, kwargs.pop(field.name, field.default))
+        # make values for fields
+        for fieldName, field in self._meta.fields.items():
+            setattr(self, fieldName, kwargs.pop(fieldName, field.column.default))
 
         if kwargs:
             raise NameError('Got unknown field names: %s' % ', '.join(kwargs))
@@ -202,8 +199,10 @@ class Model(metaclass = ModelBase):
         key: either a Field instance or name of the field.
         """
         model = self.__class__
+        if isinstance(field, fields.FieldExpression):
+            field = field.left
         if isinstance(field, fields.ModelField):
-            assert field.table is model, 'This field is from another model.'
+            assert field.model is model, 'This field is from another model.'
             attrName = field.name
         elif isinstance(field, str):
             field = model[field]
@@ -216,7 +215,7 @@ class Model(metaclass = ModelBase):
         """Delete this record.
         """
         db = self._db
-        self.checkTable(db)
+        self.objects.checkTable(db)
         model = self.__class__
         signals.pre_delete.send(sender = model, record = self)
         db.delete(model, where = (model.id == self.id))
@@ -226,12 +225,15 @@ class Model(metaclass = ModelBase):
 
     def save(self):
         db = self._db
-        self.checkTable(db)
+        self.objects.checkTable(db)
         model = self.__class__
         self.timestamp = DateTime.now()
         values = []  # list of tuples (Field, value)
-        for field in model:
-            value = self[field]
+        for field in model._meta.fields.values():
+            if isinstance(field, fields.RecordField):
+                value = getattr(self, field._name)
+            else:
+                value = self[field]
             values.append(field(value))
 
         signals.pre_save.send(sender = model, record = self)
@@ -253,7 +255,7 @@ class Model(metaclass = ModelBase):
         """Human readable presentation of the record.
         """
         values = []
-        for field in self.__class__:
+        for field in self._meta.fields.values():
             value = getattr(self, field.name)
             if isinstance(value, (Date, DateTime, Decimal)):
                 value = str(value)

@@ -62,49 +62,84 @@ class TestModelAttr(unittest.TestCase):
 #            self.db.execute(_query)
 
 
-#class TestModelsPostgresql(unittest.TestCase):
-#
-#    @classmethod
-#    def setUpClass(cls):
-##        CREATE USER test WITH PASSWORD 'test';
-##        CREATE DATABASE test;
-##        GRANT ALL PRIVILEGES ON DATABASE test TO test;
-#        cls.db = orm.connect('postgresql://test:test@localhost/test')
-#
-#    @classmethod
-#    def tearDownClass(cls):
-#        cls.db.disconnect()
-#
-#    def testCreateTableFromModel(self):
-#
-#        class Author(orm.Model):
-#            """Authors catalog
-#            """
-#            # id field already present 
-#            last_name = orm.CharField(maxLength=100, comment='Author\'s last name')
-#            first_name = orm.CharField(maxLength=100, comment='Author\'s first name')
-#            created_at = orm.DateTimeField()
-#
-#            _meta = orm.ModelOptions(
-#                db_name='authors',
-#                indexes=orm.Unique(last_name, first_name),
-#            )
-#
-#        class Book(orm.Model):
-#            """Books catalog
-#            """
-#            # id field already present 
-#            name = orm.CharField(maxLength=100, default='A very good book!!!')
-#            price = orm.DecimalField(maxDigits=10, fractionDigits=2, default='0.00',
-#                                            index=True)  # 2 decimal places
-#            author = orm.RecordField('Authors', index=True)
-#            publication_date = orm.DateField()
-#
-#        db = self.db
-#        for model in (Author, Book):
-#            db.execute(db._dropTable(model))
-#            for query in db.getCreateTableQuery(model):
-#                db.execute(query)
+class TestModelsPostgresql(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+#        CREATE USER test WITH PASSWORD 'test';
+#        CREATE DATABASE test;
+#        GRANT ALL PRIVILEGES ON DATABASE test TO test;
+        cls.db = orm.connect('postgresql://test:test@localhost/test')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.disconnect()
+
+    def runTest(self):
+
+        class Author(orm.Model):
+            """Authors catalog
+            """
+            # id field already present 
+            last_name = orm.CharField(maxLength = 100, comment = 'Author\'s last name')
+            first_name = orm.CharField(maxLength = 100, comment = 'Author\'s first name')
+            created_at = orm.DateTimeField()
+
+            _meta = orm.ModelOptions(
+                db_name = 'authors',
+                indexes = orm.Unique(last_name, first_name),
+            )
+
+        class Book(orm.Model):
+            """Books catalog
+            """
+            # id field already present 
+            name = orm.CharField(maxLength = 100, default = 'A very good book!!!')
+            price = orm.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00',
+                                    index = True)  # 2 decimal places
+            author = orm.RecordField(Author, index = True)
+            publication_date = orm.DateField()
+
+        db = self.db
+        for model in (Author, Book):
+            db.execute(db._dropTable(model))
+            for query in db.getCreateTableQuery(model):
+                db.execute(query)
+        db.commit()
+
+        authorData = (
+            ('first_name', 'last_name'),
+            ('Sam', 'Williams'),
+            ('Steven', 'Levy'),
+            ('Richard', 'Stallman'),
+            ('Имя', 'Фамилия'),
+        )
+        authors = []
+        for data in authorData[1:]:
+            data = dict(zip(authorData[0], data))
+            author = Author.objects.create(db = db, **data)
+            print(author)
+            authors.append(author)
+
+        bookData = (
+            ('name', 'author', 'price', 'publication_date'),
+            ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
+                 authors[0].id, '9.55', '2002-03-08'),
+            ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
+                 authors[1], '14.95', '2010-03-27'),
+            ("In The Plex: How Google Thinks, Works, and Shapes Our Lives",
+                 authors[1], '13.98', '2011-04-12'),
+            ("Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
+                 authors[1], '23.00', '2002-01-15'),
+            ("Книга с русским названием",
+                 authors[3], '00.00', '2000-02-29'),
+        )
+        books = []
+        for data in bookData[1:]:
+            data = dict(zip(bookData[0], data))
+            book = Book.objects.create(db = db, **data)
+            print(book)
+            books.append(book)
 
 
 class TestModels(unittest.TestCase):
@@ -122,7 +157,7 @@ class TestModels(unittest.TestCase):
         class TestModel1(orm.Model):
             field1 = orm.IntegerField()
             _meta = orm.ModelOptions(
-                db_name='test1234',
+                db_name = 'test1234',
             )
 
         self.assertIsInstance(TestModel1._meta, orm.ModelOptions)
@@ -142,11 +177,11 @@ class TestModels(unittest.TestCase):
         self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
 
         class Author(orm.Model):
-            last_name = orm.CharField(maxLength=100)
-            first_name = orm.CharField(maxLength=100)
+            last_name = orm.CharField(maxLength = 100)
+            first_name = orm.CharField(maxLength = 100)
             # you can specify name of the fields in indexes
             _meta = orm.ModelOptions(
-                indexes=orm.Unique('last_name', 'first_name'),
+                indexes = orm.Unique('last_name', 'first_name'),
             )
 
         # test indexes in _meta
@@ -168,20 +203,20 @@ class TestModels(unittest.TestCase):
 
         # you can specify fields in indexes
         class Author1(orm.Model):
-            last_name = orm.CharField(maxLength=100)
-            first_name = orm.CharField(maxLength=100)
+            last_name = orm.CharField(maxLength = 100)
+            first_name = orm.CharField(maxLength = 100)
             _meta = orm.ModelOptions(
-                indexes=orm.Unique(last_name, first_name)
+                indexes = orm.Unique(last_name, first_name)
             )
 
         # you can specify more sophisticated indexes
         class Author2(orm.Model):
-            name = orm.CharField(maxLength=100)
+            name = orm.CharField(maxLength = 100)
             description = orm.TextField()
             birth_date = orm.DateField()
             _meta = orm.ModelOptions(
-                indexes=(orm.Index(orm.IndexField(name, 'desc'),
-                                    orm.IndexField(description, prefixLength=30)),
+                indexes = (orm.Index(orm.IndexField(name, 'desc'),
+                                    orm.IndexField(description, prefixLength = 30)),
                            orm.Index(birth_date))
             )
 
@@ -206,14 +241,26 @@ class TestModels(unittest.TestCase):
     def testModelInheritance(self):
 
         class TestModel1(orm.Model):
-            field1 = orm.CharField(maxLength=100)
+            field1 = orm.CharField(maxLength = 100)
 
         class TestModel2(TestModel1):
             field1 = orm.IntegerField()
-            field2 = orm.CharField(maxLength=100)
+            field2 = orm.CharField(maxLength = 100)
 
         self.assertIsNot(TestModel2.field1, TestModel1.field1)
         self.assertIsInstance(TestModel1.field1.left, orm.CharField)
         self.assertIsInstance(TestModel2.field1.left, orm.IntegerField)
         self.assertIs(TestModel1.field1.left.model, TestModel1)
         self.assertIs(TestModel2.field1.left.model, TestModel2)
+
+class TestExpressions(unittest.TestCase):
+
+    def testIdFied(self):
+
+        class TestModel1(orm.Model):
+            field1 = orm.IntegerField()
+            field2 = orm.CharField(maxLength = 100)
+
+        self.assertEqual(str(TestModel1.id == 1), '(test_model1s.id = 1)')
+        self.assertEqual(str(TestModel1.field1 == 1), '(test_model1s.field1 = 1)')
+        self.assertEqual(str(TestModel1.field2 == 1), "(test_model1s.field2 = '1')")

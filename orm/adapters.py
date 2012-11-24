@@ -17,7 +17,7 @@ from orm import logger
 class Column():
     """Information about database table column.
     """
-    def __init__(self, type, name = '', default = None, precision = None, scale = None,
+    def __init__(self, type, name, default = None, precision = None, scale = None,
                  unsigned = None, nullable = True, autoincrement = False, comment = ''):
         self.name = name  # db table column name
         self.type = type  # string with the name of data type (decimal, varchar, bigint...)
@@ -109,10 +109,10 @@ class GenericAdapter():
         return self._timings[-1]
 
     @classmethod
-    def _FIELD(cls, left):
+    def _MODELFIELD(cls, left):
         """Render a table column name."""
         #db = db or orm.GenericAdapter # we do not use adapter here
-        return '%s.%s' % (left.model, left.field.column.name)
+        return '%s.%s' % (left.model, left.column.name)
 
     @classmethod
     def _AND(cls, left, right):
@@ -237,9 +237,12 @@ class GenericAdapter():
             return value.__str__(cls)  # render sub-expression
         else:  # it's a value for a DB column
             if value is not None and castField is not None:
-                assert isinstance(castField, orm.Expression), 'Cast field must be an Expression.'
-                if castField.__class__ is orm.Expression:  # Field - subclass of Expression
+                if isinstance(castField, orm.Expression):
                     castField = castField.type  # expression right operand type
+                assert isinstance(castField, orm.ModelField)
+#                assert isinstance(castField, orm.Expression), 'Cast field must be an Expression.'
+#                if castField.__class__ is orm.Expression:  # Field - subclass of Expression
+#                    castField = castField.type  # expression right operand type
                 value = castField._cast(value)
                 try:
                     return cls._render(value, castField.column)
@@ -286,11 +289,11 @@ class GenericAdapter():
         return cls.driver.OperationalError
 
     @classmethod
-    def _getCreateTableColumns(cls, table):
+    def _getCreateTableColumns(cls, model):
         """Get columns declarations for CREATE TABLE statement.
         """
         columns = []
-        for field in table:
+        for field in model._meta.fields.values():
             column = field.column
             if column is not None:
                 columns.append(column.__str__(cls))
@@ -461,20 +464,20 @@ class GenericAdapter():
             ( expression2_1, expression2_2, ... ), ... 
         """
         fields = []
-        table = None
+        model = None
         for item in _fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, \
                 'Pass tuples with 2 items: (field, value).'
-            field, value = item
-            assert isinstance(field, orm.Field), 'First item must be a Field.'
-            _table = field.table
-            table = table or _table
-            assert table is _table, 'Pass fields from the same table'
+            field = item[0]
+            assert isinstance(field, orm.ModelField), 'First item must be a Field.'
+            _model = field.model
+            model = model or _model
+            assert model is _model, 'Pass fields from the same table'
             if not field.column.autoincrement:
                 fields.append(item)
-        keys = ', '.join(field.column.name for field, value in fields)
+        keys = ', '.join(field.column.name for field, _ in fields)
         values = ', '.join(self.render(value, field) for field, value in fields)
-        return 'INSERT INTO %s (%s) VALUES (%s)' % (table, keys, values)
+        return 'INSERT INTO %s (%s) VALUES (%s)' % (model, keys, values)
 
     def insert(self, *fields):
         """Insert records in the db.
@@ -494,7 +497,7 @@ class GenericAdapter():
             assert isinstance(item, (list, tuple)) and len(item) == 2, \
                 'Pass tuples with 2 items: (field, value).'
             field, value = item
-            assert isinstance(field, orm.Field), 'First item in the tuple must be a Field.'
+            assert isinstance(field, orm.ModelField), 'First item in the tuple must be a Field.'
             _table = field.table
             table = table or _table
             assert table is _table, 'Pass fields from the same table'
@@ -560,8 +563,8 @@ class GenericAdapter():
             if isinstance(field, orm.Expression):
                 field = self.render(field)
             elif not isinstance(field, str):
-                raise orm.QueryError('Field must a Field instance or a string. Got `%s`'
-                                     % field.__class__.__name__)
+                raise orm.QueryError('Field must an Expression/Field/str instance. Got `%s`'
+                                     % orm.getObjectPath(field))
             _fields.append(field)
         sql_fields = ', '.join(_fields)
 
@@ -667,7 +670,7 @@ class GenericAdapter():
             newRow = []
             for j, field in enumerate(fields):
                 value = row[j]
-                if value is not None and isinstance(field, orm.Field):
+                if value is not None and isinstance(field, orm.ModelField):
                     column = field.column
                     if isinstance(column, orm.Column):
                         decodeFunc = getattr(self, '_decode' + column.type.upper(), None)
@@ -1076,9 +1079,8 @@ class PostgreSqlAdapter(GenericAdapter):
     def _getCreateTableIndexes(cls, model):
         assert orm.isModel(model)
         indexes = []
-        import ipdb; from pprint import pprint; ipdb.set_trace()
         for index in model._meta.indexes:
-            if index.type != 'primary':  # only primary index in the CREATE TABLE query
+            if index.type.lower() != 'primary':  # only primary index in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'
             columns = []
@@ -1099,11 +1101,11 @@ class PostgreSqlAdapter(GenericAdapter):
     def _getCreateTableOther(cls, model):
         assert orm.isModel(model)
         queries = []
-        for index in model._indexes:
+        for index in model._meta.indexes:
             if index.type.lower() == 'primary':  # primary index is in the CREATE TABLE query
                 continue
             elif index.type.lower() == 'unique':
-                indexType = 'UNIQUE'
+                indexType = 'UNIQUE INDEX'
             else:
                 indexType = 'INDEX'
             columns = []
@@ -1117,29 +1119,30 @@ class PostgreSqlAdapter(GenericAdapter):
                 columns.append(column)
                 # all fields are checked to have the same table, so take the first one
             model = index.indexFields[0].field.model
-            queries.append('CREATE %s "%s" ON "%s" (%s)'
+            queries.append('CREATE %s %s ON %s (%s)'
                            % (indexType, index.name, model, ', '.join(columns)))
 
-        for field in model:
+        for field in model._meta.fields.values():
             column = field.column
             if column is not None and column.comment:
                 queries.append(
-                    "COMMENT ON COLUMN %s.%s IS %s" % (
-                        model._name, column.name, cls.escape(column.comment)
-                    )
+                    "COMMENT ON COLUMN %s.%s IS %s" % (model._meta.db_name, column.name,
+                                                       cls.escape(column.comment))
                 )
 
         return queries
 
     def getTables(self):
-        """Get list of tables (names) in this DB."""
+        """Get list of tables (names) in this DB.
+        """
         self.execute("SELECT table_name "
                      "FROM information_schema.tables "
                      "WHERE table_schema = 'public'")
         return [row[0] for row in self.cursor.fetchall()]
 
     def getColumns(self, tableName):
-        """Get columns of a table"""
+        """Get columns of a table
+        """
         rows = self.select(
             'column_name', 'data_type', 'column_default', 'is_nullable', 'character_maximum_length',
             'numeric_precision', 'numeric_scale',
@@ -1168,7 +1171,7 @@ class PostgreSqlAdapter(GenericAdapter):
             else:
                 autoincrement = False
             # TODO: retrieve column comment
-            column = Column(type = typeName, field = None, name = row['column_name'],
+            column = Column(type = typeName, name = row['column_name'],
                             default = default,
                             precision = precision, scale = row['numeric_scale'],
                             nullable = nullable, autoincrement = autoincrement)

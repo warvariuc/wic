@@ -19,10 +19,10 @@ class QueryManager(models.ModelAttr):
             return
         model = self.model
         logger.debug('Model.checkTable: checking db table %s' % model)
-        tableName = model._name
+        tableName = model._meta.db_name
         if tableName not in db.getTables():
             self._handleTableMissing(db)
-        modelColumns = {field.column.name: field.column for field in model}
+        modelColumns = {field.column.name: field.column for field in model._meta.fields.values()}
         dbColumns = db.getColumns(tableName)
 #        logger.debug(pprint.pformat(list(column.str() for column in dbColumns.values())))
 #        logger.debug(pprint.pformat(list(column.str() for column in modelColumns.values())))
@@ -32,6 +32,11 @@ class QueryManager(models.ModelAttr):
                 print('Column in the db not found: %s' % column.str())
         logger.debug('CREATE TABLE query:\n%s' % db.getCreateTableQuery(model))
         self._checkedDbs.add(db.uri)
+
+    def create(self, db, *args, **kwargs):
+        record = self.model(db, *args, **kwargs)
+        record.save()
+        return record
 
     def getOne(self, db, where = None, id = None, select_related = False):
         """Get a single record which falls under the given condition.
@@ -44,7 +49,8 @@ class QueryManager(models.ModelAttr):
         if id:
             where = (self.model.id == id)
 
-        records = list(self.model.get(db, where, limit = 2, select_related = select_related))
+        records = list(self.model.objects.get(db, where, limit = 2,
+                                              select_related = select_related))
         if not records:  # not found
             raise exceptions.RecordNotFound(db.render(where))
         if len(records) == 1:
@@ -62,7 +68,7 @@ class QueryManager(models.ModelAttr):
         model = self.model
         logger.debug("Model.get('%s', db= %s, where= %s, limit= %s)" % (model, db, where, limit))
         self.checkTable(db)
-        orderby = orderby or model._ordering  # use default table ordering if no ordering passed
+        orderby = orderby or model._meta.ordering  # use default table ordering if no ordering given
         fields_ = list(model)
         from_ = [model]
         recordFields = []
@@ -70,8 +76,8 @@ class QueryManager(models.ModelAttr):
             for i, field in enumerate(model):
                 if isinstance(field, fields.RecordField):
                     recordFields.append((i, field))
-                    fields_.extend(field.referTable)
-                    from_.append(models.LeftJoin(field.referTable, field == field.referTable.id))
+                    fields_.extend(field.referModel)
+                    from_.append(models.LeftJoin(field.referTable, field == field.referModel.id))
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
         rows = db.select(*fields_, from_ = from_, where = where, orderby = orderby, limit = limit)
         for row in rows:
@@ -79,14 +85,14 @@ class QueryManager(models.ModelAttr):
             if select_related:
                 fieldOffset = len(model)
                 for i, recordField in recordFields:
-                    referTable = recordField.referTable
+                    referModel = recordField.referModel
                     if row[i] is None:
                         referRecord = None
                     else:
                         # if referRecord.id is None: # missing record !!! integrity error
-                        referRecord = referTable(db, *zip(referTable, row[fieldOffset:]))
+                        referRecord = referModel(db, *zip(referModel, row[fieldOffset:]))
                     setattr(record, recordField.name, referRecord)
-                    fieldOffset += len(referTable)
+                    fieldOffset += len(referModel)
             yield record
 
     def delete(self, db, where):

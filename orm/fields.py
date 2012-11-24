@@ -23,7 +23,7 @@ class Expression():
         @param type: cast type field
         """
         if left is not Nil and not type:
-            if isinstance(left, FieldExpression):
+            if isinstance(left, ModelField):
                 self.type = left
             elif isinstance(left, Expression):
                 self.type = left.type
@@ -97,14 +97,14 @@ class FieldExpression(Expression):
     """
     def __init__(self, field, model):
         assert isinstance(field, ModelField)
-        super().__init__('ModelField', field)
+        super().__init__('_MODELFIELD', field)
 
 
 class ModelField(Expression, models.ModelAttr):
     """Abstract ORM table field. It's inherited from Expression just for the sake of autocomplete
     in Python IDEs.
     """
-    def __init__(self, column, index = '', label = '', db_name = ''):
+    def __init__(self, column, index = '', label = ''):
         """Base initialization method. Called from subclasses.
         @param column: Column instance
         @param index: 
@@ -154,11 +154,10 @@ class IdField(ModelField):
     """Primary integer autoincrement key. ID - implicitly present in each table.
     """
     def __init__(self, db_name = '', label = ''):
-        super().__init__(
-            # 9 digits - int32 - should be enough
-            adapters.Column('INT', precision = 9, unsigned = True, nullable = False,
-                   autoincrement = True),
-            'primary', label, db_name = db_name)
+        # 9 digits - int32 - should be enough
+        super().__init__(adapters.Column('INT', db_name or self._modelAttrInfo.name, precision = 9,
+                                         unsigned = True, nullable = False, autoincrement = True),
+                        'primary', label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else int(value)
@@ -173,33 +172,34 @@ class CharField(ModelField):
         @param maxLength: maximum length in bytes of the string to be stored in the DB
         @param default: default value to store in the DB
         @param index: index type to be applied on the corresponding column in the DB
-        @param name: name of the column in the DB table
+        @param db_name: name of the column in the DB table
         @param label: short description of the field (e.g.for for forms)
         @param comment: comment for the field
         """
-        super().__init__(
-            adapters.Column('CHAR', precision = maxLength, default = default, comment = comment),
-            index, label, db_name = db_name)
+        super().__init__(adapters.Column('CHAR', db_name or self._modelAttrInfo.name,
+                                         precision = maxLength, default = default,
+                                         comment = comment),
+                         index, label)
 
 
 class TextField(ModelField):
     """Field for storing strings of any length."""
-    def __init__(self, default = None, index = '', db_name = '', label = '', modelAttrInfo = None):
+    def __init__(self, default = None, index = '', db_name = '', label = '', comment = ''):
         if index:
             assert isinstance(index, orm.Index)
-        super().__init__(adapters.Column('TEXT', default = default),
-                         index, label, db_name = db_name)
+        super().__init__(adapters.Column('TEXT', db_name or self._modelAttrInfo.name,
+                                         default = default),
+                         index, label)
 
 
 class IntegerField(ModelField):
 
     def __init__(self, maxDigits = 9, default = None, autoincrement = False, index = '',
-                 label = ''):
-        super().__init__(
-            adapters.Column('INT', precision = maxDigits, unsigned = True, default = default,
-                   autoincrement = autoincrement),
-            index, label
-        )
+                 db_name = '', label = ''):
+        super().__init__(adapters.Column('INT', db_name or self._modelAttrInfo.name,
+                                         precision = maxDigits, unsigned = True, default = default,
+                                         autoincrement = autoincrement),
+                         index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = int(value)
@@ -207,11 +207,11 @@ class IntegerField(ModelField):
 
 class DecimalField(ModelField):
 
-    def __init__(self, maxDigits, fractionDigits, default = None, index = '', label = ''):
-        super().__init__(
-            adapters.Column('DECIMAL', precision = maxDigits, scale = fractionDigits,
-                   default = default),
-            index, label)
+    def __init__(self, maxDigits, fractionDigits, default = None, index = '', db_name = '', label = ''):
+        super().__init__(adapters.Column('DECIMAL', db_name or self._modelAttrInfo.name,
+                                         precision = maxDigits, scale = fractionDigits,
+                                         default = default),
+                         index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else Decimal(value)
@@ -219,8 +219,10 @@ class DecimalField(ModelField):
 
 class DateField(ModelField):
 
-    def __init__(self, default = None, index = '', label = ''):
-        super().__init__(adapters.Column('DATE', default = default), index, label)
+    def __init__(self, default = None, index = '', db_name = '', label = ''):
+        super().__init__(adapters.Column('DATE', db_name or self._modelAttrInfo.name,
+                                         default = default),
+                         index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -233,8 +235,10 @@ class DateField(ModelField):
 
 class DateTimeField(ModelField):
 
-    def __init__(self, default = None, index = '', label = ''):
-        super().__init__(adapters.Column('DATETIME', default = default), index, label)
+    def __init__(self, default = None, index = '', db_name = '', label = ''):
+        super().__init__(adapters.Column('DATETIME', db_name or self._modelAttrInfo.name,
+                                         default = default),
+                         index, label)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -247,8 +251,10 @@ class DateTimeField(ModelField):
 
 class BooleanField(ModelField):
 
-    def __init__(self, default = None, index = '', label = ''):
-        super()._init_(adapters.Column('INT', precision = 1, default = default), index, label)
+    def __init__(self, default = None, index = '', db_name = '', label = ''):
+        super().__init__(adapters.Column('INT', db_name or self._modelAttrInfo.name, precision = 1,
+                                         default = default),
+                         index, label)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else bool(value)
@@ -270,22 +276,23 @@ class _RecordId(int):
     @property
     def record(self):
         "Get the record referred by this id."
-        return getattr(self._record, self._recordIdField.referRecordAttrName)
+        return getattr(self._record, self._recordIdField._name)
+#        return getattr(self._record, self._recordIdField.referRecordAttrName)
 
 
 class RecordField(ModelField):
     """Field for storing ids to referred records.
     """
-    def __init__(self, referTable, index = '', label = ''):
+    def __init__(self, referModel, index = '', db_name = '', label = ''):
         """
         @param referTable: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
-        super().__init__(
-            # 9 digits - int32 - ought to be enough for anyone ;)
-            adapters.Column('INT', name = self._modelAttrInfo.name + '_id', precision = 9, unsigned = True),
-            index, label)
-        self._referTable = referTable  # path to the model
+        # 9 digits - int32 - ought to be enough for anyone ;)
+        super().__init__(adapters.Column('INT', self._modelAttrInfo.name + '_id', precision = 9,
+                                         unsigned = True),
+                         index, label)
+        self._referModel = referModel  # path to the model
         self._name = '__' + self.name  # name of the attribute which keeps the referred record or its id
 
     def __get__(self, record, model):
@@ -299,7 +306,7 @@ class RecordField(ModelField):
         elif isinstance(referRecord, self.referModel):
             return referRecord
         elif isinstance(referRecord, int):
-            referRecord = self.referModel.getOne(record._db, id = referRecord)
+            referRecord = self.referModel.objects.getOne(record._db, id = referRecord)
             setattr(record, self._name, referRecord)
             return referRecord
         else:
@@ -314,18 +321,18 @@ class RecordField(ModelField):
         setattr(record, self._name, value)  # _name will contain the referred record
 
     @orm.LazyProperty
-    def referTable(self):
-        if orm.isModel(self._referTable):
-            return self._referTable
-        elif isinstance(self._referTable, str):
-            return orm.getObjectByPath(self._referTable, self.table.__module__)
+    def referModel(self):
+        if orm.isModel(self._referModel):
+            return self._referModel
+        elif isinstance(self._referModel, str):
+            return orm.getObjectByPath(self._referModel, self.model.__module__)
         else:
             raise exceptions.ModelError('Referred model must be a Model or a string with its path.')
 
     def _cast(self, value):
         """Convert a value into another value which is ok for this Field.
         """
-        if isinstance(value, self.referTable):
+        if isinstance(value, self.referModel):
             return value.id
         try:
             return int(value)
