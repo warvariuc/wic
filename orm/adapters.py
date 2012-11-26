@@ -289,7 +289,7 @@ class GenericAdapter():
         return cls.driver.OperationalError
 
     @classmethod
-    def _getCreateTableColumns(cls, model):
+    def _get_create_table_columns(cls, model):
         """Get columns declarations for CREATE TABLE statement.
         """
         columns = []
@@ -300,10 +300,10 @@ class GenericAdapter():
         return columns
 
     @classmethod
-    def _getCreateTableIndexes(cls, model):
+    def _get_create_table_indexes(cls, model):
         """Get indexes declarations for CREATE TABLE statement.
         """
-        assert orm.isModel(model)
+        assert orm.is_model(model)
         indexes = []
         for index in model._indexes:
             if index.type == 'primary':
@@ -313,11 +313,11 @@ class GenericAdapter():
             else:
                 indexType = 'KEY'
             columns = []
-            for indexField in index.indexFields:
-                column = indexField.field.name
-                if indexField.prefixLength:
-                    column += '(%i)' % indexField.prefixLength
-                column += ' %s' % indexField.sortOrder.upper()
+            for index_field in index.index_fields:
+                column = index_field.field.name
+                if index_field.prefix_length:
+                    column += '(%i)' % index_field.prefix_length
+                column += ' %s' % index_field.sort_order.upper()
                 columns.append(column)
 
             indexes.append('%s %s (%s)' % (indexType, index.name, ', '.join(columns)))
@@ -325,21 +325,21 @@ class GenericAdapter():
         return indexes
 
     @classmethod
-    def _getCreateTableOther(cls, model):
+    def _get_create_table_other(cls, model):
         return []
 
     @classmethod
-    def getCreateTableQuery(cls, model):
+    def get_create_table_query(cls, model):
         """Get CREATE TABLE statement for the given model in this DB.
         """
-        assert orm.isModel(model), 'Provide a Table subclass.'
-        columns = cls._getCreateTableColumns(model)
-        indexes = cls._getCreateTableIndexes(model)
+        assert orm.is_model(model), 'Provide a Table subclass.'
+        columns = cls._get_create_table_columns(model)
+        indexes = cls._get_create_table_indexes(model)
         query = 'CREATE TABLE %s (' % str(model)
         query += '\n  ' + ',\n  '.join(columns)
         query += ',\n  ' + ',\n  '.join(indexes) + '\n) '
         queries = [query]
-        queries.extend(cls._getCreateTableOther(model))
+        queries.extend(cls._get_create_table_other(model))
         return queries
 
     @classmethod
@@ -444,7 +444,7 @@ class GenericAdapter():
 #        """Get tables involved in WHERE expression.
 #        """
 #        tables = set()
-#        if orm.isModel(expression):
+#        if orm.is_model(expression):
 #            tables.add(expression)
 #        elif isinstance(expression, orm.Field):
 #            tables.add(expression.table)
@@ -518,7 +518,7 @@ class GenericAdapter():
 
     def _delete(self, table, where, limit = None):
         """DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]"""
-        assert orm.isModel(table)
+        assert orm.is_model(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
         return 'DELETE FROM %s%s' % (table, sql_w)
 
@@ -564,7 +564,7 @@ class GenericAdapter():
                 field = self.render(field)
             elif not isinstance(field, str):
                 raise orm.QueryError('Field must an Expression/Field/str instance. Got `%s`'
-                                     % orm.getObjectPath(field))
+                                     % orm.get_object_path(field))
             _fields.append(field)
         sql_fields = ', '.join(_fields)
 
@@ -573,7 +573,7 @@ class GenericAdapter():
         texts = []
 
         for arg in orm.listify(from_):
-            if orm.isModel(arg):
+            if orm.is_model(arg):
                 tables.append(str(arg))
             elif isinstance(arg, orm.Join):
                 joins.append('%s JOIN %s ON %s' % (arg.type.upper(), arg.model,
@@ -662,9 +662,9 @@ class GenericAdapter():
         fields, query = self._select(*fields, from_ = from_, where = where, **attributes)
         self.execute(query)
         rows = list(self.cursor.fetchall())
-        return self._parseResponse(fields, rows)
+        return self._parse_response(fields, rows)
 
-    def _parseResponse(self, fields, rows):
+    def _parse_response(self, fields, rows):
         """Post process results fetched from the DB. Return results in Rows object."""
         for i, row in enumerate(rows):
             newRow = []
@@ -764,21 +764,21 @@ class SqliteAdapter(GenericAdapter):
                 "DELETE FROM sqlite_sequence WHERE name='%s';" % tableName]
 
     @classmethod
-    def _getCreateTableIndexes(cls, model):
-        assert orm.isModel(model)
+    def _get_create_table_indexes(cls, model):
+        assert orm.is_model(model)
         indexes = []
         for index in model._indexes:
             if index.type != 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'
             columns = []
-            for indexField in index.indexFields:
-                column = indexField.field.column.name
-                prefixLength = indexField.prefixLength
-                if prefixLength:
-                    column += '(%i)' % prefixLength
-                sortOrder = indexField.sortOrder
-                column += ' %s' % sortOrder.upper()
+            for index_field in index.index_fields:
+                column = index_field.field.column.name
+                prefix_length = index_field.prefix_length
+                if prefix_length:
+                    column += '(%i)' % prefix_length
+                sort_order = index_field.sort_order
+                column += ' %s' % sort_order.upper()
                 columns.append(column)
 
             indexes.append('%s (%s)' % (indexType, ', '.join(columns)))
@@ -786,8 +786,8 @@ class SqliteAdapter(GenericAdapter):
         return indexes
 
     @classmethod
-    def _getCreateTableOther(cls, model):
-        assert orm.isModel(model)
+    def _get_create_table_other(cls, model):
+        assert orm.is_model(model)
         indexes = []
         for index in model._indexes:
             if index.type == 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
@@ -797,16 +797,16 @@ class SqliteAdapter(GenericAdapter):
             else:
                 indexType = 'INDEX'
             columns = []
-            for indexField in index.indexFields:
-                column = indexField.field.column.name
-#                prefixLength = index.prefixLengths[i] 
-#                if prefixLength:
-#                    column += '(%i)' % prefixLength
-                sortOrder = indexField.sortOrder
-                column += ' %s' % sortOrder.upper()
+            for index_field in index.index_fields:
+                column = index_field.field.column.name
+#                prefix_length = index.prefix_lengths[i] 
+#                if prefix_length:
+#                    column += '(%i)' % prefix_length
+                sort_order = index_field.sort_order
+                column += ' %s' % sort_order.upper()
                 columns.append(column)
                 # al fields are checked to have the same table, so take the first one
-            table = index.indexFields[0].field.table
+            table = index.index_fields[0].field.table
             indexes.append('CREATE %s "%s" ON "%s" (%s)'
                            % (indexType, index.name, table, ', '.join(columns)))
 
@@ -857,12 +857,12 @@ class SqliteAdapter(GenericAdapter):
     def _decodeDECIMAL(cls, value, column):
         return Decimal(value) / (10 ** column.scale)
 
-    def getTables(self):
+    def get_tables(self):
         """Get list of tables (names) in this DB."""
         self.execute("SELECT name FROM sqlite_master WHERE type='table'")
         return [row[0] for row in self.cursor.fetchall()]
 
-    def getColumns(self, tableName):
+    def get_columns(self, tableName):
         """Get columns of a table"""
         self.execute("PRAGMA table_info('%s')" % tableName)  # name, type, notnull, dflt_value, pk
         columns = {}
@@ -911,8 +911,8 @@ class SqliteAdapter(GenericAdapter):
 #    def _DECIMAL(self, **kwargs):
 #        return 'TEXT'
 #
-#    def _encodeDECIMAL(self, value, maxDigits, fractionDigits, **kwargs):
-#        _format = "'%% %i.%if'" % (maxDigits + 1, fractionDigits)
+#    def _encodeDECIMAL(self, value, max_digits, fractionDigits, **kwargs):
+#        _format = "'%% %i.%if'" % (max_digits + 1, fractionDigits)
 #        return _format % Decimal(value)
 #
 #    def _decodeDECIMAL(self, value, **kwargs):
@@ -951,7 +951,7 @@ class MysqlAdapter(GenericAdapter):
         return connection
 
     @classmethod
-    def _getCreateTableOther(cls, table):
+    def _get_create_table_other(cls, table):
         return ["ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__]
 
     @classmethod
@@ -966,12 +966,12 @@ class MysqlAdapter(GenericAdapter):
             renderedExpressions.append('(' + cls.render(expression) + ')')
         return 'CONCAT(' + ', '.join(renderedExpressions) + ')'
 
-    def getTables(self):
+    def get_tables(self):
         """Get list of tables (names) in this DB."""
         self.execute("SHOW TABLES")
         return [row[0] for row in self.cursor.fetchall()]
 
-    def getColumns(self, tableName):
+    def get_columns(self, tableName):
         """Get columns of a table"""
         self.execute("SELECT column_name, data_type, column_default, is_nullable,"
                      "       character_maximum_length, numeric_precision, numeric_scale,"
@@ -1076,21 +1076,21 @@ class PostgreSqlAdapter(GenericAdapter):
         return value
 
     @classmethod
-    def _getCreateTableIndexes(cls, model):
-        assert orm.isModel(model)
+    def _get_create_table_indexes(cls, model):
+        assert orm.is_model(model)
         indexes = []
         for index in model._meta.indexes:
             if index.type.lower() != 'primary':  # only primary index in the CREATE TABLE query
                 continue
             indexType = 'PRIMARY KEY'
             columns = []
-            for indexField in index.indexFields:
-                column = indexField.field.column.name
-                prefixLength = indexField.prefixLength
-                if prefixLength:
-                    column += '(%i)' % prefixLength
-#                sortOrder = indexField.sortOrder
-#                column += ' %s' % sortOrder.upper()
+            for index_field in index.index_fields:
+                column = index_field.field.column.name
+                prefix_length = index_field.prefix_length
+                if prefix_length:
+                    column += '(%i)' % prefix_length
+#                sort_order = index_field.sort_order
+#                column += ' %s' % sort_order.upper()
                 columns.append(column)
 
             indexes.append('%s (%s)' % (indexType, ', '.join(columns)))
@@ -1098,8 +1098,8 @@ class PostgreSqlAdapter(GenericAdapter):
         return indexes
 
     @classmethod
-    def _getCreateTableOther(cls, model):
-        assert orm.isModel(model)
+    def _get_create_table_other(cls, model):
+        assert orm.is_model(model)
         queries = []
         for index in model._meta.indexes:
             if index.type.lower() == 'primary':  # primary index is in the CREATE TABLE query
@@ -1109,16 +1109,16 @@ class PostgreSqlAdapter(GenericAdapter):
             else:
                 indexType = 'INDEX'
             columns = []
-            for indexField in index.indexFields:
-                column = indexField.field.column.name
-#                prefixLength = index.prefixLengths[i] 
-#                if prefixLength:
-#                    column += '(%i)' % prefixLength
-                sortOrder = indexField.sortOrder
-                column += ' %s' % sortOrder.upper()
+            for index_field in index.index_fields:
+                column = index_field.field.column.name
+#                prefix_length = index.prefix_lengths[i] 
+#                if prefix_length:
+#                    column += '(%i)' % prefix_length
+                sort_order = index_field.sort_order
+                column += ' %s' % sort_order.upper()
                 columns.append(column)
                 # all fields are checked to have the same table, so take the first one
-            model = index.indexFields[0].field.model
+            model = index.index_fields[0].field.model
             queries.append('CREATE %s %s ON %s (%s)'
                            % (indexType, index.name, model, ', '.join(columns)))
 
@@ -1132,7 +1132,7 @@ class PostgreSqlAdapter(GenericAdapter):
 
         return queries
 
-    def getTables(self):
+    def get_tables(self):
         """Get list of tables (names) in this DB.
         """
         self.execute("SELECT table_name "
@@ -1140,7 +1140,7 @@ class PostgreSqlAdapter(GenericAdapter):
                      "WHERE table_schema = 'public'")
         return [row[0] for row in self.cursor.fetchall()]
 
-    def getColumns(self, tableName):
+    def get_columns(self, tableName):
         """Get columns of a table
         """
         rows = self.select(
@@ -1186,11 +1186,11 @@ class PostgreSqlAdapter(GenericAdapter):
         self._autocommit()
         return self.cursor.fetchone()[0]
 
-    def _dropTable(self, tableName):
+    def _drop_table(self, tableName):
         """Return query for dropping a table
         @param table_name: table name or a model describing the table
         """
-        if orm.isModel(tableName):
+        if orm.is_model(tableName):
             tableName = tableName._meta.db_name
         elif not isinstance(tableName, str):
             raise AssertionError('Expecting a str or a Model')

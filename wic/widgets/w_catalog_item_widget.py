@@ -60,8 +60,8 @@ class WCatalogItemWidget(QtGui.QLineEdit):
     def selectItem(self):
         """Open a list of items to replace the current one."""
         if self._db:
-            from wic import forms, getObjectByPath
-            model = getObjectByPath(self._model)
+            from wic import forms, get_object_by_path
+            model = get_object_by_path(self._model)
             db = self._item._db if self._item else self._db  
             catalogForm = forms.openCatalogForm(model, db, type = 1)
             catalogForm.itemSelected.connect(self.setItem)
@@ -86,7 +86,7 @@ class WCatalogItemWidget(QtGui.QLineEdit):
             borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
         self.setStyleSheet('QLineEdit { background-color: palette(alternate-base); padding-left: %ipx;}' % (selectorWidth + borderWidth))
 #        fm = QtGui.QFontMetrics(self.font()) # font metrics
-#        maxText = '9' * self._maxDigits + '. '
+#        maxText = '9' * self._max_digits + '. '
 #        self.setMinimumSize(fm.width(maxText) + selectorWidth + borderWidth * 2,
 #                   max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
 

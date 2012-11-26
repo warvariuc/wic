@@ -14,10 +14,10 @@ class ModelAttrInfo():
     """
     def __init__(self, model, name):
         if model is not None:
-            assert orm.isModel(model)
+            assert orm.is_model(model)
             assert isinstance(name, str) and name
             assert hasattr(model, name), 'Model %s does not have an attribute with name %s' \
-                % (orm.getObjectPath(model), name)
+                % (orm.get_object_path(model), name)
         self.model = model
         self.name = name
 
@@ -49,11 +49,11 @@ class ProxyInit():
 #                print('ModelAttrStubMixin.__init__', self.__class__.__name__, args, kwargs)
                 modelAttrInfo = kwargs.pop('modelAttrInfo', None)
                 if modelAttrInfo:
-                    self._modelAttrInfo = modelAttrInfo
+                    self._model_attr_info = modelAttrInfo
                 else:
                     obj._initArgs = args
                     obj._initKwargs = kwargs
-                if self._modelAttrInfo.model is not None:
+                if self._model_attr_info.model is not None:
                     orig_init(self, *self._initArgs, **self._initKwargs)
 #            return MethodType(__init__, obj)
             # functions are descriptors, to be able to work as bound methods
@@ -68,7 +68,7 @@ class ModelAttr():
     Usually `__init__` is called  by the Model metaclass.
     """
     __creationCounter = 0  # will be used to track the definition order of the attributes in models
-    _modelAttrInfo = ModelAttrInfo(None, None)  # model attribute information, set by `_init_` 
+    _model_attr_info = ModelAttrInfo(None, None)  # model attribute information, set by `_init_` 
 
     def __new__(cls, *args, **kwargs):
         """Create the object, but prevent calling its `__init__` method, montkey patching it with a
@@ -93,35 +93,35 @@ class ModelBase(type):
 
         try:
 
-            logger.debug('Finishing initialization of model `%s`' % orm.getObjectPath(NewModel))
+            logger.debug('Finishing initialization of model `%s`' % orm.get_object_path(NewModel))
 
-            modelAttrs = OrderedDict()
-            for attrName, attr in inspect.getmembers(NewModel):
+            model_attrs = OrderedDict()
+            for attr_name, attr in inspect.getmembers(NewModel):
                 if isinstance(attr, ModelAttr):
-                    modelAttrs[attrName] = attr
+                    model_attrs[attr_name] = attr
 
-            _meta = modelAttrs.pop('_meta', None)
+            _meta = model_attrs.pop('_meta', None)
             assert isinstance(_meta, model_options.ModelOptions), \
                 '`_meta` attribute should be instance of ModelOptions'
             # sort by definition order - for the correct recreation order
-            modelAttrs = sorted(modelAttrs.items(), key = lambda i: i[1]._creationOrder)
+            model_attrs = sorted(model_attrs.items(), key = lambda i: i[1]._creationOrder)
 
-            for attrName, attr in modelAttrs:
-                if attr._modelAttrInfo.model:  # inherited field
+            for attr_name, attr in model_attrs:
+                if attr._model_attr_info.model:  # inherited field
                     # make its copy for the new model
                     _attr = attr.__class__(*attr._initArgs, **attr._initKwargs)
                     _attr._creationOrder = attr._creationOrder
                     attr = _attr
                 try:
-                    attr.__init__(modelAttrInfo = ModelAttrInfo(NewModel, attrName))
+                    attr.__init__(modelAttrInfo = ModelAttrInfo(NewModel, attr_name))
                 except Exception:
                     logger.debug('Failed to init a model attribute: %s.%s'
-                                  % (orm.getObjectPath(NewModel), attrName))
+                                  % (orm.get_object_path(NewModel), attr_name))
                     raise
-                setattr(NewModel, attrName, attr)
+                setattr(NewModel, attr_name, attr)
 
             # process _meta at the end, when all fields should have been initialized
-            if _meta._modelAttrInfo.model is not None:  # inherited
+            if _meta._model_attr_info.model is not None:  # inherited
                 _meta = model_options.ModelOptions()  # override
             _meta.__init__(modelAttrInfo = ModelAttrInfo(NewModel, '_meta'))
             NewModel._meta = _meta
@@ -131,18 +131,18 @@ class ModelBase(type):
 
         return NewModel
 
-    def __getitem__(self, fieldName):
+    def __getitem__(self, field_name):
         """Get a Table Field by name - Table['field_name'].
         """
-        if fieldName in self._meta.fields:
-            return getattr(self, fieldName)  # to ensure descriptor behavior
+        if field_name in self._meta.fields:
+            return getattr(self, field_name)  # to ensure descriptor behavior
         raise KeyError
 
     def __iter__(self):
         """Get Table fields.
         """
-        for fieldName in self._meta.fields:
-            yield getattr(self, fieldName)  # to ensure descriptor behavior
+        for field_name in self._meta.fields:
+            yield getattr(self, field_name)  # to ensure descriptor behavior
 
     def __len__(self):
         return len(self._meta.fields)
@@ -169,7 +169,7 @@ class Model(metaclass = ModelBase):
         """Create a model instance - a record.
         @param db: db adapter in which to save the table record or from which it was fetched
         @param *args: tuples (Field or field_name, value) 
-        @param **kwargs: {fieldName: fieldValue}
+        @param **kwargs: {field_name: fieldValue}
         """
         self._db = db
 
@@ -188,8 +188,8 @@ class Model(metaclass = ModelBase):
             kwargs[field.name] = value
 
         # make values for fields
-        for fieldName, field in self._meta.fields.items():
-            setattr(self, fieldName, kwargs.pop(fieldName, field.column.default))
+        for field_name, field in self._meta.fields.items():
+            setattr(self, field_name, kwargs.pop(field_name, field.column.default))
 
         if kwargs:
             raise NameError('Got unknown field names: %s' % ', '.join(kwargs))
@@ -203,19 +203,19 @@ class Model(metaclass = ModelBase):
             field = field.left
         if isinstance(field, fields.ModelField):
             assert field.model is model, 'This field is from another model.'
-            attrName = field.name
+            attr_name = field.name
         elif isinstance(field, str):
             field = model[field]
-            attrName = field.name
+            attr_name = field.name
         else:
             raise TypeError('Pass either a Field or its name.')
-        return getattr(self, attrName)
+        return getattr(self, attr_name)
 
     def delete(self):
         """Delete this record.
         """
         db = self._db
-        self.objects.checkTable(db)
+        self.objects.check_table(db)
         model = self.__class__
         signals.pre_delete.send(sender = model, record = self)
         db.delete(model, where = (model.id == self.id))
@@ -225,7 +225,7 @@ class Model(metaclass = ModelBase):
 
     def save(self):
         db = self._db
-        self.objects.checkTable(db)
+        self.objects.check_table(db)
         model = self.__class__
         self.timestamp = DateTime.now()
         values = []  # list of tuples (Field, value)
@@ -279,7 +279,7 @@ class Join():
         @param on: join condition
         @param type: join type. if empty - INNER JOIN 
         """
-        assert orm.isModel(model), 'Pass a model class.'
+        assert orm.is_model(model), 'Pass a model class.'
         assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'
         self.model = model  # table to join
         self.on = on  # expression defining join condition

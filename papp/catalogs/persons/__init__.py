@@ -8,11 +8,11 @@ from ..streets import Streets
 
 
 class Persons(forms.catalog.CatalogModel):
-    last_name = orm.CharField(maxLength= 50)
-    first_name = orm.CharField(maxLength= 50)
-    middle_name = orm.CharField(maxLength= 50)
-    phone_prefix = orm.IntegerField(maxDigits= 3)
-    phone_number = orm.IntegerField(maxDigits= 10)
+    last_name = orm.CharField(max_length= 50)
+    first_name = orm.CharField(max_length= 50)
+    middle_name = orm.CharField(max_length= 50)
+    phone_prefix = orm.IntegerField(max_digits= 3)
+    phone_number = orm.IntegerField(max_digits= 10)
     location = orm.RecordField(Locations)
     street = orm.RecordField(Streets)
 

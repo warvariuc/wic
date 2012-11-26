@@ -148,7 +148,7 @@ class CatalogModel(orm.Model):
     deleted = orm.BooleanField()
 
     @classmethod
-    def _handleTableMissing(cls, db):
+    def _handle_table_missing(cls, db):
         """Default implementation of situation when upon checking there was not found the table 
         corresponding to this model in the db.
         """
@@ -157,10 +157,10 @@ class CatalogModel(orm.Model):
                 'Do you want it to be automatically created?'
                 % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
                 QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
-            db.execute(db.getCreateTableQuery(cls))
+            db.execute(db.get_create_table_query(cls))
             QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
         else:
-            super()._handleTableMissing(db)
+            super()._handle_table_missing(db)
 
 
 
@@ -243,7 +243,7 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
     def rowCount(self, parent):
         _rowCount = self._rowCount # cached row count
         if _rowCount is None: # if it's not filled yet - fetch it from the db
-            _rowCount = self._rowCount = self._catalogModel.getCount(self._db, where = self._where)
+            _rowCount = self._rowCount = self._catalogModel.get_count(self._db, where = self._where)
             #print('rowCount', _rowsCount)
         return _rowCount
 

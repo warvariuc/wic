@@ -6,45 +6,45 @@ class QueryManager(models.ModelAttr):
     """
     def __init__(self):
         # URIs of database adapters the model was successfully checked against
-        self.model = self._modelAttrInfo.model
-        self._checkedDbs = set()
+        self.model = self._model_attr_info.model
+        self._checked_dbs = set()
 
-    def checkTable(self, db):
+    def check_table(self, db):
         """Check if corresponding table for this model exists in the db and has all necessary columns.
-        Add checkTable call in very model method that uses a db.
+        Add check_table call in very model method that uses a db.
         """
         assert isinstance(db, adapters.GenericAdapter), 'Need a database adapter'
-        if db.uri in self._checkedDbs:
+        if db.uri in self._checked_dbs:
             # this db was already checked
             return
         model = self.model
-        logger.debug('Model.checkTable: checking db table %s' % model)
-        tableName = model._meta.db_name
-        if tableName not in db.getTables():
-            self._handleTableMissing(db)
-        modelColumns = {field.column.name: field.column for field in model._meta.fields.values()}
-        dbColumns = db.getColumns(tableName)
+        logger.debug('Model.check_table: checking db table %s' % model)
+        table_name = model._meta.db_name
+        if table_name not in db.get_tables():
+            self._handle_table_missing(db)
+        model_columns = {field.column.name: field.column for field in model._meta.fields.values()}
+        db_columns = db.get_columns(table_name)
 #        logger.debug(pprint.pformat(list(column.str() for column in dbColumns.values())))
 #        logger.debug(pprint.pformat(list(column.str() for column in modelColumns.values())))
-        for columnName, column in modelColumns.items():
-            dbColumn = dbColumns.pop(columnName, None)
-            if not dbColumn:  # model column is not found in the db
+        for column_name, column in model_columns.items():
+            db_column = db_columns.pop(column_name, None)
+            if not db_column:  # model column is not found in the db
                 print('Column in the db not found: %s' % column.str())
-        logger.debug('CREATE TABLE query:\n%s' % db.getCreateTableQuery(model))
-        self._checkedDbs.add(db.uri)
+        logger.debug('CREATE TABLE query:\n%s' % db.get_create_table_query(model))
+        self._checked_dbs.add(db.uri)
 
     def create(self, db, *args, **kwargs):
         record = self.model(db, *args, **kwargs)
         record.save()
         return record
 
-    def getOne(self, db, where = None, id = None, select_related = False):
+    def get_one(self, db, where = None, id = None, select_related = False):
         """Get a single record which falls under the given condition.
         @param db: db adapter to use to getting the record
         @param where: expression to use for filter
         @param id: id of the record, if you want to fetch one record by its id
         """
-        self.checkTable(db)
+        self.check_table(db)
 
         if id:
             where = (self.model.id == id)
@@ -67,52 +67,52 @@ class QueryManager(models.ModelAttr):
         """
         model = self.model
         logger.debug("Model.get('%s', db= %s, where= %s, limit= %s)" % (model, db, where, limit))
-        self.checkTable(db)
+        self.check_table(db)
         orderby = orderby or model._meta.ordering  # use default table ordering if no ordering given
         fields_ = list(model)
         from_ = [model]
-        recordFields = []
+        record_fields = []
         if select_related:
             for i, field in enumerate(model):
                 if isinstance(field, fields.RecordField):
-                    recordFields.append((i, field))
-                    fields_.extend(field.referModel)
-                    from_.append(models.LeftJoin(field.referTable, field == field.referModel.id))
+                    record_fields.append((i, field))
+                    fields_.extend(field.refer_model)
+                    from_.append(models.LeftJoin(field.refer_model, field == field.refer_model.id))
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
         rows = db.select(*fields_, from_ = from_, where = where, orderby = orderby, limit = limit)
         for row in rows:
             record = model(db, *zip(model, row))
             if select_related:
-                fieldOffset = len(model)
-                for i, recordField in recordFields:
-                    referModel = recordField.referModel
+                field_offset = len(model)
+                for i, record_field in record_fields:
+                    refer_model = record_field.refer_model
                     if row[i] is None:
-                        referRecord = None
+                        refer_record = None
                     else:
                         # if referRecord.id is None: # missing record !!! integrity error
-                        referRecord = referModel(db, *zip(referModel, row[fieldOffset:]))
-                    setattr(record, recordField.name, referRecord)
-                    fieldOffset += len(referModel)
+                        refer_record = refer_model(db, *zip(refer_model, row[field_offset:]))
+                    setattr(record, record_field.name, refer_record)
+                    field_offset += len(refer_model)
             yield record
 
     def delete(self, db, where):
         """Delete records in this table which fall under the given condition.
         """
-        self.checkTable(db)
+        self.check_table(db)
         db.delete(self, where = where)
         db.commit()
 
-    def getCount(self, db, where = None):
+    def get_count(self, db, where = None):
         """Request number of records in this table.
         """
         model = self.model
-        model.checkTable(db)
+        model.check_table(db)
         count = model.COUNT(where)
         count = db.select(count, from_ = model).value(0, count)
-        logger.debug('Model.getCount(%s, db= %s, where= %s) = %s' % (model, db, where, count))
+        logger.debug('Model.get_count(%s, db= %s, where= %s) = %s' % (model, db, where, count))
         return count
 
-    def _handleTableMissing(self, db):
+    def _handle_table_missing(self, db):
         """Default implementation of situation when upon checking
         there was not found the table corresponding to this model in the db.
         """

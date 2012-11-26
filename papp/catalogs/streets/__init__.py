@@ -6,9 +6,9 @@ from ..locations import Locations
 
 
 class Streets(forms.catalog.CatalogModel):
-    street_name = orm.CharField(maxLength= 50)
-    street_old_name = orm.CharField(maxLength= 50)
-    street_type_name = orm.CharField(maxLength= 20)
+    street_name = orm.CharField(max_length= 50)
+    street_old_name = orm.CharField(max_length= 50)
+    street_type_name = orm.CharField(max_length= 20)
     location = orm.RecordField(Locations)
 
     def __str__(self):

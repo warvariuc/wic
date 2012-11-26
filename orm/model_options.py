@@ -9,13 +9,13 @@ class ModelOptions(models.ModelAttr):
     def __init__(self, db_name = '', indexes = None, ordering = None):
         if not db_name:
             # create db name from model class name
-            db_name = self._modelAttrInfo.model.__name__ + 's'
+            db_name = self._model_attr_info.model.__name__ + 's'
             db_name = ''.join('_' + c.lower() if c.isupper() else c for c in db_name).strip('_')
         self.db_name = db_name  # db table name
 
         # create list of fields
         _fields = {}
-        for attrName, attr in self._modelAttrInfo.model.__dict__.items():
+        for attrName, attr in self._model_attr_info.model.__dict__.items():
             if isinstance(attr, fields.ModelField):
                 _fields[attrName] = attr
         # sort by creation order
@@ -27,8 +27,8 @@ class ModelOptions(models.ModelAttr):
         # analyze indexes
         for index in indexes:
             assert isinstance(index, orm_indexes.Index)
-            if index._modelAttrInfo.model is None:
-                index.__init__(modelAttrInfo = self._modelAttrInfo)
+            if index._model_attr_info.model is None:
+                index.__init__(modelAttrInfo = self._model_attr_info)
 
         for field in self.fields.values():
             index = field.index
@@ -38,7 +38,7 @@ class ModelOptions(models.ModelAttr):
                 if not index:
                     continue
                 index = orm_indexes.Index(orm_indexes.IndexField(field), type = index)
-                index.__init__(modelAttrInfo = self._modelAttrInfo)
+                index.__init__(modelAttrInfo = self._model_attr_info)
             assert isinstance(index, orm_indexes.Index)
             indexes.append(index)
 

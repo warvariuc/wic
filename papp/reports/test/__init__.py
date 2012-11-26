@@ -59,7 +59,7 @@ class Form(WForm):
 
     def updateInfoAboutDecimalEdit(self):
         self._.dceShowSelector = self.decimalEdit.selectorVisible
-        self._.dceTotalDigits = self.decimalEdit.maxDigits
+        self._.dceTotalDigits = self.decimalEdit.max_digits
         self._.dceFractionDigits = self.decimalEdit.fractionDigits
         self._.dceNonNegative = self.decimalEdit.nonNegative
         self._.dceSeparateThousands = self.decimalEdit.thousandsSeparated

@@ -13,16 +13,16 @@ class Authors(orm.Model):
     """Authors catalog"""
     _tableId = 1
     # id field is already present 
-    first_name = orm.CharField(maxLength = 100, comment='Author\'s first name')
-    last_name = orm.CharField(maxLength = 100, comment='Author\'s last name')
+    first_name = orm.CharField(max_length = 100, comment='Author\'s first name')
+    last_name = orm.CharField(max_length = 100, comment='Author\'s last name')
 
 
 class Books(orm.Model):
     """Books catalog"""
     _tableId = 2
     # id field is already present 
-    name = orm.CharField(maxLength = 100, default = 'a very good book!!!')
-    price = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00', index = True) # 2 decimal places
+    name = orm.CharField(max_length = 100, default = 'a very good book!!!')
+    price = orm.fields.DecimalField(max_digits = 10, fractionDigits = 2, default = '0.00', index = True) # 2 decimal places
     author = orm.RecordField('Authors', index = True)
     publication_date = orm.fields.DateField()
     timestamp = orm.fields.DateTimeField()
@@ -38,7 +38,7 @@ class CatalogModel(orm.Model):
     deleted = orm.BooleanField()
 
 class Streets(CatalogModel):
-    street_name = orm.CharField(maxLength = 50)
+    street_name = orm.CharField(max_length = 50)
 
 
 ##################################################################
@@ -56,13 +56,13 @@ elif test == 'postgresql':
 db.execute('DROP TABLE IF EXISTS authors')
 db.execute('DROP TABLE IF EXISTS books')
 
-query = db.getCreateTableQuery(Authors)
+query = db.get_create_table_query(Authors)
 print('\nGetting the CREATE TABLE query for table Authors:\n', query)
 for _query in query.split('\n\n'):
     db.execute(_query)
 
 
-query = db.getCreateTableQuery(Books)
+query = db.get_create_table_query(Books)
 print('\nGetting the CREATE TABLE query for table Books:\n', query)
 for _query in query.split('\n\n'):
     db.execute(_query)
@@ -108,14 +108,14 @@ for data in booksData:
 print('\nSELECT query:')
 print(db._select('id', from_ = Books, where = (15 > Books.price > '14.00'), limit = 10))
 print(db.select(Books.id, from_ = Books, where = (Books.price > '15'), limit = 10))
-book = Books.getOne(db, where = (Books.price > 15))
+book = Books.get_one(db, where = (Books.price > 15))
 print("print(book, book.author)")
 print(book, book.author)
 
 print('\nUPDATE query:')
 print(db._update(Books.name('_' + book.name), Books.price(Books.price + 1), where = (Books.id == book.id)))
 db.update(Books.name('A new title with raised price'), Books.price(Books.price + 1), where = (Books.id == book.id))
-print(Books.getOne(db, where = (Books.id == book.id)))
+print(Books.get_one(db, where = (Books.id == book.id)))
 
 
 print('\nAuthors count')
@@ -126,7 +126,7 @@ print('\nSelecting one book with id=1:\n ', db.select('*', from_ = [Books, orm.J
 
 book = Books(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),
              ('publication_date', '2002-12-01'))
-book.author = Authors.getOne(db, id = 3) # Richard Stallman (?)
+book.author = Authors.get_one(db, id = 3) # Richard Stallman (?)
 book.save()
 print('\nNew saved book with wrong author:\n ', book)
 
@@ -143,7 +143,7 @@ print('\nSaved the new author. It should have now an id and a timestamp:\n ', au
 print('\nAfter saving the new author book.author_id should have changed:\n ', book)
 
 print('\nRetreving book with id 1:')
-book = Books.getOne(db, id = 1, select_related = True)
+book = Books.get_one(db, id = 1, select_related = True)
 print(book)
 print('\nbook.author automatically retrives the author from the db:\n ', book.author)
 #os.unlink(filePath) # delete the temporary db file

@@ -185,7 +185,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.interactiveClear)
 
-        self._maxDigits = 15 # total number of digits
+        self._max_digits = 15 # total number of digits
         self._fractionDigits = -1 # number of digits in fractional part. Initial value is -1 - to avoid chopping the text when setFactionDigits is called after setText by uic 
         self._nonNegative = False
         self._separateThousands = True
@@ -193,14 +193,14 @@ class WDecimalEdit(QtGui.QLineEdit):
         self._newText = None # is used to track editing
         self.setValue(0) # will cause text update
 
-    def maxDigits(self): 
-        return self._maxDigits
+    def max_digits(self): 
+        return self._max_digits
     def setMaxDigits(self, value):
         assert isinstance(value, int), 'Pass an integer'
-        self._maxDigits = max(value, 1)
-        self._fractionDigits = min(self._fractionDigits, self._maxDigits)
+        self._max_digits = max(value, 1)
+        self._fractionDigits = min(self._fractionDigits, self._max_digits)
         self._format() # to reflect changes
-    maxDigits = QtCore.pyqtProperty(int, maxDigits, setMaxDigits) 
+    max_digits = QtCore.pyqtProperty(int, max_digits, setMaxDigits) 
 
     def fractionDigits(self): 
         return self._fractionDigits
@@ -208,7 +208,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         """How many digits after decimal point to show. If is 0 - no fraction digits - an integer.
         If -1 - any number of digits in fractional part."""
         self._fractionDigits = max(value, -1)
-        self._maxDigits = max(self._maxDigits, self._fractionDigits)
+        self._max_digits = max(self._max_digits, self._fractionDigits)
         self._format()
     fractionDigits = QtCore.pyqtProperty(int, fractionDigits, setFractionDigits)
 
@@ -237,7 +237,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         selectorWidth = self.selector.sizeHint().width() if self.isSelectorVisible() else 0 
         self.setStyleSheet('QLineEdit { padding-right: %ipx; }' % (selectorWidth + borderWidth))
         fm = QtGui.QFontMetrics(self.font()) # font metrics
-        maxText = '9' * self._maxDigits + '. '
+        maxText = '9' * self._max_digits + '. '
         self.setMinimumSize(fm.width(maxText) + selectorWidth + borderWidth * 2,
                    max(fm.height(), self.selector.sizeHint().height() + borderWidth * 2))
     
@@ -284,7 +284,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.setValue(0)
 
     def _format(self):
-        """Format the value according to the view properties (maxDigits, fractionDigits, thousandsSeparator)).
+        """Format the value according to the view properties (max_digits, fractionDigits, thousandsSeparator)).
         Filters invalid entered symbols."""
         txt = self.text()
         if self._fractionDigits > 0: 
@@ -316,7 +316,7 @@ class WDecimalEdit(QtGui.QLineEdit):
             elif not char.isdigit(): #минус и точку проверили, все остальные не-цифры удаляем
                 del_ = True # non-digit
             elif dotPos == -1: # это цифра. точка еще не была
-                del_ = i >= self._maxDigits - max(self._fractionDigits, 0) #  отсекаем лишние цифры целой части
+                del_ = i >= self._max_digits - max(self._fractionDigits, 0) #  отсекаем лишние цифры целой части
             else: # это цифра. точка уже была найдена
                 del_ = i - dotPos > self._fractionDigits >= 0 # or not self._fractionDigits: # отсекаем лишние цифры дробной части # digits number before dot limit reached
             

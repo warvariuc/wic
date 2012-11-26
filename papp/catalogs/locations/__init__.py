@@ -8,8 +8,8 @@ from ..regions import Regions
 
 
 class Locations(forms.catalog.CatalogModel):
-    location_name = orm.CharField(maxLength= 50)
-    location_type_name = orm.CharField(maxLength= 50)
+    location_name = orm.CharField(max_length= 50)
+    location_type_name = orm.CharField(max_length= 50)
     region = orm.RecordField(Regions)
 
     def __str__(self):

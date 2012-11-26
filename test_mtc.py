@@ -5,26 +5,26 @@ from orm import Join, LeftJoin
 
 
 class Regions(orm.Model):
-    region_name = orm.CharField(maxLength= 60)
-    region_type_name = orm.CharField(maxLength= 20)
+    region_name = orm.CharField(max_length= 60)
+    region_type_name = orm.CharField(max_length= 20)
 
 class Locations(orm.Model):
     region = orm.RecordField(Regions)
-    location_name = orm.CharField(maxLength= 100)
-    location_type_name = orm.CharField(maxLength= 20)
+    location_name = orm.CharField(max_length= 100)
+    location_type_name = orm.CharField(max_length= 20)
 
 class Streets(orm.Model):
     location = orm.RecordField(Locations)
-    street_name = orm.CharField(maxLength= 100)
-    street_old_name = orm.CharField(maxLength= 100)
-    street_type_name = orm.CharField(maxLength= 20)
+    street_name = orm.CharField(max_length= 100)
+    street_old_name = orm.CharField(max_length= 100)
+    street_type_name = orm.CharField(max_length= 20)
 
 class Persons(orm.Model):
-    last_name = orm.CharField(maxLength= 100)
-    first_name = orm.CharField(maxLength= 100)
-    middle_name = orm.CharField(maxLength= 100)
-    phone_prefix = orm.IntegerField(maxDigits= 3) # phone prefix code of the location
-    phone_number = orm.IntegerField(maxDigits= 10)
+    last_name = orm.CharField(max_length= 100)
+    first_name = orm.CharField(max_length= 100)
+    middle_name = orm.CharField(max_length= 100)
+    phone_prefix = orm.IntegerField(max_digits= 3) # phone prefix code of the location
+    phone_number = orm.IntegerField(max_digits= 10)
     location = orm.RecordField(Locations)
     street = orm.RecordField(Streets)
     
@@ -124,14 +124,14 @@ print(db.getLastQuery(), '\n')
 #print(person.id)
 #person.first_name = 'Andrei'
 #person.save()
-#print(Persons.getOne(db, id = 14362421))
+#print(Persons.get_one(db, id = 14362421))
 #pprint(db.select(Persons, where= (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
-#print(Persons.getOne(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
+#print(Persons.get_one(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_number == 28072)))
 #Persons.delete(db, Persons.id >= 14362420)
 
 #pprint(db._update(Persons.phone_prefix(Persons.phone_prefix + 1), where= (Persons.id == 1))) # UPDATE persons SET phone_prefix= (persons.phone_prefix + 1) WHERE (persons.id = 1); 
 
 #for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
-#    print(str(person), str(Locations.getOne(db, id = person.location_id)))
+#    print(str(person), str(Locations.get_one(db, id = person.location_id)))
 pprint(list(db.select(*Persons, where = (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit = 5)))
 print(db.getLastQuery(), '\n')

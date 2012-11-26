@@ -400,9 +400,9 @@ def openCatalogItemForm(catalogItem, FormClass = None, **kwargs):
 
 def openCatalogForm(catalogModel, db, FormClass = None, **kwargs):
     if isinstance(catalogModel, str):
-        catalogModel = wic.getObjectByPath(catalogModel)
-    assert orm.isModel(catalogModel), 'Pass a model class.'
-    catalogModel.checkTable(db) # before opening the form
+        catalogModel = wic.get_object_by_path(catalogModel)
+    assert orm.is_model(catalogModel), 'Pass a model class.'
+    catalogModel.check_table(db) # before opening the form
     if not FormClass:
         formModulePath = catalogModel.__module__
         FormClass = getattr(sys.modules[formModulePath], 'CatalogForm', CatalogForm)

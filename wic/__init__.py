@@ -32,7 +32,7 @@ wicDir = os.path.dirname(os.path.abspath(__file__))
 
 app = None
 
-from orm import getObjectByPath
+from orm import get_object_by_path
 
 
 #import errno

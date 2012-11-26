@@ -217,7 +217,7 @@ class WForm(QtGui.QDialog):
 
 def openForm(FormClass, *args, modal = False, **kwargs):
     if isinstance(FormClass, str):
-        FormClass = wic.getObjectByPath(FormClass)
+        FormClass = wic.get_object_by_path(FormClass)
     assert issubclass(FormClass, WForm), 'This is not a WForm.'
     form = FormClass(*args, **kwargs) # no parent widget for now
     if modal:

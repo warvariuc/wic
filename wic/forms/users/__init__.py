@@ -7,9 +7,9 @@ from wic import forms
 
 
 class Users(forms.catalog.CatalogModel):
-    name = orm.CharField(maxLength=20)
-    full_name = orm.CharField(maxLength=50)
-    password_hash = orm.CharField(maxLength=32)
+    name = orm.CharField(max_length=20)
+    full_name = orm.CharField(max_length=50)
+    password_hash = orm.CharField(max_length=32)
     is_enabled = orm.BooleanField()
 
 
