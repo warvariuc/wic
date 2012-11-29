@@ -629,7 +629,7 @@ class GenericAdapter():
                     _order = self.render(_order) + ' ' + _order.sort
                 elif isinstance(_order, str):
                     if _order == '<random>':
-                        _order = self.RANDOM()
+                        _order = self._RANDOM()
                 else:
                     raise SyntaxError('Orderby should receive Field or str.')
                 _orderby.append(_order)
@@ -668,17 +668,17 @@ class GenericAdapter():
     def _parse_response(self, fields, rows):
         """Post process results fetched from the DB. Return results in Rows object."""
         for i, row in enumerate(rows):
-            newRow = []
+            new_row = []
             for j, field in enumerate(fields):
                 value = row[j]
                 if value is not None and isinstance(field, orm.ModelField):
                     column = field.column
                     if isinstance(column, orm.Column):
-                        decodeFunc = getattr(self, '_decode' + column.type.upper(), None)
-                        if callable(decodeFunc):
-                            value = decodeFunc(value, column)
-                newRow.append(value)
-            rows[i] = newRow
+                        decode_func = getattr(self, '_decode' + column.type.upper(), None)
+                        if callable(decode_func):
+                            value = decode_func(value, column)
+                new_row.append(value)
+            rows[i] = new_row
 
         return Rows(self, fields, rows)
 
@@ -697,20 +697,20 @@ class Rows():
         self.db = db
         self.fields = tuple(fields)
         self.rows = rows
-        self._fieldsStr = tuple(str(field) for field in fields)
+        self._fields_str = tuple(str(field) for field in fields)
         # {field_str: field_order}
-        self._fieldsOrder = dict((fieldStr, i) for i, fieldStr in enumerate(self._fieldsStr))
+        self._fields_order = dict((field_str, i) for i, field_str in enumerate(self._fields_str))
 
-    def value(self, rowNo, field):
+    def value(self, row_no, field):
         """Get a value
         @param rowNo: row number
         @param field: field instance or column number
         """
         if isinstance(field, int):
-            columnNo = field
+            column_no = field
         else:
-            columnNo = self._fieldsOrder[str(field)]
-        return self.rows[rowNo][columnNo]
+            column_no = self._fields_order[str(field)]
+        return self.rows[row_no][column_no]
 
     def __len__(self):
         return len(self.rows)
@@ -730,7 +730,7 @@ class Rows():
         {'field1_name': field1_value, 'field2_name': field2_value, ...}
         """
         for row in self.rows:
-            yield {self._fieldsStr[i]: value for i, value in enumerate(row)}
+            yield {self._fields_str[i]: value for i, value in enumerate(row)}
 
 
 
@@ -863,12 +863,12 @@ class SqliteAdapter(GenericAdapter):
         self.execute("SELECT name FROM sqlite_master WHERE type='table'")
         return [row[0] for row in self.cursor.fetchall()]
 
-    def get_columns(self, tableName):
+    def get_columns(self, table_name):
         """Get columns of a table"""
-        self.execute("PRAGMA table_info('%s')" % tableName)  # name, type, notnull, dflt_value, pk
+        self.execute("PRAGMA table_info('%s')" % table_name)  # name, type, notnull, dflt_value, pk
         columns = {}
         for row in self.cursor.fetchall():
-            logger.debug('Found table column: %s, %s' % (tableName, row))
+            logger.debug('Found table column: %s, %s' % (table_name, row))
             typeName = row[2].lower()
             # INTEGER PRIMARY KEY fields are auto-generated in sqlite
             # INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
@@ -880,7 +880,7 @@ class SqliteAdapter(GenericAdapter):
             column = Column(type = typeName, field = None, name = row[1], default = row[4],
                             precision = 19, nullable = (not row[3]), autoincrement = autoincrement)
             columns[column.name] = column
-            logger.debug('Reproduced table column: %s, %s' % (tableName, column))
+            logger.debug('Reproduced table column: %s, %s' % (table_name, column))
         return columns
 
 
@@ -1034,31 +1034,31 @@ class PostgreSqlAdapter(GenericAdapter):
         return connection
 
     @classmethod
-    def _INT(cls, column, intMap = [(2, 'SMALLINT'), (4, 'INTEGER'), (8, 'BIGINT')]):
+    def _INT(cls, column, int_map = [(2, 'SMALLINT'), (4, 'INTEGER'), (8, 'BIGINT')]):
         """Render declaration of INT column type.
         """
-        maxInt = int('9' * column.precision)
-        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8)  # add one bit for sign
-        for _bytesCount, _columnType in intMap:
-            if bytesCount <= _bytesCount:
+        max_int = int('9' * column.precision)
+        bytes_count = math.ceil((max_int.bit_length() - 1) / 8)  # add one bit for sign
+        for _bytes_count, _column_type in int_map:
+            if bytes_count <= _bytes_count:
                 break
         else:
             raise Exception('Too big precision specified.')
-        columnStr = _columnType
+        column_str = _column_type
 
         if column.autoincrement:
-            if columnStr == 'BIGINT':
-                columnStr = 'BIGSERIAL'
+            if column_str == 'BIGINT':
+                column_str = 'BIGSERIAL'
             else:
-                columnStr = 'SERIAL'
+                column_str = 'SERIAL'
         else:
             if not column.nullable:
-                columnStr += ' NOT'
-            columnStr += ' NULL'
+                column_str += ' NOT'
+            column_str += ' NULL'
             if column.default is not Nil:
-                columnStr += ' DEFAULT ' + cls._render(column.default, None)
+                column_str += ' DEFAULT ' + cls._render(column.default, None)
 
-        return columnStr
+        return column_str
 
     @classmethod
     def _DATETIME(cls, column):
@@ -1141,29 +1141,29 @@ class PostgreSqlAdapter(GenericAdapter):
                      "WHERE table_schema = 'public'")
         return [row[0] for row in self.cursor.fetchall()]
 
-    def get_columns(self, tableName):
+    def get_columns(self, table_name):
         """Get columns of a table
         """
         rows = self.select(
             'column_name', 'data_type', 'column_default', 'is_nullable', 'character_maximum_length',
             'numeric_precision', 'numeric_scale',
             from_ = 'information_schema.columns',
-            where = {'table_schema': 'public', 'table_name': tableName},
+            where = {'table_schema': 'public', 'table_name': table_name},
         )
 
         columns = {}
         for row in rows.dictresult():
-            typeName = row['data_type'].lower()
-            if 'int' in typeName:
-                typeName = 'int'
-            elif 'char' in typeName:
-                typeName = 'char'
-            elif typeName == 'timestamp without time zone':
-                typeName = 'datetime'
-            elif typeName == 'numeric':
-                typeName = 'decimal'
-            elif typeName not in ('text', 'date'):
-                raise Exception('Unexpected data type: `%s`' % typeName)
+            type_name = row['data_type'].lower()
+            if 'int' in type_name:
+                type_name = 'int'
+            elif 'char' in type_name:
+                type_name = 'char'
+            elif type_name == 'timestamp without time zone':
+                type_name = 'datetime'
+            elif type_name == 'numeric':
+                type_name = 'decimal'
+            elif type_name not in ('text', 'date'):
+                raise Exception('Unexpected data type: `%s`' % type_name)
             precision = row['character_maximum_length'] or row['numeric_precision']
             nullable = row['is_nullable'].lower() == 'yes'
             default = row['column_default']
@@ -1172,7 +1172,7 @@ class PostgreSqlAdapter(GenericAdapter):
             else:
                 autoincrement = False
             # TODO: retrieve column comment
-            column = Column(type = typeName, name = row['column_name'],
+            column = Column(type = type_name, name = row['column_name'],
                             default = default,
                             precision = precision, scale = row['numeric_scale'],
                             nullable = nullable, autoincrement = autoincrement)
@@ -1187,15 +1187,15 @@ class PostgreSqlAdapter(GenericAdapter):
         self._autocommit()
         return self.cursor.fetchone()[0]
 
-    def _drop_table(self, tableName):
+    def _drop_table(self, table_name):
         """Return query for dropping a table
         @param table_name: table name or a model describing the table
         """
-        if orm.is_model(tableName):
-            tableName = tableName._meta.db_name
-        elif not isinstance(tableName, str):
+        if orm.is_model(table_name):
+            table_name = table_name._meta.db_name
+        elif not isinstance(table_name, str):
             raise AssertionError('Expecting a str or a Model')
-        return 'DROP TABLE IF EXISTS %s' % tableName
+        return 'DROP TABLE IF EXISTS %s' % table_name
 
 
 def xorify(orderBy):

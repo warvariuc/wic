@@ -128,7 +128,10 @@ class ModelField(Expression, models.ModelAttr):
     def __get__(self, record, model):
         if record is not None:
             # called as an instance attribute
-            return record.__dict__[self.name]
+            try:
+                return record.__dict__[self.name]
+            except KeyError:
+                raise AttributeError('Value for field `%s` was not set yet' % self.name)
         # called as a class attribute
         return FieldExpression(self, model = model)
 
