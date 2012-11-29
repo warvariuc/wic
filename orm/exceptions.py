@@ -25,6 +25,11 @@ class ModelError(OrmError):
 class TableError(OrmError):
     """A problem with a db table structure."""
 
+class RecordError(ModelError):
+    """A problem with a model instance."""
+
+class RecordValueError(ModelError):
+    """A problem with a model instance value."""
 
 class QueryError(OrmError):
     """Bad parameters to a query"""

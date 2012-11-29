@@ -123,9 +123,9 @@ class ModelField(Expression, models.ModelAttr):
         self.label = label or self.name.replace('_', ' ').capitalize()
 
     def __get__(self, record, model):
-        if record is not None:  # called as an instance attribute
+        if record is not None:
+            # called as an instance attribute
             return record.__dict__[self.name]
-
         # called as a class attribute
         return FieldExpression(self, model = model)
 
@@ -139,11 +139,24 @@ class ModelField(Expression, models.ModelAttr):
         """
         return value
 
+#    def has_default(self):
+#        """Returns a boolean of whether this field has a default value.
+#        """
+#        return self.default is not Nil
+#
+#    def get_default(self):
+#        """Returns the default value for this field.
+#        """
+#        if self.has_default():
+#            if callable(self.default):
+#                return self.default()
+#            return self.default
+#        return ""
 
 # remove Expression from Field base classes, which was put for IDE autocomplete to work
-__field_base_classes = list(ModelField.__bases__)
-__field_base_classes.remove(Expression)
-ModelField.__bases__ = tuple(__field_base_classes)
+_field_base_classes = list(ModelField.__bases__)
+_field_base_classes.remove(Expression)
+ModelField.__bases__ = tuple(_field_base_classes)
 
 
 ####################################################################################################
@@ -203,7 +216,9 @@ class IntegerField(ModelField):
                          index, label)
 
     def __set__(self, record, value):
-        record.__dict__[self.name] = int(value)
+        if not isinstance(value, int) and value is not None:
+            raise exceptions.RecordValueError('Provide an int')
+        record.__dict__[self.name] = value
 
 
 class DecimalField(ModelField):
@@ -216,6 +231,11 @@ class DecimalField(ModelField):
                          index, label)
 
     def __set__(self, record, value):
+        if not isinstance(value, Decimal) and value is not None:
+            try:
+                value = Decimal(value)
+            except ValueError as exc:
+                raise exceptions.RecordValueError('Provide a Decimal.')
         record.__dict__[self.name] = None if value is None else Decimal(value)
 
 
@@ -230,8 +250,8 @@ class DateField(ModelField):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d').date()
         elif not isinstance(value, Date) and value is not None:
-            raise ValueError('Provide a datetime.date or a string in format "%Y-%m-%d" with valid '
-                             'date.')
+            raise exceptions.RecordValueError('Provide a datetime.date or a string in format "%Y-%m-%d" '
+                                         'with a valid date.')
         record.__dict__[self.name] = value
 
 
@@ -246,8 +266,8 @@ class DateTimeField(ModelField):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         elif not isinstance(value, DateTime) and value is not None:
-            raise ValueError('Provide a datetime.datetime or a string in format '
-                             '"%Y-%m-%d %H:%M:%S.%f" with valid date-time.')
+            raise exceptions.RecordValueError('Provide a datetime.datetime or a string in format '
+                                         '"%Y-%m-%d %H:%M:%S.%f" with valid date-time.')
         record.__dict__[self.name] = value
 
 
@@ -259,81 +279,82 @@ class BooleanField(ModelField):
                          index, label)
 
     def __set__(self, record, value):
-        record.__dict__[self.name] = None if value is None else bool(value)
+        if not isinstance(value, bool) and value is not None:
+            raise exceptions.RecordValueError('Provide a bool or None.')
+        # TODO: check is nullable
+        record.__dict__[self.name] = value
 
 
-#class _RecordId(int):
-#    """Keeps id of a referred record allowing to get the referred record.
-#    """
-#    def __new__(cls, *args, recordIdField, record, **kwargs):
-#        """
-#        @param recordIdField: referred record id model field - to know which model is referred
-#        @param record: record part of which is this referred record id
-#        """
-#        self = super().__new__(cls, *args, **kwargs)
-#        self._recordIdField = recordIdField
-#        self._record = record
-#        return self
-#
-#    @property
-#    def record(self):
-#        "Get the record referred by this id."
-#        return getattr(self._record, self._recordIdField._name)
+class _RecordId():
+    """Keeps id of a related record allowing to get the referred record.
+    """
+    def __init__(self, recordField):
+        """
+        @param recordField: related record field
+        """
+        assert isinstance(recordField, RecordField)
+        self._recordField = recordField
+
+    def __set__(self, record, value):
+        """Setter for this attribute."""
+        if not isinstance(value, int) and value is not None:
+            raise exceptions.RecordValueError('You can assign only int or None to %s.%s'
+                                         % (orm.get_object_path(record), self._recordField._name))
 
 
 class RecordField(ModelField):
-    """Field for storing ids to referred records.
+    """Field for storing ids to related records.
     """
-    def __init__(self, refer_model, index = '', db_name = '', label = ''):
+    def __init__(self, related_model, index = '', db_name = '', label = ''):
         """
-        @param referTable: a Model subclass of which record is referenced
+        @param related_model: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
         # 9 digits - int32 - ought to be enough for anyone ;)
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name + '_id',
                                          precision = 9, unsigned = True),
                          index, label)
-        self._refer_model = refer_model  # path to the model
-        self._name = '__' + self.name  # name of the attribute which keeps the referred record or its id
+        self._related_model = related_model  # path to the model
+        self._name = self.name + '_id'  # name of the attribute which keeps id of the related record
+        setattr(self.model, self._name, _RecordId(self))
 
     def __get__(self, record, model):
         if record is None:  # called as a class attribute
             return super().__get__(None, model)
 
         # called as an instance attribute
-        refer_record = getattr(record, self._name)
-        if refer_record is None:
-            return None
-        elif isinstance(refer_record, self.refer_model):
-            return refer_record
-        elif isinstance(refer_record, int):
-            refer_record = self.refer_model.objects.get_one(record._db, id = refer_record)
-            setattr(record, self._name, refer_record)
-            return refer_record
+        related_record = record.__dict__.get(self.name)
+        related_record_id = getattr(record, self._name)
+        if related_record_id is None:
+            related_record = None
+        elif related_record is not None and related_record.id == related_record_id:
+            return related_record
         else:
-            raise TypeError('This should not have happened: private attribute is not a record of '
-                            'required model, id or None')
+            related_record = self.related_model.objects.get_one(record._db, id = related_record_id)
+        record.__dict__[self.name] = related_record
+        return related_record
 
     def __set__(self, record, value):
-        """You can assign to the field an integer id or the record itself."""
-        assert isinstance(value, (int, self.refer_model)) or value is None, \
-            'You can assign only records of model `%s`, an integer id of the record or None' \
-            % self.refer_model
-        setattr(record, self._name, value)  # _name will contain the referred record
+        """Setter for this field."""
+        if not isinstance(value, self.related_model) and value is not None:
+            raise exceptions.RecordValueError('You can assign only instances of model `%s` or None'
+                                         % orm.get_object_path(self.related_model))
+        record.__dict__[self.name] = value
+        record.__dict__[self._name] = value.id
 
     @orm.LazyProperty
-    def refer_model(self):
-        if orm.is_model(self._refer_model):
-            return self._refer_model
-        elif isinstance(self._refer_model, str):
-            return orm.get_object_by_path(self._refer_model, self.model.__module__)
+    def related_model(self):
+        if orm.is_model(self._related_model):
+            return self._related_model
+        elif isinstance(self._related_model, str):
+            return orm.get_object_by_path(self._related_model, self.model.__module__)
         else:
             raise exceptions.ModelError('Referred model must be a Model or a string with its path.')
 
     def _cast(self, value):
         """Convert a value into another value which is ok for this Field.
         """
-        if isinstance(value, self.refer_model):
+        if isinstance(value, self.related_model):
             return value.id
         try:
             return int(value)

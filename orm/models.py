@@ -4,9 +4,9 @@ import inspect
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
 from collections import OrderedDict
-from types import MethodType
 
 import orm
+from orm import Nil
 
 
 class ModelAttrInfo():
@@ -168,7 +168,7 @@ class Model(metaclass = ModelBase):
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
         @param db: db adapter in which to save the table record or from which it was fetched
-        @param *args: tuples (Field or field_name, value) 
+        @param *args: tuples (ModelField or field_name, value) 
         @param **kwargs: {field_name: fieldValue}
         """
         self._db = db
@@ -189,7 +189,21 @@ class Model(metaclass = ModelBase):
 
         # make values for fields
         for field_name, field in self._meta.fields.items():
-            setattr(self, field_name, kwargs.pop(field_name, field.column.default))
+            # is this a field name?
+            field_value = kwargs.pop(field_name, Nil)
+            if field_value is Nil and isinstance(field, fields.RecordField):
+                # a related record id?
+                field_value = kwargs.pop(field._name, Nil)
+                if field_value is not Nil:
+                    field_name = field._name
+
+            if field_value is Nil:
+                field_value = field.column.default
+
+            try:
+                setattr(self, field_name, field_value)
+            except exceptions.RecordValueError as exc:
+                raise exceptions.RecordValueError(exc.args[0])
 
         if kwargs:
             raise NameError('Got unknown field names: %s' % ', '.join(kwargs))
@@ -255,11 +269,14 @@ class Model(metaclass = ModelBase):
         """Human readable presentation of the record.
         """
         values = []
-        for field in self._meta.fields.values():
-            value = getattr(self, field.name)
-            if isinstance(value, (Date, DateTime, Decimal)):
-                value = str(value)
-            values.append("%s= %r" % (field.name, value))
+        for field_name, field in self._meta.fields.items():
+            field_value = getattr(self, field_name)
+            if isinstance(field_value, (Date, DateTime, Decimal)):
+                field_value = str(field_value)
+            if isinstance(field, fields.RecordField):
+                field_name = field._name
+                field_value = field_value.id
+            values.append("%s= %r" % (field_name, field_value))
         return '%s(%s)' % (self.__class__.__name__, ', '.join(values))
 
     @classmethod

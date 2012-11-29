@@ -39,10 +39,10 @@ def get_object_path(obj):
     """Having an object return path to its class in form of `path.to.module.ClassName`
     """
     if isinstance(obj, type):
-        klass = obj
+        return obj.__module__ + '.' + obj.__name__
     else:
-        klass = obj.__class__
-    return klass.__module__ + '.' + klass.__name__
+        obj = obj.__class__
+        return obj.__module__ + '.' + obj.__name__ + '()'
 
 
 def get_object_by_path(object_path, package_path = None):

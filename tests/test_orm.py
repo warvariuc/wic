@@ -122,9 +122,9 @@ class TestModelsPostgresql(unittest.TestCase):
             authors.append(author)
 
         bookData = (
-            ('name', 'author', 'price', 'publication_date'),
+            ('name', 'authorid', 'price', 'publication_date'),
             ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
-                 authors[0].id, '9.55', '2002-03-08'),
+                 authors[0], '9.55', '2002-03-08'),
             ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
                  authors[1], '14.95', '2010-03-27'),
             ("In The Plex: How Google Thinks, Works, and Shapes Our Lives",
@@ -253,6 +253,7 @@ class TestModels(unittest.TestCase):
         self.assertIs(TestModel1.field1.left.model, TestModel1)
         self.assertIs(TestModel2.field1.left.model, TestModel2)
 
+
 class TestExpressions(unittest.TestCase):
 
     def testIdFied(self):
@@ -261,6 +262,10 @@ class TestExpressions(unittest.TestCase):
             field1 = orm.IntegerField()
             field2 = orm.CharField(max_length = 100)
 
+        class TestModel2(orm.Model):
+            field3 = orm.RecordField(TestModel1)
+
         self.assertEqual(str(TestModel1.id == 1), '(test_model1s.id = 1)')
         self.assertEqual(str(TestModel1.field1 == 1), '(test_model1s.field1 = 1)')
         self.assertEqual(str(TestModel1.field2 == 1), "(test_model1s.field2 = '1')")
+        self.assertEqual(str(TestModel2.field3 == 3), "(test_model2s.field3_id = 3)")
