@@ -10,6 +10,9 @@ import unittest
 import orm
 
 
+orm.sql_logger.setLevel(orm.logging.DEBUG)
+
+
 def setUpModule():
     pass
 

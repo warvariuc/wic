@@ -29,10 +29,16 @@ import logging, inspect, importlib
 
 
 logger = logging.getLogger('orm')
-strm_out = logging.StreamHandler(sys.__stdout__)
-strm_out.setFormatter(logging.Formatter())
-logger.addHandler(strm_out)
+stream = logging.StreamHandler()
+stream.setFormatter(logging.Formatter())
+logger.addHandler(stream)
 logger.setLevel(logging.ERROR)  # logging level
+
+sql_logger = logging.getLogger('orm.sql')
+stream = logging.StreamHandler()
+stream.setFormatter(logging.Formatter())
+sql_logger.addHandler(stream)
+sql_logger.setLevel(logging.ERROR)  # logging level
 
 
 def get_object_path(obj):

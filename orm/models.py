@@ -198,15 +198,17 @@ class Model(metaclass = ModelBase):
                     field_name = field._name
 
             if field_value is Nil:
-                field_value = field.column.default
+                if field.has_default():
+                    field_value = field.default
 
-            try:
-                setattr(self, field_name, field_value)
-            except exceptions.RecordValueError as exc:
-                raise exceptions.RecordValueError(exc.args[0])
+            if field_value is not Nil:
+                try:
+                    setattr(self, field_name, field_value)
+                except exceptions.RecordValueError as exc:
+                    raise exceptions.RecordValueError(str(exc))
 
         if kwargs:
-            raise NameError('Got unknown field names: %s' % ', '.join(kwargs))
+            raise exceptions.ModelError('Got unknown field names: %s' % ', '.join(kwargs))
 
     def __getitem__(self, field):
         """Get a Record Field value by key.

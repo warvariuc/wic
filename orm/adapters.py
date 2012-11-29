@@ -11,7 +11,7 @@ from decimal import Decimal
 import pprint
 
 import orm
-from orm import logger
+from orm import Nil, logger, sql_logger
 
 
 class Column():
@@ -91,7 +91,7 @@ class GenericAdapter():
 
     def _execute(self, *a, **b):
         query = a[0]
-        logger.debug('DB query: %s' % query)
+        sql_logger.debug('DB query: %s' % query)
         t0 = time.time()
         try:
             result = self.cursor.execute(*a, **b)
@@ -109,10 +109,11 @@ class GenericAdapter():
         return self._timings[-1]
 
     @classmethod
-    def _MODELFIELD(cls, left):
+    def _MODELFIELD(cls, field):
         """Render a table column name."""
         #db = db or orm.GenericAdapter # we do not use adapter here
-        return '%s.%s' % (left.model, left.column.name)
+        assert isinstance(field, orm.ModelField)
+        return '%s.%s' % (field.model, field.column.name)
 
     @classmethod
     def _AND(cls, left, right):
@@ -362,7 +363,7 @@ class GenericAdapter():
         if not column.nullable:
             columnStr += ' NOT'
         columnStr += ' NULL'
-        if column.nullable or column.default is not None:
+        if column.default is not Nil:
             columnStr += ' DEFAULT ' + cls._render(column.default, None)
         if column.autoincrement:
             columnStr += ' AUTO_INCREMENT'
@@ -1054,7 +1055,7 @@ class PostgreSqlAdapter(GenericAdapter):
             if not column.nullable:
                 columnStr += ' NOT'
             columnStr += ' NULL'
-            if column.nullable or column.default is not None:
+            if column.default is not Nil:
                 columnStr += ' DEFAULT ' + cls._render(column.default, None)
 
         return columnStr
