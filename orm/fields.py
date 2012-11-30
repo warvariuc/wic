@@ -190,10 +190,13 @@ class CharField(ModelField):
         """Initialize a CHAR field.
         @param max_length: maximum length in bytes of the string to be stored in the DB
         @param default: default value to store in the DB
+            If no default value is declared explicitly, the default value is the null value.
         @param index: index type to be applied on the corresponding column in the DB
         @param db_name: name of the column in the DB table
         @param label: short description of the field (e.g.for for forms)
         @param comment: comment for the field
+        @param nullable: whether the db column can have NULL values.
+            A NULL value represents the complete absence of value within the column, not that it is merely blank.
         """
         super().__init__(adapters.Column('CHAR', db_name or self._model_attr_info.name,
                                          precision = max_length, default = db_default,
@@ -354,6 +357,16 @@ class RecordField(ModelField):
                                          % orm.get_object_path(self.related_model))
         record.__dict__[self.name] = value
         record.__dict__[self._name] = value.id
+
+    def __call__(self, value):
+        """You can use Field(...)(value) to return a tuple for INSERT.
+        """
+        if isinstance(value, self.related_model):
+            value = value.id
+        elif not isinstance(value, int) or value is not None:
+            raise exceptions.RecordValueError('Bad value. Pass a `%s` instance, int or None'
+                                              % orm.get_object_path(self.related_model))
+        return (self, value)
 
     @orm.LazyProperty
     def related_model(self):

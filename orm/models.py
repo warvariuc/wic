@@ -197,10 +197,6 @@ class Model(metaclass = ModelBase):
                 if field_value is not Nil:
                     field_name = field._name
 
-            if field_value is Nil:
-                if field.has_default():
-                    field_value = field.default
-
             if field_value is not Nil:
                 try:
                     setattr(self, field_name, field_value)
@@ -246,10 +242,16 @@ class Model(metaclass = ModelBase):
         self.timestamp = DateTime.now()
         values = []  # list of tuples (Field, value)
         for field in model._meta.fields.values():
+            value = Nil
             if isinstance(field, fields.RecordField):
                 value = getattr(self, field._name)
             else:
-                value = self[field]
+                try:
+                    value = self[field]
+                except AttributeError:
+                    if field.has_default():
+                        value = field.default
+            
             values.append(field(value))
 
         signals.pre_save.send(sender = model, record = self)
