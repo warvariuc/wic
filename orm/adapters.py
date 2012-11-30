@@ -17,7 +17,7 @@ from orm import Nil, logger, sql_logger
 class Column():
     """Information about database table column.
     """
-    def __init__(self, type, name, default = None, precision = None, scale = None,
+    def __init__(self, type, name, default = Nil, precision = None, scale = None,
                  unsigned = None, nullable = True, autoincrement = False, comment = ''):
         self.name = name  # db table column name
         self.type = type  # string with the name of data type (decimal, varchar, bigint...)
@@ -1062,7 +1062,11 @@ class PostgreSqlAdapter(GenericAdapter):
 
     @classmethod
     def _DATETIME(cls, column):
-        return 'timestamp (6) without time zone'
+        column_str =  'timestamp (6) without time zone'
+        if not column.nullable:
+            column_str += ' NOT'
+        column_str += ' NULL'
+        return column_str    
 
     @classmethod
     def _encodeDATETIME(cls, value, column):

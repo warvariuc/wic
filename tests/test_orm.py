@@ -10,7 +10,7 @@ import unittest
 import orm
 
 
-orm.sql_logger.setLevel(orm.logging.DEBUG)
+#orm.sql_logger.setLevel(orm.logging.DEBUG)
 
 
 def setUpModule():
@@ -47,115 +47,17 @@ class TestModelAttr(unittest.TestCase):
         self.assertEqual(TestModel.attr2.sequence, 2)
 
 
-
-#
-#class TestModelsSqlite(unittest.TestCase):
-#    @classmethod
-#    def setUpClass(cls):
-#        cls.db = orm.connect('sqlite://:memory:')
-#
-#    @classmethod
-#    def tearDownClass(cls):
-#        cls.db = None  # disconnect?    
-#
-#    def test_create_table_from_model(self):
-#
-#        query = self.db.get_create_table_query(TestModel)
-#        for _query in query.split('\n\n'):
-#            self.db.execute(_query)
-
-
-class TestModelsPostgresql(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-#        CREATE USER test WITH PASSWORD 'test';
-#        CREATE DATABASE test;
-#        GRANT ALL PRIVILEGES ON DATABASE test TO test;
-        cls.db = orm.connect('postgresql://test:test@localhost/test')
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.db.disconnect()
-
-    def runTest(self):
-
-        class Author(orm.Model):
-            """Authors catalog
-            """
-            # id field already present 
-            last_name = orm.CharField(max_length = 100, comment = 'Author\'s last name')
-            first_name = orm.CharField(max_length = 100, comment = 'Author\'s first name')
-            created_at = orm.DateTimeField()
-
-            _meta = orm.ModelOptions(
-                db_name = 'authors',
-                indexes = orm.Unique(last_name, first_name),
-            )
-
-        class Book(orm.Model):
-            """Books catalog
-            """
-            # id field already present 
-            name = orm.CharField(max_length = 100, default = 'A very good book!!!')
-            price = orm.DecimalField(max_digits = 10, fractionDigits = 2, default = '0.00',
-                                    index = True)  # 2 decimal places
-            author = orm.RecordField(Author, index = True)
-            publication_date = orm.DateField()
-
-        db = self.db
-        for model in (Author, Book):
-            db.execute(db._drop_table(model))
-            for query in db.get_create_table_query(model):
-                db.execute(query)
-        db.commit()
-
-        authorData = (
-            ('first_name', 'last_name'),
-            ('Sam', 'Williams'),
-            ('Steven', 'Levy'),
-            ('Richard', 'Stallman'),
-            ('Имя', 'Фамилия'),
-        )
-        authors = []
-        for data in authorData[1:]:
-            data = dict(zip(authorData[0], data))
-            author = Author.objects.create(db = db, **data)
-            print(author)
-            authors.append(author)
-
-        bookData = (
-            ('name', 'authorid', 'price', 'publication_date'),
-            ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
-                 authors[0], '9.55', '2002-03-08'),
-            ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
-                 authors[1], '14.95', '2010-03-27'),
-            ("In The Plex: How Google Thinks, Works, and Shapes Our Lives",
-                 authors[1], '13.98', '2011-04-12'),
-            ("Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
-                 authors[1], '23.00', '2002-01-15'),
-            ("Книга с русским названием",
-                 authors[3], '00.00', '2000-02-29'),
-        )
-        books = []
-        for data in bookData[1:]:
-            data = dict(zip(bookData[0], data))
-            book = Book.objects.create(db = db, **data)
-            print(book)
-            books.append(book)
-
-
 class TestModels(unittest.TestCase):
 
     def testModelOptions(self):
 
+        ok = False
         try:
             class TestModel(orm.Model):
                 _meta = object()
         except orm.ModelError:
-            pass
-        else:
-            self.fail('`_meta` should be only instance of ModelOptions.')
+            ok = True
+        self.assertTrue(ok, '`_meta` should be only instance of ModelOptions.')
 
         class TestModel1(orm.Model):
             field1 = orm.IntegerField()
@@ -223,24 +125,6 @@ class TestModels(unittest.TestCase):
                            orm.Index(birth_date))
             )
 
-    def testModelField(self):
-
-        try:
-            class TestModel1(orm.Model):
-                _field = orm.IntegerField()
-        except orm.ModelError:
-            pass
-        else:
-            self.fail('Models should not accept fields with names starting with `_`')
-
-        class TestModel2(orm.Model):
-            field1 = orm.IntegerField()
-
-        self.assertIsInstance(TestModel2.field1, orm.FieldExpression)
-        self.assertEqual(TestModel2.field1.left.name, 'field1')
-        # Model.field returns Expression, not Field
-        self.assertIsInstance(TestModel2.field1, orm.FieldExpression)
-
     def testModelInheritance(self):
 
         class TestModel1(orm.Model):
@@ -255,6 +139,35 @@ class TestModels(unittest.TestCase):
         self.assertIsInstance(TestModel2.field1.left, orm.IntegerField)
         self.assertIs(TestModel1.field1.left.model, TestModel1)
         self.assertIs(TestModel2.field1.left.model, TestModel2)
+
+
+class TestModelFields(unittest.TestCase):
+
+    def testModelFieldName(self):
+
+        ok = False
+        try:
+            class TestModel1(orm.Model):
+                _field = orm.IntegerField()
+        except orm.ModelError:
+            ok = True
+        self.assertTrue(ok, 'Models should not accept fields with names starting with `_`')
+
+        class TestModel2(orm.Model):
+            field1 = orm.IntegerField()
+
+        # Model.field returns Expression, not Field
+        self.assertIsInstance(TestModel2.field1, orm.FieldExpression)
+        self.assertEqual(TestModel2.field1.left.name, 'field1')
+        self.assertIsInstance(TestModel2.field1, orm.FieldExpression)
+
+        record = TestModel2(None)
+        ok = False
+        try:
+            record.field1 = '1'
+        except orm.RecordValueError:
+            ok = True
+        self.assertTrue(ok, 'The assignment should have failed')
 
 
 class TestExpressions(unittest.TestCase):
@@ -272,3 +185,83 @@ class TestExpressions(unittest.TestCase):
         self.assertEqual(str(TestModel1.field1 == 1), '(test_model1s.field1 = 1)')
         self.assertEqual(str(TestModel1.field2 == 1), "(test_model1s.field2 = '1')")
         self.assertEqual(str(TestModel2.field3 == 3), "(test_model2s.field3_id = 3)")
+
+
+class TestModelsPostgresql(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+#        CREATE USER test WITH PASSWORD 'test';
+#        CREATE DATABASE test;
+#        GRANT ALL PRIVILEGES ON DATABASE test TO test;
+        cls.db = orm.connect('postgresql://test:test@localhost/test')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.disconnect()
+
+    def runTest(self):
+
+        class Author(orm.Model):
+            """Authors catalog
+            """
+            # id field already present 
+            last_name = orm.CharField(max_length = 100, comment = 'Author\'s last name')
+            first_name = orm.CharField(max_length = 100, comment = 'Author\'s first name')
+            created_at = orm.DateTimeField()
+
+            _meta = orm.ModelOptions(
+                db_name = 'authors',
+                indexes = orm.Unique(last_name, first_name),
+            )
+
+        class Book(orm.Model):
+            """Books catalog
+            """
+            # id field already present 
+            name = orm.CharField(max_length = 100, default = 'A very good book!!!')
+            price = orm.DecimalField(max_digits = 10, fractionDigits = 2, default = '0.00',
+                                    index = True)  # 2 decimal places
+            author = orm.RecordField(Author, index = True)
+            publication_date = orm.DateField()
+
+        db = self.db
+        for model in (Author, Book):
+            db.execute(db._drop_table(model))
+            for query in db.get_create_table_query(model):
+                db.execute(query)
+        db.commit()
+
+        authorData = (
+            ('first_name', 'last_name'),
+            ('Sam', 'Williams'),
+            ('Steven', 'Levy'),
+            ('Richard', 'Stallman'),
+            ('Имя', 'Фамилия'),
+        )
+        authors = []
+        for data in authorData[1:]:
+            data = dict(zip(authorData[0], data))
+            author = Author.objects.create(db = db, **data)
+            print(author)
+            authors.append(author)
+
+        bookData = (
+            ('name', 'author', 'price', 'publication_date'),
+            ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
+                 authors[0], '9.55', '2002-03-08'),
+            ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
+                 authors[1], '14.95', '2010-03-27'),
+            ("In The Plex: How Google Thinks, Works, and Shapes Our Lives",
+                 authors[1], '13.98', '2011-04-12'),
+            ("Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
+                 authors[1], '23.00', '2002-01-15'),
+            ("Книга с русским названием",
+                 authors[3], '00.00', '2000-02-29'),
+        )
+        books = []
+        for data in bookData[1:]:
+            data = dict(zip(bookData[0], data))
+            book = Book.objects.create(db = db, **data)
+            print(book)
+            books.append(book)

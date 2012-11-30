@@ -197,11 +197,13 @@ class Model(metaclass = ModelBase):
                 if field_value is not Nil:
                     field_name = field._name
 
-            if field_value is not Nil:
-                try:
-                    setattr(self, field_name, field_value)
-                except exceptions.RecordValueError as exc:
-                    raise exceptions.RecordValueError(str(exc))
+            if field_value is Nil:
+                field_value = field.default
+
+            try:
+                setattr(self, field_name, field_value)
+            except exceptions.RecordValueError as exc:
+                raise exceptions.RecordValueError(str(exc))
 
         if kwargs:
             raise exceptions.ModelError('Got unknown field names: %s' % ', '.join(kwargs))
@@ -246,11 +248,7 @@ class Model(metaclass = ModelBase):
             if isinstance(field, fields.RecordField):
                 value = getattr(self, field._name)
             else:
-                try:
-                    value = self[field]
-                except AttributeError:
-                    if field.has_default():
-                        value = field.default
+                value = self[field]
             
             values.append(field(value))
 
@@ -262,9 +260,8 @@ class Model(metaclass = ModelBase):
         else:  # existing record
             rowsCount = db.update(*values, where = (model.id == self.id))
             if not rowsCount:
-                raise orm.exceptions.SaveError(
-                    'Looks like the record was deleted: table=`%s`, id=%s' % (model, self.id)
-                )
+                raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, '
+                                               'id=%s' % (model, self.id))
         db.commit()
 
         signals.post_save.send(sender = model, record = self, isNew = isNew)

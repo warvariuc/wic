@@ -104,7 +104,7 @@ class ModelField(Expression, models.ModelAttr):
     """Abstract ORM table field. It's inherited from Expression just for the sake of autocomplete
     in Python IDEs.
     """
-    def __init__(self, column, index = '', label = '', default = Nil):
+    def __init__(self, column, index = '', label = '', default = None):
         """Base initialization method. Called from subclasses.
         @param column: Column instance
         @param index: 
@@ -123,7 +123,7 @@ class ModelField(Expression, models.ModelAttr):
         self.index = index
         assert isinstance(label, str)
         self.label = label or self.name.replace('_', ' ').capitalize()
-        self.default = default
+        self._default = default
 
     def __get__(self, record, model):
         if record is not None:
@@ -145,17 +145,13 @@ class ModelField(Expression, models.ModelAttr):
         """
         return value
 
-    def has_default(self):
-        """Returns a boolean of whether this field has a default value.
-        """
-        return self.default is not Nil
-
-    def get_default(self):
+    @property
+    def default(self):
         """Returns the default value for this field.
         """
-        if callable(self.default):
-            return self.default()
-        return self.default
+        if callable(self._default):
+            return self._default()
+        return self._default
 
 
 # remove Expression from Field base classes, which was put for IDE autocomplete to work
@@ -174,9 +170,9 @@ class IdField(ModelField):
     def __init__(self, db_name = '', label = ''):
         # 9 digits - int32 - should be enough
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
-                                         precision = 9, unsigned = True, nullable = False,
+                                         precision = 9, unsigned = True, nullable = True,
                                          autoincrement = True),
-                        'primary', label)
+                        'primary', label, default = None)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else int(value)
@@ -185,8 +181,8 @@ class IdField(ModelField):
 class CharField(ModelField):
     """Field for storing strings of certain length.
     """
-    def __init__(self, max_length, default = Nil, index = '', db_name = '', label = '',
-                 comment = '', nullable = False, db_default = Nil):
+    def __init__(self, max_length, default = None, index = '', db_name = '', label = '',
+                 comment = '', nullable = True, db_default = Nil):
         """Initialize a CHAR field.
         @param max_length: maximum length in bytes of the string to be stored in the DB
         @param default: default value to store in the DB
@@ -206,8 +202,8 @@ class CharField(ModelField):
 
 class TextField(ModelField):
     """Field for storing strings of any length."""
-    def __init__(self, default = Nil, index = '', db_name = '', label = '', comment = '',
-                 nullable = False, db_default = Nil):
+    def __init__(self, default = None, index = '', db_name = '', label = '', comment = '',
+                 nullable = True, db_default = Nil):
         if index:
             assert isinstance(index, orm.Index)
         super().__init__(adapters.Column('TEXT', db_name or self._model_attr_info.name,
@@ -217,8 +213,8 @@ class TextField(ModelField):
 
 class IntegerField(ModelField):
 
-    def __init__(self, max_digits = 9, default = Nil, autoincrement = False, index = '',
-                 db_name = '', label = '', nullable = False, db_default = Nil):
+    def __init__(self, max_digits = 9, default = None, autoincrement = False, index = '',
+                 db_name = '', label = '', nullable = True, db_default = Nil):
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
                                          precision = max_digits, unsigned = True,
                                          nullable = nullable, default = db_default,
@@ -233,8 +229,8 @@ class IntegerField(ModelField):
 
 class DecimalField(ModelField):
 
-    def __init__(self, max_digits, fractionDigits, default = Nil, index = '', db_name = '',
-                 label = '', nullable = False, db_default = Nil):
+    def __init__(self, max_digits, fractionDigits, default = None, index = '', db_name = '',
+                 label = '', nullable = True, db_default = Nil):
         super().__init__(adapters.Column('DECIMAL', db_name or self._model_attr_info.name,
                                          precision = max_digits, scale = fractionDigits,
                                          default = db_default, nullable = nullable),
@@ -251,7 +247,7 @@ class DecimalField(ModelField):
 
 class DateField(ModelField):
 
-    def __init__(self, default = Nil, index = '', db_name = '', label = '', nullable = False,
+    def __init__(self, default = None, index = '', db_name = '', label = '', nullable = True,
                  db_default = Nil):
         super().__init__(adapters.Column('DATE', db_name or self._model_attr_info.name,
                                          default = db_default, nullable = nullable),
@@ -268,8 +264,8 @@ class DateField(ModelField):
 
 class DateTimeField(ModelField):
 
-    def __init__(self, default = Nil, index = '', db_name = '', label = '', db_default = Nil,
-                 nullable = False):
+    def __init__(self, default = None, index = '', db_name = '', label = '', db_default = Nil,
+                 nullable = True):
         super().__init__(adapters.Column('DATETIME', db_name or self._model_attr_info.name,
                                          default = db_default, nullable = nullable),
                          index, label, default)
@@ -285,8 +281,8 @@ class DateTimeField(ModelField):
 
 class BooleanField(ModelField):
 
-    def __init__(self, default = Nil, index = '', db_name = '', label = '', db_default = Nil,
-                 nullable = False):
+    def __init__(self, default = None, index = '', db_name = '', label = '', db_default = Nil,
+                 nullable = True):
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
                                          precision = 1, default = db_default, nullable = nullable),
                          index, label, default)
@@ -320,7 +316,7 @@ class RecordField(ModelField):
     """Field for storing ids to related records.
     """
     def __init__(self, related_model, index = '', db_name = '', label = '', db_default = Nil,
-                 nullable = False):
+                 nullable = True):
         """
         @param related_model: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
@@ -356,14 +352,14 @@ class RecordField(ModelField):
             raise exceptions.RecordValueError('You can assign only instances of model `%s` or None'
                                          % orm.get_object_path(self.related_model))
         record.__dict__[self.name] = value
-        record.__dict__[self._name] = value.id
+        record.__dict__[self._name] = value.id if value is not None else None
 
     def __call__(self, value):
         """You can use Field(...)(value) to return a tuple for INSERT.
         """
         if isinstance(value, self.related_model):
             value = value.id
-        elif not isinstance(value, int) or value is not None:
+        elif not isinstance(value, int) and value is not None:
             raise exceptions.RecordValueError('Bad value. Pass a `%s` instance, int or None'
                                               % orm.get_object_path(self.related_model))
         return (self, value)
