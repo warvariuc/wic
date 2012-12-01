@@ -22,7 +22,6 @@ class ModelAttrInfo():
         self.name = name
 
 
-
 class ProxyInit():
     """A descriptor to hook accesss to `__init__` of a Model attribute, which needs postponed
     initialiaztion only when the model is fully initialized.
@@ -42,9 +41,9 @@ class ProxyInit():
             orig_init = self.orig_init
 
             def proxy_init(self, *args, **kwargs):
-                """This will replace `__init__` method of a Model attribute, will remember initialization
-                arguments and will call the original `__init__` when information about the model attribute
-                is passed.
+                """This will replace `__init__` method of a Model attribute, will remember
+                initialization arguments and will call the original `__init__` when information
+                about the model attribute is passed.
                 """
 #                print('ModelAttrStubMixin.__init__', self.__class__.__name__, args, kwargs)
                 modelAttrInfo = kwargs.pop('modelAttrInfo', None)
@@ -68,7 +67,7 @@ class ModelAttr():
     Usually `__init__` is called  by the Model metaclass.
     """
     __creationCounter = 0  # will be used to track the definition order of the attributes in models
-    _model_attr_info = ModelAttrInfo(None, None)  # model attribute information, set by `_init_` 
+    _model_attr_info = ModelAttrInfo(None, None)  # model attribute information, set by `_init_`
 
     def __new__(cls, *args, **kwargs):
         """Create the object, but prevent calling its `__init__` method, montkey patching it with a
@@ -85,7 +84,7 @@ class ModelAttr():
 
 class ModelBase(type):
     """Metaclass for all tables (models).
-    It gives names to all fields and makes instances for fields for each of the models. 
+    It gives names to all fields and makes instances for fields for each of the models.
     It has some class methods for models.
     """
     def __new__(cls, name, bases, attrs):
@@ -104,7 +103,7 @@ class ModelBase(type):
             assert isinstance(_meta, model_options.ModelOptions), \
                 '`_meta` attribute should be instance of ModelOptions'
             # sort by definition order - for the correct recreation order
-            model_attrs = sorted(model_attrs.items(), key = lambda i: i[1]._creationOrder)
+            model_attrs = sorted(model_attrs.items(), key=lambda i: i[1]._creationOrder)
 
             for attr_name, attr in model_attrs:
                 if attr._model_attr_info.model:  # inherited field
@@ -113,21 +112,21 @@ class ModelBase(type):
                     _attr._creationOrder = attr._creationOrder
                     attr = _attr
                 try:
-                    attr.__init__(modelAttrInfo = ModelAttrInfo(NewModel, attr_name))
+                    attr.__init__(modelAttrInfo=ModelAttrInfo(NewModel, attr_name))
                 except Exception:
                     logger.debug('Failed to init a model attribute: %s.%s'
-                                  % (orm.get_object_path(NewModel), attr_name))
+                                 % (orm.get_object_path(NewModel), attr_name))
                     raise
                 setattr(NewModel, attr_name, attr)
 
             # process _meta at the end, when all fields should have been initialized
             if _meta._model_attr_info.model is not None:  # inherited
                 _meta = model_options.ModelOptions()  # override
-            _meta.__init__(modelAttrInfo = ModelAttrInfo(NewModel, '_meta'))
+            _meta.__init__(modelAttrInfo=ModelAttrInfo(NewModel, '_meta'))
             NewModel._meta = _meta
 
-        except Exception:
-            raise exceptions.ModelError()
+        except Exception as exc:
+            raise exceptions.ModelError(str(exc))
 
         return NewModel
 
@@ -151,26 +150,30 @@ class ModelBase(type):
         return self._meta.db_name
 
 
-from . import fields, signals, logger, exceptions, model_options, query_manager
+from . import fields, signals, logger, exceptions, model_options, query_manager, adapters
 
 
-class Model(metaclass = ModelBase):
-    """Base class for all tables. Class attributes - the fields. 
+class Model(metaclass=ModelBase):
+    """Base class for all tables. Class attributes - the fields.
     Instance attributes - the values for the corresponding table fields.
     """
     objects = query_manager.QueryManager()
     _meta = model_options.ModelOptions()
 
     # default fields
-    id = fields.IdField()  # row id. This field is present in all tables
-    timestamp = fields.DateTimeField()  # version of the record - datetime (with milliseconds) of the last update of this record
+    # row id. This field is present in all tables
+    id = fields.IdField()
+    # version of the record - datetime (with milliseconds) of the last update of this record
+    timestamp = fields.DateTimeField()
 
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
         @param db: db adapter in which to save the table record or from which it was fetched
-        @param *args: tuples (ModelField or field_name, value) 
+        @param *args: tuples (ModelField or field_name, value)
         @param **kwargs: {field_name: fieldValue}
         """
+        if not isinstance(db, adapters.GenericAdapter) and db is not None:
+            raise exceptions.RecordError('`db` should be a GenericAdapter instance')
         self._db = db
 
         model = None
@@ -231,10 +234,10 @@ class Model(metaclass = ModelBase):
         db = self._db
         self.objects.check_table(db)
         model = self.__class__
-        signals.pre_delete.send(sender = model, record = self)
-        db.delete(model, where = (model.id == self.id))
+        signals.pre_delete.send(sender=model, record=self)
+        db.delete(model, where=(model.id == self.id))
         db.commit()
-        signals.post_delete.send(sender = model, record = self)
+        signals.post_delete.send(sender=model, record=self)
         self.id = None
 
     def save(self):
@@ -249,22 +252,22 @@ class Model(metaclass = ModelBase):
                 value = getattr(self, field._name)
             else:
                 value = self[field]
-            
+
             values.append(field(value))
 
-        signals.pre_save.send(sender = model, record = self)
+        signals.pre_save.send(sender=model, record=self)
 
         isNew = not self.id
         if isNew:  # new record
             self.id = db.insert(*values)
         else:  # existing record
-            rowsCount = db.update(*values, where = (model.id == self.id))
+            rowsCount = db.update(*values, where=(model.id == self.id))
             if not rowsCount:
-                raise orm.exceptions.SaveError('Looks like the record was deleted: table=`%s`, '
-                                               'id=%s' % (model, self.id))
+                raise orm.exceptions.RecordSaveError('Looks like the record was deleted: table=`%s`'
+                                                     ', id=%s' % (model, self.id))
         db.commit()
 
-        signals.post_save.send(sender = model, record = self, isNew = isNew)
+        signals.post_save.send(sender=model, record=self, isNew=isNew)
 
     def __str__(self):
         """Human readable presentation of the record.
@@ -281,7 +284,7 @@ class Model(metaclass = ModelBase):
         return '%s(%s)' % (self.__class__.__name__, ', '.join(values))
 
     @classmethod
-    def COUNT(cls, where = None):
+    def COUNT(cls, where=None):
         """Get COUNT expression for this table.
         @param where: WHERE expression
         """
@@ -291,11 +294,11 @@ class Model(metaclass = ModelBase):
 class Join():
     """Object holding parameters for a join.
     """
-    def __init__(self, model, on, type = ''):
+    def __init__(self, model, on, type=''):
         """
-        @param model: table to join 
+        @param model: table to join
         @param on: join condition
-        @param type: join type. if empty - INNER JOIN 
+        @param type: join type. if empty - INNER JOIN
         """
         assert orm.is_model(model), 'Pass a model class.'
         assert isinstance(on, orm.Expression), 'WHERE should be an Expression.'

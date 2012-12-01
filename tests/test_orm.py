@@ -3,8 +3,6 @@ Unit tests for ORM
 """
 __author__ = 'Victor Varvariuc <victor.varvariuc@gmail.com>'
 
-import sys
-import os
 import unittest
 
 import orm
@@ -62,7 +60,7 @@ class TestModels(unittest.TestCase):
         class TestModel1(orm.Model):
             field1 = orm.IntegerField()
             _meta = orm.ModelOptions(
-                db_name = 'test1234',
+                db_name='test1234',
             )
 
         self.assertIsInstance(TestModel1._meta, orm.ModelOptions)
@@ -82,11 +80,11 @@ class TestModels(unittest.TestCase):
         self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
 
         class Author(orm.Model):
-            last_name = orm.CharField(max_length = 100)
-            first_name = orm.CharField(max_length = 100)
+            last_name = orm.CharField(max_length=100)
+            first_name = orm.CharField(max_length=100)
             # you can specify name of the fields in indexes
             _meta = orm.ModelOptions(
-                indexes = orm.Unique('last_name', 'first_name'),
+                indexes=orm.Unique('last_name', 'first_name'),
             )
 
         # test indexes in _meta
@@ -108,31 +106,31 @@ class TestModels(unittest.TestCase):
 
         # you can specify fields in indexes
         class Author1(orm.Model):
-            last_name = orm.CharField(max_length = 100)
-            first_name = orm.CharField(max_length = 100)
+            last_name = orm.CharField(max_length=100)
+            first_name = orm.CharField(max_length=100)
             _meta = orm.ModelOptions(
-                indexes = orm.Unique(last_name, first_name)
+                indexes=orm.Unique(last_name, first_name)
             )
 
         # you can specify more sophisticated indexes
         class Author2(orm.Model):
-            name = orm.CharField(max_length = 100)
+            name = orm.CharField(max_length=100)
             description = orm.TextField()
             birth_date = orm.DateField()
             _meta = orm.ModelOptions(
-                indexes = (orm.Index(orm.IndexField(name, 'desc'),
-                                    orm.IndexField(description, prefix_length = 30)),
-                           orm.Index(birth_date))
+                indexes=(orm.Index(orm.IndexField(name, 'desc'),
+                                   orm.IndexField(description, prefix_length=30)),
+                         orm.Index(birth_date))
             )
 
     def testModelInheritance(self):
 
         class TestModel1(orm.Model):
-            field1 = orm.CharField(max_length = 100)
+            field1 = orm.CharField(max_length=100)
 
         class TestModel2(TestModel1):
             field1 = orm.IntegerField()
-            field2 = orm.CharField(max_length = 100)
+            field2 = orm.CharField(max_length=100)
 
         self.assertIsNot(TestModel2.field1, TestModel1.field1)
         self.assertIsInstance(TestModel1.field1.left, orm.CharField)
@@ -154,20 +152,30 @@ class TestModelFields(unittest.TestCase):
         self.assertTrue(ok, 'Models should not accept fields with names starting with `_`')
 
         class TestModel2(orm.Model):
-            field1 = orm.IntegerField()
+            integer_field = orm.IntegerField()
+            record_field = orm.RecordField('self')
+
+        class TestModel3(orm.Model):
+            pass
 
         # Model.field returns Expression, not Field
-        self.assertIsInstance(TestModel2.field1, orm.FieldExpression)
-        self.assertEqual(TestModel2.field1.left.name, 'field1')
-        self.assertIsInstance(TestModel2.field1, orm.FieldExpression)
+        self.assertIsInstance(TestModel2.integer_field, orm.FieldExpression)
+        self.assertEqual(TestModel2.integer_field.left.name, 'integer_field')
+        self.assertIsInstance(TestModel2.integer_field, orm.FieldExpression)
 
+        # create a record from the model
         record = TestModel2(None)
-        ok = False
-        try:
-            record.field1 = '1'
-        except orm.RecordValueError:
-            ok = True
-        self.assertTrue(ok, 'The assignment should have failed')
+        record2 = TestModel2(None)
+        record3 = TestModel3(None)
+
+        # the assignment should fail
+        self.assertRaises(orm.RecordValueError, setattr, record, 'integer_field', '1')
+        record2.record_field = record
+        record2.record_field_id = 3
+        record2.record_field = None
+        record2.record_field_id = None
+        # try to assign a record of another model
+        self.assertRaises(orm.RecordValueError, setattr, record, 'record_field', record3)
 
 
 class TestExpressions(unittest.TestCase):
@@ -176,7 +184,7 @@ class TestExpressions(unittest.TestCase):
 
         class TestModel1(orm.Model):
             field1 = orm.IntegerField()
-            field2 = orm.CharField(max_length = 100)
+            field2 = orm.CharField(max_length=100)
 
         class TestModel2(orm.Model):
             field3 = orm.RecordField(TestModel1)
@@ -205,24 +213,24 @@ class TestModelsPostgresql(unittest.TestCase):
         class Author(orm.Model):
             """Authors catalog
             """
-            # id field already present 
-            last_name = orm.CharField(max_length = 100, comment = 'Author\'s last name')
-            first_name = orm.CharField(max_length = 100, comment = 'Author\'s first name')
+            # id field already present
+            last_name = orm.CharField(max_length=100, comment='Author\'s last name')
+            first_name = orm.CharField(max_length=100, comment='Author\'s first name')
             created_at = orm.DateTimeField()
 
             _meta = orm.ModelOptions(
-                db_name = 'authors',
-                indexes = orm.Unique(last_name, first_name),
+                db_name='authors',
+                indexes=orm.Unique(last_name, first_name),
             )
 
         class Book(orm.Model):
             """Books catalog
             """
-            # id field already present 
-            name = orm.CharField(max_length = 100, default = 'A very good book!!!')
-            price = orm.DecimalField(max_digits = 10, fractionDigits = 2, default = '0.00',
-                                    index = True)  # 2 decimal places
-            author = orm.RecordField(Author, index = True)
+            # id field already present
+            name = orm.CharField(max_length=100, default='A very good book!!!')
+            price = orm.DecimalField(max_digits=10, decimal_places=2, default='0.00',
+                                     index=True)  # 2 decimal places
+            author = orm.RecordField(Author, index=True)
             publication_date = orm.DateField()
 
         db = self.db
@@ -232,7 +240,7 @@ class TestModelsPostgresql(unittest.TestCase):
                 db.execute(query)
         db.commit()
 
-        authorData = (
+        author_data = (
             ('first_name', 'last_name'),
             ('Sam', 'Williams'),
             ('Steven', 'Levy'),
@@ -240,28 +248,28 @@ class TestModelsPostgresql(unittest.TestCase):
             ('Имя', 'Фамилия'),
         )
         authors = []
-        for data in authorData[1:]:
-            data = dict(zip(authorData[0], data))
-            author = Author.objects.create(db = db, **data)
-            print(author)
+        for data in author_data[1:]:
+            data = dict(zip(author_data[0], data))
+            author = Author.objects.create(db=db, **data)
+#            print(author)
             authors.append(author)
 
-        bookData = (
+        book_data = (
             ('name', 'author', 'price', 'publication_date'),
             ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
-                 authors[0], '9.55', '2002-03-08'),
+             authors[0], '9.55', '2002-03-08'),
             ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
-                 authors[1], '14.95', '2010-03-27'),
+             authors[1], '14.95', '2010-03-27'),
             ("In The Plex: How Google Thinks, Works, and Shapes Our Lives",
-                 authors[1], '13.98', '2011-04-12'),
+             authors[1], '13.98', '2011-04-12'),
             ("Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
-                 authors[1], '23.00', '2002-01-15'),
+             authors[1], '23.00', '2002-01-15'),
             ("Книга с русским названием",
-                 authors[3], '00.00', '2000-02-29'),
+             authors[3], '00.00', '2000-02-29'),
         )
         books = []
-        for data in bookData[1:]:
-            data = dict(zip(bookData[0], data))
-            book = Book.objects.create(db = db, **data)
-            print(book)
+        for data in book_data[1:]:
+            data = dict(zip(book_data[0], data))
+            book = Book.objects.create(db=db, **data)
+#            print(book)
             books.append(book)

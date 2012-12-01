@@ -1,10 +1,11 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
-import sys, os
+import sys
 
 python_required_version = '3.2'
 if sys.version < python_required_version:
-    sys.exit('Python %s or newer required (you are using: %s).' % (python_required_version, sys.version))
+    sys.exit('Python %s or newer required (you are using: %s).' % (python_required_version,
+                                                                   sys.version))
 
 
 def _import(name, globals=None, locals=None, fromlist=None, level=-1):
@@ -25,7 +26,8 @@ _base_import = __builtins__['__import__']
 __builtins__['__import__'] = _import
 
 
-import logging, inspect, importlib
+import logging
+import importlib
 
 
 logger = logging.getLogger('orm')
@@ -51,10 +53,11 @@ def get_object_path(obj):
         return obj.__module__ + '.' + obj.__name__ + '()'
 
 
-def get_object_by_path(object_path, package_path = None):
+def get_object_by_path(object_path, package_path=None):
     """Given the path in form 'some.module.object' return the object.
     @param objectPath: path to an object
-    @param packagePath: if objectPath is relative or only object name in it is given, packagePath should be given.
+    @param packagePath: if objectPath is relative or only object name in it is given, package_path
+        should be given.
     """
     module_path, sep, object_name = object_path.rpartition('.')
     if not sep:  # '.' not present - only object name is given in the path
@@ -79,8 +82,8 @@ def listify(obj):
 
 
 class LazyProperty():
-    """The descriptor is designed to be used as a decorator, and will save the decorated function and its name.
-    http://blog.pythonisito.com/2008/08/lazy-descriptors.html
+    """The descriptor is designed to be used as a decorator, and will save the decorated function
+    and its name. http://blog.pythonisito.com/2008/08/lazy-descriptors.html
     """
     def __init__(self, func):
         self._func = func
@@ -88,8 +91,10 @@ class LazyProperty():
         self.__doc__ = func.__doc__
 
     def __get__(self, instance, owner):
-        """When the descriptor is accessed, it will calculate the value by calling the function and save the calculated value back to the object's dict.
-        Saving back to the object's dict has the additional benefit of preventing the descriptor from being called the next time the property is accessed.
+        """When the descriptor is accessed, it will calculate the value by calling the function and
+        save the calculated value back to the object's dict. Saving back to the object's dict has
+        the additional benefit of preventing the descriptor from being called the next time the
+        property is accessed.
         """
         if instance is not None:  # when the descriptor is accessed as an instance attribute
             result = instance.__dict__[self.__name__] = self._func(instance)
@@ -102,13 +107,13 @@ class LazyProperty():
 Nil = object()
 
 
-from .exceptions import *
-from .adapters import *
-from .models import *
-from .model_options import ModelOptions
-from .query_manager import QueryManager
-from .indexes import *
-from .fields import *
+from .exceptions import *  # NOQA
+from .adapters import *  # NOQA
+from .models import *  # NOQA
+from .model_options import ModelOptions  # NOQA
+from .query_manager import QueryManager  # NOQA
+from .indexes import *  # NOQA
+from .fields import *  # NOQA
 
 
 def connect(uri):

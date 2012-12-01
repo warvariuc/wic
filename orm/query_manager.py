@@ -10,8 +10,8 @@ class QueryManager(models.ModelAttr):
         self._checked_dbs = set()
 
     def check_table(self, db):
-        """Check if corresponding table for this model exists in the db and has all necessary columns.
-        Add check_table call in very model method that uses a db.
+        """Check if corresponding table for this model exists in the db and has all necessary
+        columns. Add check_table call in very model method that uses a db.
         """
         assert isinstance(db, adapters.GenericAdapter), 'Need a database adapter'
         if db.uri in self._checked_dbs:
@@ -38,7 +38,7 @@ class QueryManager(models.ModelAttr):
         record.save()
         return record
 
-    def get_one(self, db, where = None, id = None, select_related = False):
+    def get_one(self, db, where=None, id=None, select_related=False):
         """Get a single record which falls under the given condition.
         @param db: db adapter to use to getting the record
         @param where: expression to use for filter
@@ -49,15 +49,15 @@ class QueryManager(models.ModelAttr):
         if id:
             where = (self.model.id == id)
 
-        records = list(self.model.objects.get(db, where, limit = 2,
-                                              select_related = select_related))
+        records = list(self.model.objects.get(db, where, limit=2,
+                                              select_related=select_related))
         if not records:  # not found
             raise exceptions.RecordNotFound(db.render(where))
         if len(records) == 1:
             return records[0]
         raise exceptions.TooManyRecords
 
-    def get(self, db, where, orderby = False, limit = False, select_related = False):
+    def get(self, db, where, orderby=False, limit=False, select_related=False):
         """Get records from this table which fall under the given condition.
         @param db: adapter to use
         @param where: condition to filter
@@ -79,7 +79,7 @@ class QueryManager(models.ModelAttr):
                     fields_.extend(field.refer_model)
                     from_.append(models.LeftJoin(field.refer_model, field == field.refer_model.id))
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
-        rows = db.select(*fields_, from_ = from_, where = where, orderby = orderby, limit = limit)
+        rows = db.select(*fields_, from_=from_, where=where, orderby=orderby, limit=limit)
         for row in rows:
             record = model(db, *zip(model, row))
             if select_related:
@@ -99,16 +99,16 @@ class QueryManager(models.ModelAttr):
         """Delete records in this table which fall under the given condition.
         """
         self.check_table(db)
-        db.delete(self, where = where)
+        db.delete(self, where=where)
         db.commit()
 
-    def get_count(self, db, where = None):
+    def get_count(self, db, where=None):
         """Request number of records in this table.
         """
         model = self.model
         model.check_table(db)
         count = model.COUNT(where)
-        count = db.select(count, from_ = model).value(0, count)
+        count = db.select(count, from_=model).value(0, count)
         logger.debug('Model.get_count(%s, db= %s, where= %s) = %s' % (model, db, where, count))
         return count
 
@@ -118,4 +118,4 @@ class QueryManager(models.ModelAttr):
         """
         raise exceptions.TableMissing(db, self.model)
 
-from . import adapters, fields, exceptions, signals, logger
+from . import adapters, fields, exceptions, logger

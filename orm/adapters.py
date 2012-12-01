@@ -1,11 +1,14 @@
 """
-This module contains database adapters, which incapsulate all operations specific to a certain database.
-All other ORM modules should be database agnostic.
+This module contains database adapters, which incapsulate all operations specific to a certain
+database. All other ORM modules should be database agnostic.
 """
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
-import os, sys, base64
-import time, re, math
+import os
+import base64
+import time
+import re
+import math
 from datetime import date as Date, datetime as DateTime, timedelta as TimeDelta
 from decimal import Decimal
 import pprint
@@ -17,20 +20,21 @@ from orm import Nil, logger, sql_logger
 class Column():
     """Information about database table column.
     """
-    def __init__(self, type, name, default = Nil, precision = None, scale = None,
-                 unsigned = None, nullable = True, autoincrement = False, comment = ''):
+    def __init__(self, type, name, default=Nil, precision=None, scale=None,
+                 unsigned=None, nullable=True, autoincrement=False, comment=''):
         self.name = name  # db table column name
         self.type = type  # string with the name of data type (decimal, varchar, bigint...)
         self.default = default  # column default value
         self.precision = precision  # char max length or decimal/int max digits
         self.scale = scale  # for decimals
         self.unsigned = unsigned  # for decimals, integers
-        # assert nullable or default is not None or autoincrement, 'Column `%s` is not nullable, but has no default value.' % self.name
+#        assert nullable or default is not None or autoincrement, \
+#            'Column `%s` is not nullable, but has no default value.' % self.name
         self.nullable = nullable  # can contain NULL values?
         self.autoincrement = autoincrement  # for primary integer
         self.comment = comment
 
-    def __str__(self, db = None):
+    def __str__(self, db=None):
         db = db or GenericAdapter
         assert isinstance(db, GenericAdapter) or \
             (isinstance(db, type) and issubclass(db, GenericAdapter)), \
@@ -54,7 +58,7 @@ class GenericAdapter():
     # from this date number of days will be counted when storing DATE values in the DB
     epoch = Date(1970, 1, 1)
 
-    def __init__(self, uri = '', connect = True, autocommit = True):
+    def __init__(self, uri='', connect=True, autocommit=True):
         """URI is already without protocol."""
         self.uri = uri
         logger.debug('Creating adapter for `%s`' % self)
@@ -214,7 +218,7 @@ class GenericAdapter():
         return 'RANDOM()'
 
     @classmethod
-    def _LIMIT(cls, limit = None):
+    def _LIMIT(cls, limit=None):
         if not limit:
             return ''
         elif isinstance(limit, int):
@@ -226,11 +230,11 @@ class GenericAdapter():
                                  % limit)
 
     @classmethod
-    def render(cls, value, castField = None):
+    def render(cls, value, castField=None):
         """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for
         operations with castField in the DB.
         @param value:
-        @param castField: 
+        @param castField:
         """
         if isinstance(value, orm.Expression):  # it's an Expression or Field
             if isinstance(value, orm.DateTimeField):
@@ -253,7 +257,7 @@ class GenericAdapter():
             return cls._render(value)
 
     @classmethod
-    def _render(cls, value, column = None):
+    def _render(cls, value, column=None):
         """Render a simple value to the format needed for the given column.
         For example, _render a datetime to the format acceptable for datetime columns in this kind
         of DB.
@@ -344,10 +348,10 @@ class GenericAdapter():
         return queries
 
     @classmethod
-    def _INT(cls, column, intMap = [(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'),
-                                    (8, 'BIGINT')]):
+    def _INT(cls, column, intMap=[(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'),
+                                  (8, 'BIGINT')]):
         """Render declaration of INT column type.
-        `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s rating from store'
+        `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s store rating'
         """
         maxInt = int('9' * column.precision)
         # TODO: check for column.unsigned
@@ -394,7 +398,7 @@ class GenericAdapter():
         """The declaration syntax for a DECIMAL column is DECIMAL(M,D).
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
-        D is the number of digits to the right of the decimal point (the scale). 
+        D is the number of digits to the right of the decimal point (the scale).
         It has a range of 0 to 30 and must be no larger than M.
         """
         return 'DECIMAL(%s, %s)' % (column.precision, column.scale)
@@ -462,7 +466,7 @@ class GenericAdapter():
         """Get INSERT query.
         INSERT INTO table_name [ ( col_name1, col_name2, ... ) ]
           VALUES ( expression1_1, expression1_2, ... ),
-            ( expression2_1, expression2_2, ... ), ... 
+            ( expression2_1, expression2_2, ... ), ...
         """
         fields = []
         model = None
@@ -489,7 +493,7 @@ class GenericAdapter():
         self._autocommit()
         return self.lastInsertId()
 
-    def _update(self, *fields, where = None, limit = None):
+    def _update(self, *fields, where=None, limit=None):
         """UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
           [ WHERE expression ] [ LIMIT limit_amount ]
           """
@@ -507,23 +511,23 @@ class GenericAdapter():
                            for (field, value) in fields])
         return 'UPDATE %s SET %s%s' % (table, sql_v, sql_w)
 
-    def update(self, *fields, where = None, limit = None):
+    def update(self, *fields, where=None, limit=None):
         """Update records
         @param *args: tuples in form (Field, value)
         @param where: an Expression or string for WHERE part of the DELETE query
         @param limit: a tuple in form (start, end) which specifies the range dor deletion.
         """
-        sql = self._update(*fields, where = where)
+        sql = self._update(*fields, where=where)
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _delete(self, table, where, limit = None):
+    def _delete(self, table, where, limit=None):
         """DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]"""
         assert orm.is_model(table)
         sql_w = ' WHERE ' + self.render(where) if where else ''
         return 'DELETE FROM %s%s' % (table, sql_w)
 
-    def delete(self, table, where, limit = None):
+    def delete(self, table, where, limit=None):
         """Delete records from table with the given condition and limit.
         @param talbe: a Model subclass, whose records to delete
         @param where: an Expression or string for WHERE part of the DELETE query
@@ -533,8 +537,8 @@ class GenericAdapter():
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _select(self, *fields, from_ = None, where = None, orderby = False, limit = False,
-                distinct = False, groupby = False, having = ''):
+    def _select(self, *fields, from_=None, where=None, orderby=False, limit=False,
+                distinct=False, groupby=False, having=''):
         """SELECT [ DISTINCT ] column_expression1, column_expression2, ...
           [ FROM from_clause ]
           [ JOIN table_name ON (join_condition) ]
@@ -635,9 +639,10 @@ class GenericAdapter():
                 _orderby.append(_order)
             sql_other += ' ORDER BY %s' % ', '.join(_orderby)
 
-# When using LIMIT, it is a good idea to use an ORDER BY clause that constrains the result rows into a unique order. 
-# Otherwise you will get an unpredictable subset of the query's rows -- you may be asking for the tenth through twentieth rows, 
-# but tenth through twentieth in what ordering? The ordering is unknown, unless you specified ORDER BY.
+# When using LIMIT, it is a good idea to use an ORDER BY clause that constrains the result rows into
+# a unique order. Otherwise you will get an unpredictable subset of the query's rows -- you may be
+# asking for the tenth through twentieth rows, but tenth through twentieth in what ordering?
+# The ordering is unknown, unless you specified ORDER BY.
 #        if limit:
 #            if not orderby and tables:
 #                sql_other += ' ORDER BY %s' % ', '.join(map(str, (table.id for table in tables)))
@@ -647,7 +652,7 @@ class GenericAdapter():
 
         return fields, sql
 
-    def select(self, *fields, from_ = None, where = None, **attributes):
+    def select(self, *fields, from_=None, where=None, **attributes):
         """Create and return SELECT query.
         @param fields: tables, fields or joins;
         @param from_: tables and joined tables to select from.
@@ -660,7 +665,7 @@ class GenericAdapter():
         @param groupby:
         tables are taken from fields and `where` expression;
         """
-        fields, query = self._select(*fields, from_ = from_, where = where, **attributes)
+        fields, query = self._select(*fields, from_=from_, where=where, **attributes)
         self.execute(query)
         rows = list(self.cursor.fetchall())
         return self._parse_response(fields, rows)
@@ -726,12 +731,11 @@ class Rows():
         return pprint.pformat(self.rows)
 
     def dictresult(self):
-        """Iterator of the result which return row by row in form 
+        """Iterator of the result which return row by row in form
         {'field1_name': field1_value, 'field2_name': field2_value, ...}
         """
         for row in self.rows:
             yield {self._fields_str[i]: value for i, value in enumerate(row)}
-
 
 
 ####################################################################################################
@@ -759,7 +763,7 @@ class SqliteAdapter(GenericAdapter):
                                       'file.' % dbPath)
         return sqlite3.Connection(self.dbPath, **self.driverArgs)
 
-    def _truncate(self, table, mode = ''):
+    def _truncate(self, table, mode=''):
         tableName = str(table)
         return ['DELETE FROM %s;' % tableName,
                 "DELETE FROM sqlite_sequence WHERE name='%s';" % tableName]
@@ -800,7 +804,7 @@ class SqliteAdapter(GenericAdapter):
             columns = []
             for index_field in index.index_fields:
                 column = index_field.field.column.name
-#                prefix_length = index.prefix_lengths[i] 
+#                prefix_length = index.prefix_lengths[i]
 #                if prefix_length:
 #                    column += '(%i)' % prefix_length
                 sort_order = index_field.sort_order
@@ -842,7 +846,7 @@ class SqliteAdapter(GenericAdapter):
 
     @classmethod
     def _decodeDATE(cls, value, column):
-        return cls.epoch + TimeDelta(days = value)
+        return cls.epoch + TimeDelta(days=value)
 
     @classmethod
     def _DECIMAL(cls, column):
@@ -877,8 +881,8 @@ class SqliteAdapter(GenericAdapter):
                 typeName = 'int'
             elif typeName not in ('blob', 'text'):
                 raise TypeError('Unexpected data type: %s' % typeName)
-            column = Column(type = typeName, field = None, name = row[1], default = row[4],
-                            precision = 19, nullable = (not row[3]), autoincrement = autoincrement)
+            column = Column(type=typeName, field=None, name=row[1], default=row[4],
+                            precision=19, nullable=(not row[3]), autoincrement=autoincrement)
             columns[column.name] = column
             logger.debug('Reproduced table column: %s, %s' % (table_name, column))
         return columns
@@ -993,9 +997,9 @@ class MysqlAdapter(GenericAdapter):
             nullable = row[3].lower() == 'yes'
             autoincrement = 'auto_increment' in row[8].lower()
             unsigned = row[7].lower().endswith('unsigned')
-            column = Column(type = typeName, field = None, name = row[0], default = row[2],
-                            precision = precision, scale = row[6], unsigned = unsigned,
-                            nullable = nullable, autoincrement = autoincrement, comment = row[9])
+            column = Column(type=typeName, field=None, name=row[0], default=row[2],
+                            precision=precision, scale=row[6], unsigned=unsigned,
+                            nullable=nullable, autoincrement=autoincrement, comment=row[9])
             columns[column.name] = column
         return columns
 
@@ -1022,7 +1026,6 @@ class PostgreSqlAdapter(GenericAdapter):
         self.driverArgs = kwargs
         super().__init__(uri)
 
-
     def connect(self):
 
         import psycopg2
@@ -1034,7 +1037,7 @@ class PostgreSqlAdapter(GenericAdapter):
         return connection
 
     @classmethod
-    def _INT(cls, column, int_map = [(2, 'SMALLINT'), (4, 'INTEGER'), (8, 'BIGINT')]):
+    def _INT(cls, column, int_map=[(2, 'SMALLINT'), (4, 'INTEGER'), (8, 'BIGINT')]):
         """Render declaration of INT column type.
         """
         max_int = int('9' * column.precision)
@@ -1062,11 +1065,11 @@ class PostgreSqlAdapter(GenericAdapter):
 
     @classmethod
     def _DATETIME(cls, column):
-        column_str =  'timestamp (6) without time zone'
+        column_str = 'timestamp (6) without time zone'
         if not column.nullable:
             column_str += ' NOT'
         column_str += ' NULL'
-        return column_str    
+        return column_str
 
     @classmethod
     def _encodeDATETIME(cls, value, column):
@@ -1116,7 +1119,7 @@ class PostgreSqlAdapter(GenericAdapter):
             columns = []
             for index_field in index.index_fields:
                 column = index_field.field.column.name
-#                prefix_length = index.prefix_lengths[i] 
+#                prefix_length = index.prefix_lengths[i]
 #                if prefix_length:
 #                    column += '(%i)' % prefix_length
                 sort_order = index_field.sort_order
@@ -1151,8 +1154,8 @@ class PostgreSqlAdapter(GenericAdapter):
         rows = self.select(
             'column_name', 'data_type', 'column_default', 'is_nullable', 'character_maximum_length',
             'numeric_precision', 'numeric_scale',
-            from_ = 'information_schema.columns',
-            where = {'table_schema': 'public', 'table_name': table_name},
+            from_='information_schema.columns',
+            where={'table_schema': 'public', 'table_name': table_name},
         )
 
         columns = {}
@@ -1176,10 +1179,10 @@ class PostgreSqlAdapter(GenericAdapter):
             else:
                 autoincrement = False
             # TODO: retrieve column comment
-            column = Column(type = type_name, name = row['column_name'],
-                            default = default,
-                            precision = precision, scale = row['numeric_scale'],
-                            nullable = nullable, autoincrement = autoincrement)
+            column = Column(type=type_name, name=row['column_name'],
+                            default=default,
+                            precision=precision, scale=row['numeric_scale'],
+                            nullable=nullable, autoincrement=autoincrement)
             columns[column.name] = column
         return columns
 

@@ -4,7 +4,7 @@ from . import models
 class IndexField():
     """Helper class for defining a field for index
     """
-    def __init__(self, field, sort_order = 'asc', prefix_length = None):
+    def __init__(self, field, sort_order='asc', prefix_length=None):
         assert isinstance(field, fields.ModelField), 'Pass Field instances.'
         assert sort_order in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
         assert isinstance(prefix_length, int) or prefix_length is None, \
@@ -17,7 +17,7 @@ class IndexField():
 class Index(models.ModelAttr):
     """A database table index.
     """
-    def __init__(self, *index_fields, type = 'index', name = '', method = ''):
+    def __init__(self, *index_fields, type='index', name='', method=''):
         """
         @param index_fields: list of IndexField instances
         @param type: index, primary, unique, fulltext, spatial - specific fot the db
@@ -57,8 +57,10 @@ class Index(models.ModelAttr):
         self.method = method  # if empty - will be used default for this type of DB
 
     def __str__(self):
-        return '{} `{}` ON ({}) {}'.format(self.type, self.name,
-            ', '.join(str(index_field.field) for index_field in self.index_fields), self.method)
+        return '%s `%s` ON (%s) %s' % (self.type, self.name,
+                                       ', '.join(str(index_field.field)
+                                                 for index_field in self.index_fields),
+                                       self.method)
 
 #    def _copy(self, model):
 #        """Create a copy of the index with copy of fields in the index with the given model."""
@@ -70,13 +72,13 @@ class Index(models.ModelAttr):
 class Unique(Index):
     """Convenience class for defining a unique index.
     """
-    def __init__(self, *index_fields, name = '', method = ''):
+    def __init__(self, *index_fields, name='', method=''):
         """
         @param index_fields: list of IndexField instances
         @param method: btree, hash, gist, gin - specific fot the db
         """
 #        print('Unique.__init')
-        super().__init__(*index_fields, type = 'unique', name = name, method = method)
+        super().__init__(*index_fields, type='unique', name=name, method=method)
 
 
 from . import fields

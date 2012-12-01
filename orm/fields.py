@@ -2,10 +2,9 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal
-import sys
 
 import orm
-from orm import Nil, logger
+from orm import Nil
 from . import adapters, models
 
 
@@ -15,9 +14,9 @@ class Expression():
 
     sort = 'ASC'  # default sorting
 
-    def __init__(self, operation, left = Nil, right = Nil, type = None, **kwargs):
+    def __init__(self, operation, left=Nil, right=Nil, type=None, **kwargs):
         """Create an expression.
-        @param operation: string with the operation name (defined in adapters) 
+        @param operation: string with the operation name (defined in adapters)
         @param left: left operand
         @param right: right operand
         @param type: cast type field
@@ -40,20 +39,28 @@ class Expression():
 
     def __and__(self, other):
         return Expression('_AND', self, other)
+
     def __or__(self, other):
         return Expression('_OR', self, other)
+
     def __eq__(self, other):
         return Expression('_EQ', self, other)
+
     def __ne__(self, other):
         return Expression('_NE', self, other)
+
     def __gt__(self, other):
         return Expression('_GT', self, other)
+
     def __ge__(self, other):
         return Expression('_GE', self, other)
+
     def __lt__(self, other):
         return Expression('_LT', self, other)
+
     def __le__(self, other):
         return Expression('_LE', self, other)
+
     def __add__(self, other):
         return Expression('_ADD', self, other)
 
@@ -61,6 +68,7 @@ class Expression():
         """-Field: sort DESC"""
         self.sort = 'DESC'  # TODO: should return new Expression
         return self
+
     def __pos__(self):
         """+Field: sort ASC"""
         self.sort = 'ASC'
@@ -80,7 +88,7 @@ class Expression():
         assert isinstance(pattern, str), 'Pattern must be a string.'
         return Expression('_LIKE', self, pattern)
 
-    def __str__(self, db = None):
+    def __str__(self, db=None):
         """Construct the text of the WHERE clause from this Expression.
         @param db: GenericAdapter subclass to use for rendering.
         """
@@ -104,10 +112,10 @@ class ModelField(Expression, models.ModelAttr):
     """Abstract ORM table field. It's inherited from Expression just for the sake of autocomplete
     in Python IDEs.
     """
-    def __init__(self, column, index = '', label = '', default = None):
+    def __init__(self, column, index='', label='', default=None):
         """Base initialization method. Called from subclasses.
         @param column: Column instance
-        @param index: 
+        @param index: name of the index type, or True - 'index' to be used
         @param label: verbose name, can be used in forms
         @param default: default value, can be callable
         """
@@ -133,7 +141,7 @@ class ModelField(Expression, models.ModelAttr):
             except KeyError:
                 raise AttributeError('Value for field `%s` was not set yet' % self.name)
         # called as a class attribute
-        return FieldExpression(self, model = model)
+        return FieldExpression(self, model=model)
 
     def __call__(self, value):
         """You can use Field(...)(value) to return a tuple for INSERT.
@@ -167,12 +175,12 @@ ModelField.__bases__ = tuple(_field_base_classes)
 class IdField(ModelField):
     """Primary integer autoincrement key. ID - implicitly present in each table.
     """
-    def __init__(self, db_name = '', label = ''):
+    def __init__(self, db_name='', label=''):
         # 9 digits - int32 - should be enough
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
-                                         precision = 9, unsigned = True, nullable = True,
-                                         autoincrement = True),
-                        'primary', label, default = None)
+                                         precision=9, unsigned=True, nullable=True,
+                                         autoincrement=True),
+                         'primary', label, default=None)
 
     def __set__(self, record, value):
         record.__dict__[self.name] = None if value is None else int(value)
@@ -181,8 +189,8 @@ class IdField(ModelField):
 class CharField(ModelField):
     """Field for storing strings of certain length.
     """
-    def __init__(self, max_length, default = None, index = '', db_name = '', label = '',
-                 comment = '', nullable = True, db_default = Nil):
+    def __init__(self, max_length, default=None, index='', db_name='', label='',
+                 comment='', nullable=True, db_default=Nil):
         """Initialize a CHAR field.
         @param max_length: maximum length in bytes of the string to be stored in the DB
         @param default: default value to store in the DB
@@ -191,34 +199,34 @@ class CharField(ModelField):
         @param db_name: name of the column in the DB table
         @param label: short description of the field (e.g.for for forms)
         @param comment: comment for the field
-        @param nullable: whether the db column can have NULL values.
-            A NULL value represents the complete absence of value within the column, not that it is merely blank.
+        @param nullable: whether the db column can have NULL values. A NULL value represents the
+            complete absence of value within the column, not that it is merely blank.
         """
         super().__init__(adapters.Column('CHAR', db_name or self._model_attr_info.name,
-                                         precision = max_length, default = db_default,
-                                         comment = comment, nullable = nullable),
+                                         precision=max_length, default=db_default,
+                                         comment=comment, nullable=nullable),
                          index, label, default)
 
 
 class TextField(ModelField):
     """Field for storing strings of any length."""
-    def __init__(self, default = None, index = '', db_name = '', label = '', comment = '',
-                 nullable = True, db_default = Nil):
+    def __init__(self, default=None, index='', db_name='', label='', comment='',
+                 nullable=True, db_default=Nil):
         if index:
             assert isinstance(index, orm.Index)
         super().__init__(adapters.Column('TEXT', db_name or self._model_attr_info.name,
-                                         default = db_default),
+                                         default=db_default, comment=comment),
                          index, label, default)
 
 
 class IntegerField(ModelField):
 
-    def __init__(self, max_digits = 9, default = None, autoincrement = False, index = '',
-                 db_name = '', label = '', nullable = True, db_default = Nil):
+    def __init__(self, max_digits=9, default=None, autoincrement=False, index='',
+                 db_name='', label='', nullable=True, db_default=Nil, comment=''):
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
-                                         precision = max_digits, unsigned = True,
-                                         nullable = nullable, default = db_default,
-                                         autoincrement = autoincrement),
+                                         precision=max_digits, unsigned=True,
+                                         nullable=nullable, default=db_default,
+                                         autoincrement=autoincrement, comment=comment),
                          index, label, default)
 
     def __set__(self, record, value):
@@ -229,11 +237,12 @@ class IntegerField(ModelField):
 
 class DecimalField(ModelField):
 
-    def __init__(self, max_digits, fractionDigits, default = None, index = '', db_name = '',
-                 label = '', nullable = True, db_default = Nil):
+    def __init__(self, max_digits, decimal_places, default=None, index='', db_name='',
+                 label='', nullable=True, db_default=Nil, comment=''):
         super().__init__(adapters.Column('DECIMAL', db_name or self._model_attr_info.name,
-                                         precision = max_digits, scale = fractionDigits,
-                                         default = db_default, nullable = nullable),
+                                         precision=max_digits, scale=decimal_places,
+                                         default=db_default, nullable=nullable,
+                                         comment=comment),
                          index, label, default)
 
     def __set__(self, record, value):
@@ -241,16 +250,17 @@ class DecimalField(ModelField):
             try:
                 value = Decimal(value)
             except ValueError as exc:
-                raise exceptions.RecordValueError('Provide a Decimal.')
+                raise exceptions.RecordValueError('Provide a Decimal: %s' % exc)
         record.__dict__[self.name] = None if value is None else Decimal(value)
 
 
 class DateField(ModelField):
 
-    def __init__(self, default = None, index = '', db_name = '', label = '', nullable = True,
-                 db_default = Nil):
+    def __init__(self, default=None, index='', db_name='', label='', nullable=True,
+                 db_default=Nil, comment=''):
         super().__init__(adapters.Column('DATE', db_name or self._model_attr_info.name,
-                                         default = db_default, nullable = nullable),
+                                         default=db_default, nullable=nullable,
+                                         comment=comment),
                          index, label, default)
 
     def __set__(self, record, value):
@@ -264,10 +274,11 @@ class DateField(ModelField):
 
 class DateTimeField(ModelField):
 
-    def __init__(self, default = None, index = '', db_name = '', label = '', db_default = Nil,
-                 nullable = True):
+    def __init__(self, default=None, index='', db_name='', label='', db_default=Nil,
+                 nullable=True, comment=''):
         super().__init__(adapters.Column('DATETIME', db_name or self._model_attr_info.name,
-                                         default = db_default, nullable = nullable),
+                                         default=db_default, nullable=nullable,
+                                         comment=comment),
                          index, label, default)
 
     def __set__(self, record, value):
@@ -281,10 +292,11 @@ class DateTimeField(ModelField):
 
 class BooleanField(ModelField):
 
-    def __init__(self, default = None, index = '', db_name = '', label = '', db_default = Nil,
-                 nullable = True):
+    def __init__(self, default=None, index='', db_name='', label='', db_default=Nil,
+                 nullable=True, comment=''):
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
-                                         precision = 1, default = db_default, nullable = nullable),
+                                         precision=1, default=db_default, nullable=nullable,
+                                         comment=comment),
                          index, label, default)
 
     def __set__(self, record, value):
@@ -297,34 +309,35 @@ class BooleanField(ModelField):
 class _RecordId():
     """Descriptor for keeping id of a related record.
     """
-    def __init__(self, recordField):
+    def __init__(self, record_field):
         """
-        @param recordField: related record field
+        @param record_field: related record field
         """
-        assert isinstance(recordField, RecordField)
-        self._recordField = recordField
+        assert isinstance(record_field, RecordField)
+        self._record_field = record_field
 
     def __set__(self, record, value):
         """Setter for this attribute."""
         if not isinstance(value, int) and value is not None:
             raise exceptions.RecordValueError('You can assign only int or None to %s.%s'
                                               % (orm.get_object_path(record),
-                                                 self._recordField._name))
+                                                 self._record_field._name))
+        record.__dict__[self._record_field._name] = value
 
 
 class RecordField(ModelField):
     """Field for storing ids to related records.
     """
-    def __init__(self, related_model, index = '', db_name = '', label = '', db_default = Nil,
-                 nullable = True):
+    def __init__(self, related_model, index='', db_name='', label='', db_default=Nil,
+                 nullable=True, comment=''):
         """
         @param related_model: a Model subclass of which record is referenced
         @param index: True if simple index, otherwise string with index type ('index', 'unique')
         """
         # 9 digits - int32 - ought to be enough for anyone ;)
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name + '_id',
-                                         precision = 9, unsigned = True, default = db_default,
-                                         nullable = nullable),
+                                         precision=9, unsigned=True, default=db_default,
+                                         nullable=nullable, comment=comment),
                          index, label)
         self._related_model = related_model  # path to the model
         self._name = self.name + '_id'  # name of the attribute which keeps id of the related record
@@ -342,7 +355,7 @@ class RecordField(ModelField):
         elif related_record is not None and related_record.id == related_record_id:
             return related_record
         else:
-            related_record = self.related_model.objects.get_one(record._db, id = related_record_id)
+            related_record = self.related_model.objects.get_one(record._db, id=related_record_id)
         record.__dict__[self.name] = related_record
         return related_record
 
@@ -350,7 +363,7 @@ class RecordField(ModelField):
         """Setter for this field."""
         if not isinstance(value, self.related_model) and value is not None:
             raise exceptions.RecordValueError('You can assign only instances of model `%s` or None'
-                                         % orm.get_object_path(self.related_model))
+                                              % orm.get_object_path(self.related_model))
         record.__dict__[self.name] = value
         record.__dict__[self._name] = value.id if value is not None else None
 
@@ -369,6 +382,8 @@ class RecordField(ModelField):
         if orm.is_model(self._related_model):
             return self._related_model
         elif isinstance(self._related_model, str):
+            if self._related_model == 'self':
+                return self._model_attr_info.model
             return orm.get_object_by_path(self._related_model, self.model.__module__)
         else:
             raise exceptions.ModelError('Referred model must be a Model or a string with its path.')
@@ -391,7 +406,8 @@ class RecordField(ModelField):
 #
 #    def cast(self, value):
 #        if isinstance(value, (orm.Model, orm.ModelMeta)):
-#            return value._tableId # Table.tableIdField == Table -> Table.tableIdField == Table._tableId 
+#        # Table.tableIdField == Table -> Table.tableIdField == Table._tableId
+#            return value._tableId
 #        try:
 #            return int(value)
 #        except ValueError:
@@ -399,52 +415,59 @@ class RecordField(ModelField):
 #
 #class AnyRecordField(Field):
 #    """This field stores id of a row of any table.
-#    It's a virtual field - it creates two real fields: one for keeping Record ID and another one for Table ID."""
+#    It's a virtual field - it creates two real fields: one for keeping Record ID and another one
+#     for Table ID.
+#    """
 #    def _init(self, index= ''):
 #        super()._init(None, None) # no column, but later we create two fields
-#            
+#
 #        tableIdField = TableIdField(name= self.name + '_table', table= self.table)
 #        tableIdField._init()
 #        setattr(self.table, tableIdField.name, tableIdField)
-#        
+#
 #        recordIdField = RecordIdField(name= self.name + '_record', table= self.table)
 #        recordIdField._init(None) # no refered table
 #        setattr(self.table, recordIdField.name, recordIdField)
-#        
+#
 #        self.table._indexes.append(orm.Index([tableIdField, recordIdField], index))
-#        
+#
 #        self._fields = dict(tableId= tableIdField, itemId= recordIdField) # real fields
 #
-#    def __eq__(self, other): 
+#    def __eq__(self, other):
 #        assert isinstance(other, orm.Model)
-#        return Expression('AND', 
-#                  Expression('EQ', self._fields['tableId'], other._tableId), 
+#        return Expression('AND',
+#                  Expression('EQ', self._fields['tableId'], other._tableId),
 #                  Expression('EQ', self._fields['itemId'], other.id))
 
 
-def COUNT(expression = None, distinct = False):
+def COUNT(expression=None, distinct=False):
     if expression is None or isinstance(expression, Expression):
-        return Expression('_COUNT', None, distinct = distinct)
+        return Expression('_COUNT', None, distinct=distinct)
     elif orm.is_model(expression):
-        return Expression('_COUNT', None, table = expression)
+        return Expression('_COUNT', None, table=expression)
     else:
         raise orm.QueryError('Argument must be a Field, an Expression or a Table.')
+
 
 def MAX(expression):
     assert isinstance(expression, Expression), 'Argument must be a Field or an Expression.'
     return Expression('_MAX', expression)
 
+
 def MIN(expression):
     assert isinstance(expression, Expression), 'Argument must be a Field or an Expression.'
     return Expression('_MIN', expression)
+
 
 def UPPER(expression):
     assert isinstance(expression, Expression), 'Argument must be a Field or an Expression.'
     return Expression('_UPPER', expression)
 
+
 def LOWER(expression):
     assert isinstance(expression, Expression), 'Argument must be a Field or an Expression.'
     return Expression('_LOWER', expression)
+
 
 def CONCAT(*expressions):
     "Concatenate two or more expressions/strings."
