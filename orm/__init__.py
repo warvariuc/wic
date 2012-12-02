@@ -2,9 +2,9 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import sys
 
-python_required_version = '3.2'
-if sys.version < python_required_version:
-    sys.exit('Python %s or newer required (you are using: %s).' % (python_required_version,
+PYTHON_REQUIRED_VERSION = '3.2'
+if sys.version < PYTHON_REQUIRED_VERSION:
+    sys.exit('Python %s or newer required (you are using: %s).' % (PYTHON_REQUIRED_VERSION,
                                                                    sys.version))
 
 
@@ -69,14 +69,17 @@ def get_object_by_path(object_path, package_path=None):
 
 
 def is_model(obj):
+    """Check if the argment is a Model instance.
+    """
     return isinstance(obj, models.ModelBase)
 
 
 def listify(obj):
-    """Assure that obj is a list."""
+    """Assure that obj is a list.
+    """
     if isinstance(obj, list):
         return obj
-    elif hasattr(obj, '__iter__') and not isinstance(obj, str):
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, models.ModelBase)):
         return list(obj)
     return [obj]
 
@@ -113,19 +116,19 @@ from .models import *  # NOQA
 from .model_options import ModelOptions  # NOQA
 from .query_manager import QueryManager  # NOQA
 from .indexes import *  # NOQA
-from .fields import *  # NOQA
+from .model_fields import *  # NOQA
 
 
-def connect(uri):
-    """Search for suitable adapter by protocol in the given URI
-    @param uri: database URI. Its form depends on the adapter, but generally is
+def connect(url):
+    """Search for suitable adapter by protocol in the given URL
+    @param url: database URL. Its form depends on the adapter, but generally is
         like 'protocol://username:password@host:port/db_name'
     @return: adapter instance, which handles the specified protocol
     """
     for AdapterClass in globals().values():
         if isinstance(AdapterClass, type) and issubclass(AdapterClass, GenericAdapter):
-            uri_start = AdapterClass.protocol + '://'
-            if uri.startswith(uri_start):
-                db_adapter = AdapterClass(uri[len(uri_start):])
+            url_start = AdapterClass.protocol + '://'
+            if url.startswith(url_start):
+                db_adapter = AdapterClass(url[len(url_start):])
                 return db_adapter
-    raise AdapterNotFound('Could not find a suitable adapter for the URI `%s`' % uri)
+    raise AdapterNotFound('Could not find a suitable adapter for the URL `%s`' % url)

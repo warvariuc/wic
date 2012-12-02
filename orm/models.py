@@ -13,11 +13,15 @@ class ModelAttrInfo():
     """Information about an attribute of a Model
     """
     def __init__(self, model, name):
+        """
+        @param model: model class to which the attribute belongs
+        @param name: name of the attribute in the model class 
+        """
         if model is not None:
             assert orm.is_model(model)
             assert isinstance(name, str) and name
-            assert hasattr(model, name), 'Model %s does not have an attribute with name %s' \
-                % (orm.get_object_path(model), name)
+#            assert hasattr(model, name), 'Model %s does not have an attribute with name %s' \
+#                % (orm.get_object_path(model), name)
         self.model = model
         self.name = name
 
@@ -46,9 +50,9 @@ class ProxyInit():
                 about the model attribute is passed.
                 """
 #                print('ModelAttrStubMixin.__init__', self.__class__.__name__, args, kwargs)
-                modelAttrInfo = kwargs.pop('modelAttrInfo', None)
-                if modelAttrInfo:
-                    self._model_attr_info = modelAttrInfo
+                model_attr_info = kwargs.pop('model_attr_info', None)
+                if model_attr_info:
+                    self._model_attr_info = model_attr_info
                 else:
                     obj._initArgs = args
                     obj._initKwargs = kwargs
@@ -83,7 +87,7 @@ class ModelAttr():
 
 
 class ModelBase(type):
-    """Metaclass for all tables (models).
+    """Metaclass for all models.
     It gives names to all fields and makes instances for fields for each of the models.
     It has some class methods for models.
     """
@@ -112,7 +116,7 @@ class ModelBase(type):
                     _attr._creationOrder = attr._creationOrder
                     attr = _attr
                 try:
-                    attr.__init__(modelAttrInfo=ModelAttrInfo(NewModel, attr_name))
+                    attr.__init__(model_attr_info=ModelAttrInfo(NewModel, attr_name))
                 except Exception:
                     logger.debug('Failed to init a model attribute: %s.%s'
                                  % (orm.get_object_path(NewModel), attr_name))
@@ -122,7 +126,7 @@ class ModelBase(type):
             # process _meta at the end, when all fields should have been initialized
             if _meta._model_attr_info.model is not None:  # inherited
                 _meta = model_options.ModelOptions()  # override
-            _meta.__init__(modelAttrInfo=ModelAttrInfo(NewModel, '_meta'))
+            _meta.__init__(model_attr_info=ModelAttrInfo(NewModel, '_meta'))
             NewModel._meta = _meta
 
         except Exception as exc:
@@ -150,21 +154,21 @@ class ModelBase(type):
         return self._meta.db_name
 
 
-from . import fields, signals, logger, exceptions, model_options, query_manager, adapters
+from . import model_fields, signals, logger, exceptions, model_options, query_manager, adapters
 
 
 class Model(metaclass=ModelBase):
-    """Base class for all tables. Class attributes - the fields.
-    Instance attributes - the values for the corresponding table fields.
+    """Base class for all models. Class attributes - the fields.
+    Instance attributes - the values for the corresponding model fields.
     """
     objects = query_manager.QueryManager()
     _meta = model_options.ModelOptions()
 
     # default fields
-    # row id. This field is present in all tables
-    id = fields.IdField()
+    # row id. This field is present in all model
+    id = model_fields.IdField()
     # version of the record - datetime (with milliseconds) of the last update of this record
-    timestamp = fields.DateTimeField()
+    timestamp = model_fields.DateTimeField()
 
     def __init__(self, db, *args, **kwargs):
         """Create a model instance - a record.
@@ -183,18 +187,18 @@ class Model(metaclass=ModelBase):
             field, value = arg
             if isinstance(field, str):
                 field = self.__class__[field]
-            assert isinstance(field, fields.FieldExpression), 'First arg must be a Field.'
+            assert isinstance(field, model_fields.FieldExpression), 'First arg must be a Field.'
             field = field.left
             _model = field.model
             model = model or _model
-            assert model is _model, 'Pass fields from the same table'
+            assert model is _model, 'Pass fields from the same model'
             kwargs[field.name] = value
 
         # make values for fields
         for field_name, field in self._meta.fields.items():
             # is this a field name?
             field_value = kwargs.pop(field_name, Nil)
-            if field_value is Nil and isinstance(field, fields.RecordField):
+            if field_value is Nil and isinstance(field, model_fields.RecordField):
                 # a related record id?
                 field_value = kwargs.pop(field._name, Nil)
                 if field_value is not Nil:
@@ -206,6 +210,7 @@ class Model(metaclass=ModelBase):
             try:
                 setattr(self, field_name, field_value)
             except exceptions.RecordValueError as exc:
+                import ipdb; from pprint import pprint; ipdb.set_trace()
                 raise exceptions.RecordValueError(str(exc))
 
         if kwargs:
@@ -216,9 +221,9 @@ class Model(metaclass=ModelBase):
         key: either a Field instance or name of the field.
         """
         model = self.__class__
-        if isinstance(field, fields.FieldExpression):
+        if isinstance(field, model_fields.FieldExpression):
             field = field.left
-        if isinstance(field, fields.ModelField):
+        if isinstance(field, model_fields.ModelField):
             assert field.model is model, 'This field is from another model.'
             attr_name = field.name
         elif isinstance(field, str):
@@ -248,7 +253,7 @@ class Model(metaclass=ModelBase):
         values = []  # list of tuples (Field, value)
         for field in model._meta.fields.values():
             value = Nil
-            if isinstance(field, fields.RecordField):
+            if isinstance(field, model_fields.RecordField):
                 value = getattr(self, field._name)
             else:
                 value = self[field]
@@ -257,17 +262,17 @@ class Model(metaclass=ModelBase):
 
         signals.pre_save.send(sender=model, record=self)
 
-        isNew = not self.id
-        if isNew:  # new record
+        is_new = not self.id
+        if is_new:  # new record
             self.id = db.insert(*values)
         else:  # existing record
-            rowsCount = db.update(*values, where=(model.id == self.id))
-            if not rowsCount:
+            rows_count = db.update(*values, where=(model.id == self.id))
+            if not rows_count:
                 raise orm.exceptions.RecordSaveError('Looks like the record was deleted: table=`%s`'
                                                      ', id=%s' % (model, self.id))
         db.commit()
 
-        signals.post_save.send(sender=model, record=self, isNew=isNew)
+        signals.post_save.send(sender=model, record=self, is_new=is_new)
 
     def __str__(self):
         """Human readable presentation of the record.
@@ -277,7 +282,7 @@ class Model(metaclass=ModelBase):
             field_value = getattr(self, field_name)
             if isinstance(field_value, (Date, DateTime, Decimal)):
                 field_value = str(field_value)
-            if isinstance(field, fields.RecordField):
+            if isinstance(field, model_fields.RecordField):
                 field_name = field._name
                 field_value = field_value.id
             values.append("%s= %r" % (field_name, field_value))

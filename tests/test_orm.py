@@ -21,7 +21,7 @@ def tearDownModule():
 
 class TestModelAttr(unittest.TestCase):
 
-    def testModelAttr(self):
+    def test_model_attr(self):
 
         class ModelAttribute(orm.ModelAttr):
             sequence = 0
@@ -47,7 +47,7 @@ class TestModelAttr(unittest.TestCase):
 
 class TestModels(unittest.TestCase):
 
-    def testModelOptions(self):
+    def test_model_options(self):
 
         ok = False
         try:
@@ -123,7 +123,7 @@ class TestModels(unittest.TestCase):
                          orm.Index(birth_date))
             )
 
-    def testModelInheritance(self):
+    def test_model_inheritance(self):
 
         class TestModel1(orm.Model):
             field1 = orm.CharField(max_length=100)
@@ -141,7 +141,7 @@ class TestModels(unittest.TestCase):
 
 class TestModelFields(unittest.TestCase):
 
-    def testModelFieldName(self):
+    def test_model_field_name(self):
 
         ok = False
         try:
@@ -153,34 +153,47 @@ class TestModelFields(unittest.TestCase):
 
         class TestModel2(orm.Model):
             integer_field = orm.IntegerField()
-            record_field = orm.RecordField('self')
-
-        class TestModel3(orm.Model):
-            pass
 
         # Model.field returns Expression, not Field
         self.assertIsInstance(TestModel2.integer_field, orm.FieldExpression)
         self.assertEqual(TestModel2.integer_field.left.name, 'integer_field')
         self.assertIsInstance(TestModel2.integer_field, orm.FieldExpression)
+        
+    def test_record_values(self):
+
+        class TestModel2(orm.Model):
+            integer_field = orm.IntegerField()
+            record_field = orm.RecordField('self')
+
+        class TestModel3(orm.Model):
+            pass
 
         # create a record from the model
         record = TestModel2(None)
+        record1 = TestModel2(None, id=101)
         record2 = TestModel2(None)
         record3 = TestModel3(None)
 
-        # the assignment should fail
+        # the assignment should fail, only integers should be accepted
         self.assertRaises(orm.RecordValueError, setattr, record, 'integer_field', '1')
-        record2.record_field = record
-        record2.record_field_id = 3
-        record2.record_field = None
-        record2.record_field_id = None
         # try to assign a record of another model
         self.assertRaises(orm.RecordValueError, setattr, record, 'record_field', record3)
+
+        record2.record_field = record
+        self.assertEqual(record2.record_field, record)
+        self.assertEqual(record2.record_field_id, None)
+
+        record2.record_field_id = record1.id
+        self.assertEqual(record2.record_field, record1)
+        self.assertEqual(record2.record_field_id, record1.id)
+
+        record2.record_field = None
+        record2.record_field_id = None
 
 
 class TestExpressions(unittest.TestCase):
 
-    def testIdFied(self):
+    def test_id_field(self):
 
         class TestModel1(orm.Model):
             field1 = orm.IntegerField()
@@ -213,7 +226,7 @@ class TestModelsPostgresql(unittest.TestCase):
         class Author(orm.Model):
             """Authors catalog
             """
-            # id field already present
+            # `id` and `timestamp` fields already present
             last_name = orm.CharField(max_length=100, comment='Author\'s last name')
             first_name = orm.CharField(max_length=100, comment='Author\'s first name')
             created_at = orm.DateTimeField()
@@ -226,7 +239,6 @@ class TestModelsPostgresql(unittest.TestCase):
         class Book(orm.Model):
             """Books catalog
             """
-            # id field already present
             name = orm.CharField(max_length=100, default='A very good book!!!')
             price = orm.DecimalField(max_digits=10, decimal_places=2, default='0.00',
                                      index=True)  # 2 decimal places

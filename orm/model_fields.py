@@ -103,13 +103,18 @@ class Expression():
 class FieldExpression(Expression):
     """Expression which holds a single field.
     """
-    def __init__(self, field, model):
+    def __init__(self, field):
         assert isinstance(field, ModelField)
         super().__init__('_MODELFIELD', field)
+        # `model` attribute is needed to extract `from_` tables
+        self.model = field.model
+        
+    def __call__(self, value):
+        return self.left(value)
 
 
 class ModelField(Expression, models.ModelAttr):
-    """Abstract ORM table field. It's inherited from Expression just for the sake of autocomplete
+    """Abstract model field. It's inherited from Expression just for the sake of autocomplete
     in Python IDEs.
     """
     def __init__(self, column, index='', label='', default=None):
@@ -141,7 +146,7 @@ class ModelField(Expression, models.ModelAttr):
             except KeyError:
                 raise AttributeError('Value for field `%s` was not set yet' % self.name)
         # called as a class attribute
-        return FieldExpression(self, model=model)
+        return FieldExpression(self)
 
     def __call__(self, value):
         """You can use Field(...)(value) to return a tuple for INSERT.
@@ -173,7 +178,7 @@ ModelField.__bases__ = tuple(_field_base_classes)
 ####################################################################################################
 
 class IdField(ModelField):
-    """Primary integer autoincrement key. ID - implicitly present in each table.
+    """Primary integer autoincrement key. ID - implicitly present in each model.
     """
     def __init__(self, db_name='', label=''):
         # 9 digits - int32 - should be enough
@@ -302,7 +307,6 @@ class BooleanField(ModelField):
     def __set__(self, record, value):
         if not isinstance(value, bool) and value is not None:
             raise exceptions.RecordValueError('Provide a bool or None.')
-        # TODO: check is nullable
         record.__dict__[self.name] = value
 
 
@@ -444,7 +448,7 @@ def COUNT(expression=None, distinct=False):
     if expression is None or isinstance(expression, Expression):
         return Expression('_COUNT', None, distinct=distinct)
     elif orm.is_model(expression):
-        return Expression('_COUNT', None, table=expression)
+        return Expression('_COUNT', None, model=expression)
     else:
         raise orm.QueryError('Argument must be a Field, an Expression or a Table.')
 

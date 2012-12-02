@@ -15,9 +15,9 @@ class ModelOptions(models.ModelAttr):
 
         # create list of fields
         _fields = {}
-        for attrName, attr in self._model_attr_info.model.__dict__.items():
-            if isinstance(attr, fields.ModelField):
-                _fields[attrName] = attr
+        for attr_name, attr in self._model_attr_info.model.__dict__.items():
+            if isinstance(attr, model_fields.ModelField):
+                _fields[attr_name] = attr
         # sort by creation order
         self.fields = OrderedDict(sorted(_fields.items(), key=lambda i: i[1]._creationOrder))
 
@@ -28,7 +28,7 @@ class ModelOptions(models.ModelAttr):
         for index in indexes:
             assert isinstance(index, orm_indexes.Index)
             if index._model_attr_info.model is None:
-                index.__init__(modelAttrInfo=self._model_attr_info)
+                index.__init__(model_attr_info=self._model_attr_info)
 
         for field in self.fields.values():
             index = field.index
@@ -38,11 +38,11 @@ class ModelOptions(models.ModelAttr):
                 if not index:
                     continue
                 index = orm_indexes.Index(orm_indexes.IndexField(field), type=index)
-                index.__init__(modelAttrInfo=self._model_attr_info)
+                index.__init__(model_attr_info=self._model_attr_info)
             assert isinstance(index, orm_indexes.Index)
             indexes.append(index)
 
         self.indexes = indexes
 
 
-from . import fields, indexes as orm_indexes
+from . import model_fields, indexes as orm_indexes

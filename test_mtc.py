@@ -45,7 +45,7 @@ db = orm.connect('sqlite://papp/databases/mtc.sqlite')
 
 # explicit join
 #pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
-#print(dbAdapter.getLastQuery(), '\n')
+#print(dbAdapter.get_last_query(), '\n')
 
 rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name, Regions.region_name,
               from_ = [Persons, LeftJoin(Locations, Locations.id == Persons.location),
@@ -53,16 +53,16 @@ rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name,
               where= Persons.phone_number == '763533', 
               limit= 10)
 pprint(list(zip(rows.fields, rows)))
-print(db.getLastQuery(), '\n')
+print(db.get_last_query(), '\n')
 
 #pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
-#print(dbAdapter.getLastQuery(), '\n')
+#print(dbAdapter.get_last_query(), '\n')
 #
 #print(dbAdapter.select(orm.COUNT(Persons))) 
-#print(dbAdapter.getLastQuery(), '\n')
+#print(dbAdapter.get_last_query(), '\n')
 #
 #print(dbAdapter.select(orm.COUNT(Persons.street_id))) 
-#print(dbAdapter.getLastQuery(), '\n')
+#print(dbAdapter.get_last_query(), '\n')
 
 #dbAdapter.insert(Persons.phone_number(222222), Persons.phone_prefix(22))
 #dbAdapter.commit()
@@ -134,4 +134,4 @@ print(db.getLastQuery(), '\n')
 #for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
 #    print(str(person), str(Locations.get_one(db, id = person.location_id)))
 pprint(list(db.select(*Persons, where = (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit = 5)))
-print(db.getLastQuery(), '\n')
+print(db.get_last_query(), '\n')

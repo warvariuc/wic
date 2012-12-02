@@ -20,8 +20,8 @@ from orm import Nil, logger, sql_logger
 class Column():
     """Information about database table column.
     """
-    def __init__(self, type, name, default=Nil, precision=None, scale=None,
-                 unsigned=None, nullable=True, autoincrement=False, comment=''):
+    def __init__(self, type, name, default=Nil, precision=None, scale=None, unsigned=None,
+                 nullable=True, autoincrement=False, comment=''):
         self.name = name  # db table column name
         self.type = type  # string with the name of data type (decimal, varchar, bigint...)
         self.default = default  # column default value
@@ -39,9 +39,9 @@ class Column():
         assert isinstance(db, GenericAdapter) or \
             (isinstance(db, type) and issubclass(db, GenericAdapter)), \
             'Must be GenericAdapter class or instance'
-        colFunc = getattr(db, '_' + self.type.upper())
-        columnType = colFunc(self)
-        return '%s %s' % (self.name, columnType)
+        col_func = getattr(db, '_declare_' + self.type.upper())
+        column_type = col_func(self)
+        return '%s %s' % (self.name, column_type)
 
     def str(self):
         attrs = self.__dict__.copy()
@@ -50,7 +50,7 @@ class Column():
 
 
 class GenericAdapter():
-    """Generic DB adapter.
+    """ A generic database adapter.
     """
     protocol = 'generic'
     driver = None
@@ -58,9 +58,10 @@ class GenericAdapter():
     # from this date number of days will be counted when storing DATE values in the DB
     epoch = Date(1970, 1, 1)
 
-    def __init__(self, uri='', connect=True, autocommit=True):
-        """URI is already without protocol."""
-        self.uri = uri
+    def __init__(self, url='', connect=True, autocommit=True):
+        """URL is already without protocol.
+        """
+        self.url = url
         logger.debug('Creating adapter for `%s`' % self)
         self._timings = []
         if connect:
@@ -72,7 +73,7 @@ class GenericAdapter():
         self.autocommit = autocommit
 
     def __str__(self):
-        return "'%s://%s'" % (self.protocol, self.uri)
+        return "'%s://%s'" % (self.protocol, self.url)
 
     def connect(self):
         """Connect to the DB and return the connection. To be overridden in subclasses.
@@ -93,25 +94,26 @@ class GenericAdapter():
     def rollback(self):
         return self.connection.rollback()
 
-    def _execute(self, *a, **b):
-        query = a[0]
+    def _execute(self, query, *args, **kwargs):
         sql_logger.debug('DB query: %s' % query)
-        t0 = time.time()
+        start_time = time.time()
         try:
-            result = self.cursor.execute(*a, **b)
+            result = self.cursor.execute(query, *args, **kwargs)
         except Exception:
             logger.warning(query)
             raise
-        self._timings.append((query, round(time.time() - t0, 4)))
+        self._timings.append((query, round(time.time() - start_time, 4)))
         return result
 
     def execute(self, *args, **kwargs):
-        """Execute a query."""
+        """Execute a query.
+        """
         return self._execute(*args, **kwargs)
 
-    def getLastQuery(self):
+    def get_last_query(self):
         return self._timings[-1]
 
+    # TODO: remove classmethods
     @classmethod
     def _MODELFIELD(cls, field):
         """Render a table column name."""
@@ -169,10 +171,10 @@ class GenericAdapter():
     @classmethod
     def _CONCAT(cls, expressions):  # ((expression1) || (expression2) || ...)
         "Concatenate two or more expressions."
-        renderedExpressions = []
+        rendered_expressions = []
         for expression in expressions:
-            renderedExpressions.append('(' + cls.render(expression) + ')')
-        return '(' + ' || '.join(renderedExpressions) + ')'
+            rendered_expressions.append('(' + cls.render(expression) + ')')
+        return '(' + ' || '.join(rendered_expressions) + ')'
 
     @classmethod
     def _IN(cls, first, second):
@@ -226,33 +228,33 @@ class GenericAdapter():
         elif isinstance(limit, (tuple, list)) and len(limit) == 2:
             return ' LIMIT %i OFFSET %i' % (limit[1], limit[0])
         else:
-            raise orm.QueryError('limit must be an integer or tuple/list of two elements. Got `%s`'
-                                 % limit)
+            raise orm.QueryError('`limit` must be an integer or tuple/list of two elements. '
+                                 'Got `%s`' % limit)
 
     @classmethod
-    def render(cls, value, castField=None):
+    def render(cls, value, cast_field=None):
         """Render of a value (Expression, Field or simple (scalar?) value) in a format suitable for
-        operations with castField in the DB.
+        operations with cast_field in the DB.
         @param value:
-        @param castField:
+        @param cast_field:
         """
         if isinstance(value, orm.Expression):  # it's an Expression or Field
             if isinstance(value, orm.DateTimeField):
-                pass
+                pass  # db-api 2.0 supports python datetime as is, no need to stringify
             return value.__str__(cls)  # render sub-expression
         else:  # it's a value for a DB column
-            if value is not None and castField is not None:
-                if isinstance(castField, orm.Expression):
-                    castField = castField.type  # expression right operand type
-                assert isinstance(castField, orm.ModelField)
-#                assert isinstance(castField, orm.Expression), 'Cast field must be an Expression.'
-#                if castField.__class__ is orm.Expression:  # Field - subclass of Expression
-#                    castField = castField.type  # expression right operand type
-                value = castField._cast(value)
+            if value is not None and cast_field is not None:
+                if isinstance(cast_field, orm.Expression):
+                    cast_field = cast_field.type  # expression right operand type
+                assert isinstance(cast_field, orm.ModelField)
+#                assert isinstance(cast_field, orm.Expression), 'Cast field must be an Expression.'
+#                if cast_field.__class__ is orm.Expression:  # Field - subclass of Expression
+#                    cast_field = cast_field.type  # expression right operand type
+                value = cast_field._cast(value)
                 try:
-                    return cls._render(value, castField.column)
+                    return cls._render(value, cast_field.column)
                 except Exception:
-                    logger.warning('Check %r._cast().' % castField)
+                    logger.warning('Check %r._cast().' % cast_field)
                     raise
             return cls._render(value)
 
@@ -269,13 +271,13 @@ class GenericAdapter():
             return cls._NULL()
         if column:
             assert isinstance(column, Column), 'It must be a Column instance.'
-            encodeFuncName = '_encode' + column.type.upper()
-            encodeFunc = getattr(cls, encodeFuncName, None)
-            if callable(encodeFunc):
-                value = encodeFunc(value, column)
+            encode_func_name = '_encode_' + column.type.upper()
+            encode_func = getattr(cls, encode_func_name, None)
+            if callable(encode_func):
+                value = encode_func(value, column)
                 assert isinstance(value, (str, int, Decimal)), \
                     'Encode `%s.%s` function did not return a string, integer or decimal' \
-                    % (cls.__name__, '_encode' + column.type.upper())
+                    % (cls.__name__, '_encode_' + column.type.upper())
                 return str(value)
         return cls.escape(value)
 
@@ -312,11 +314,11 @@ class GenericAdapter():
         indexes = []
         for index in model._indexes:
             if index.type == 'primary':
-                indexType = 'PRIMARY KEY'
+                index_type = 'PRIMARY KEY'
             elif index.type == 'unique':
-                indexType = 'UNIQUE KEY'
+                index_type = 'UNIQUE KEY'
             else:
-                indexType = 'KEY'
+                index_type = 'KEY'
             columns = []
             for index_field in index.index_fields:
                 column = index_field.field.name
@@ -325,7 +327,7 @@ class GenericAdapter():
                 column += ' %s' % index_field.sort_order.upper()
                 columns.append(column)
 
-            indexes.append('%s %s (%s)' % (indexType, index.name, ', '.join(columns)))
+            indexes.append('%s %s (%s)' % (index_type, index.name, ', '.join(columns)))
 
         return indexes
 
@@ -348,53 +350,53 @@ class GenericAdapter():
         return queries
 
     @classmethod
-    def _INT(cls, column, intMap=[(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'), (4, 'INT'),
-                                  (8, 'BIGINT')]):
+    def _declare_INT(cls, column, int_map=[(1, 'TINYINT'), (2, 'SMALLINT'), (3, 'MEDIUMINT'),
+                                           (4, 'INT'), (8, 'BIGINT')]):
         """Render declaration of INT column type.
         `store_rating_sum` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Item\'s store rating'
         """
-        maxInt = int('9' * column.precision)
+        max_int = int('9' * column.precision)
         # TODO: check for column.unsigned
-        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8)  # add one bit for sign
-        for _bytesCount, _columnType in intMap:
-            if bytesCount <= _bytesCount:
+        bytes_count = math.ceil((max_int.bit_length() - 1) / 8)  # add one bit for sign
+        for _bytes_count, _column_type in int_map:
+            if bytes_count <= _bytes_count:
                 break
         else:
             raise Exception('Too big precision specified.')
-        columnStr = '%s(%s)' % (_columnType, column.precision)
+        column_str = '%s(%s)' % (_column_type, column.precision)
         if column.unsigned:
-            columnStr += ' UNSIGNED'
+            column_str += ' UNSIGNED'
         if not column.nullable:
-            columnStr += ' NOT'
-        columnStr += ' NULL'
+            column_str += ' NOT'
+        column_str += ' NULL'
         if column.default is not Nil:
-            columnStr += ' DEFAULT ' + cls._render(column.default, None)
+            column_str += ' DEFAULT ' + cls._render(column.default, None)
         if column.autoincrement:
-            columnStr += ' AUTO_INCREMENT'
+            column_str += ' AUTO_INCREMENT'
         if column.comment:
-            columnStr += ' COMMENT ' + cls._render(column.comment, None)
-        return columnStr
+            column_str += ' COMMENT ' + cls._render(column.comment, None)
+        return column_str
 
     @classmethod
-    def _encodeINT(cls, value, column):
+    def _encode_INT(cls, value, column):
         """Encode a value for insertion in a column of INT type.
         """
         return str(int(value))
 
     @classmethod
-    def _CHAR(cls, column):
+    def _declare_CHAR(cls, column):
         """CHAR, VARCHAR
         """
         return 'VARCHAR (%i)' % column.precision
 
     @classmethod
-    def _decodeCHAR(cls, value, column):
+    def _decode_CHAR(cls, value, column):
         if isinstance(value, bytes):
             return value.decode()
         return str(value)
 
     @classmethod
-    def _DECIMAL(cls, column):
+    def _declare_DECIMAL(cls, column):
         """The declaration syntax for a DECIMAL column is DECIMAL(M,D).
         The ranges of values for the arguments in MySQL 5.1 are as follows:
         M is the maximum number of digits (the precision). It has a range of 1 to 65.
@@ -404,15 +406,15 @@ class GenericAdapter():
         return 'DECIMAL(%s, %s)' % (column.precision, column.scale)
 
     @classmethod
-    def _DATE(cls, column):
+    def _declare_DATE(cls, column):
         return 'DATE'
 
     @classmethod
-    def _DATETIME(cls, column):
+    def _declare_DATETIME(cls, column):
         return 'INTEGER'
 
     @classmethod
-    def _encodeDATETIME(cls, value, column):
+    def _encode_DATETIME(cls, value, column):
         """Not all DBs have microsecond precision in DATETIME columns.
         So, generic implementation stores datetimes as integer number of microseconds since the
         Epoch.
@@ -425,23 +427,23 @@ class GenericAdapter():
         raise SyntaxError('Expected datetime.datetime.')
 
     @classmethod
-    def _decodeDATETIME(cls, value, column):
+    def _decode_DATETIME(cls, value, column):
         return DateTime.fromtimestamp(value / 1000000)
 
     @classmethod
-    def _TEXT(cls, column):
+    def _declare_TEXT(cls, column):
         return 'TEXT'
 
     @classmethod
-    def _BLOB(cls, column):
+    def _declare_BLOB(cls, column):
         return 'BLOB'
 
     @classmethod
-    def _encodeBLOB(cls, value, column):
+    def _encode_BLOB(cls, value, column):
         return "'%s'" % base64.b64encode(value)
 
     @classmethod
-    def _decodeBLOB(cls, value, column):
+    def _decode_BLOB(cls, value, column):
         return base64.b64decode(value)
 
 #    @classmethod
@@ -497,19 +499,20 @@ class GenericAdapter():
         """UPDATE table_name SET col_name1 = expression1, col_name2 = expression2, ...
           [ WHERE expression ] [ LIMIT limit_amount ]
           """
-        table = None
+        model = None
         for item in fields:
             assert isinstance(item, (list, tuple)) and len(item) == 2, \
                 'Pass tuples with 2 items: (field, value).'
             field, value = item
             assert isinstance(field, orm.ModelField), 'First item in the tuple must be a Field.'
-            _table = field.table
-            table = table or _table
-            assert table is _table, 'Pass fields from the same table'
+            _model = field.model
+            if model is None:
+                model = _model
+            assert model is _model, 'Pass fields from the same model'
         sql_w = ' WHERE ' + self.render(where) if where else ''
         sql_v = ', '.join(['%s= %s' % (field.column.name, self.render(value, field))
                            for (field, value) in fields])
-        return 'UPDATE %s SET %s%s' % (table, sql_v, sql_w)
+        return 'UPDATE %s SET %s%s' % (model, sql_v, sql_w)
 
     def update(self, *fields, where=None, limit=None):
         """Update records
@@ -521,19 +524,19 @@ class GenericAdapter():
         self.execute(sql)
         return self.cursor.rowcount
 
-    def _delete(self, table, where, limit=None):
+    def _delete(self, model, where, limit=None):
         """DELETE FROM table_name [ WHERE expression ] [ LIMIT limit_amount ]"""
-        assert orm.is_model(table)
+        assert orm.is_model(model)
         sql_w = ' WHERE ' + self.render(where) if where else ''
-        return 'DELETE FROM %s%s' % (table, sql_w)
+        return 'DELETE FROM %s%s' % (model, sql_w)
 
-    def delete(self, table, where, limit=None):
+    def delete(self, model, where, limit=None):
         """Delete records from table with the given condition and limit.
         @param talbe: a Model subclass, whose records to delete
         @param where: an Expression or string for WHERE part of the DELETE query
         @param limit: a tuple in form (start, end) which specifies the range dor deletion.
         """
-        sql = self._delete(table, where)
+        sql = self._delete(model, where)
         self.execute(sql)
         return self.cursor.rowcount
 
@@ -554,13 +557,13 @@ class GenericAdapter():
             from_ = []
             for field in fields:
                 if isinstance(field, orm.Expression):
-                    # some expressions might have `table` attribute
-                    table = getattr(field, 'table', None)
-                    if table is not None and table not in from_:
-                        from_.append(field.table)
+                    # some expressions might have `model` attribute
+                    model = getattr(field, 'model', None)
+                    if model is not None and model not in from_:
+                        from_.append(field.model)
 
         if not from_:
-            raise orm.QueryError('Specify at least one table in `from_` argument or at least on '
+            raise orm.QueryError('Specify at least one model in `from_` argument or at least on '
                                  'Field to select')
 
         _fields = []
@@ -587,7 +590,7 @@ class GenericAdapter():
                 texts.append(arg)
             else:
                 raise orm.QueryError('`from_` argument should contain only Models, Joins or '
-                                     'strings, but got a `%s`' % arg.__class__.__name__)
+                                     'strings, but got a `%s`' % orm.get_object_path(arg))
 
         sql_from = ''
         if tables:
@@ -657,8 +660,8 @@ class GenericAdapter():
         @param fields: tables, fields or joins;
         @param from_: tables and joined tables to select from.
             None -tables will be automatically extracted from provided fields
-            A single table or string
-            A list of tables or strings
+            A single model or string
+            A list of models or strings
         @param where: expression for where;
         @param limit: an integer (LIMIT) or tuple/list of two elements (OFFSET, LIMIT)
         @param orderby:
@@ -671,15 +674,17 @@ class GenericAdapter():
         return self._parse_response(fields, rows)
 
     def _parse_response(self, fields, rows):
-        """Post process results fetched from the DB. Return results in Rows object."""
+        """Post process results fetched from the DB. Decode values to model fields representation.
+        Return results in Rows object.
+        """
         for i, row in enumerate(rows):
             new_row = []
             for j, field in enumerate(fields):
                 value = row[j]
-                if value is not None and isinstance(field, orm.ModelField):
-                    column = field.column
+                if value is not None and isinstance(field, orm.FieldExpression):
+                    column = field.left.column
                     if isinstance(column, orm.Column):
-                        decode_func = getattr(self, '_decode' + column.type.upper(), None)
+                        decode_func = getattr(self, '_decode_' + column.type.upper(), None)
                         if callable(decode_func):
                             value = decode_func(value, column)
                 new_row.append(value)
@@ -741,41 +746,41 @@ class Rows():
 ####################################################################################################
 
 class SqliteAdapter(GenericAdapter):
-    """Adapter for Sqlite databases"""
-
+    """Adapter for Sqlite databases.
+    """
     protocol = 'sqlite'
 
-    def __init__(self, dbPath, **kwargs):
-        self.driverArgs = kwargs
+    def __init__(self, db_path, **kwargs):
+        self.driver_args = kwargs
         #path_encoding = sys.getfilesystemencoding() or locale.getdefaultlocale()[1] or 'utf8'
-        if dbPath != ':memory:' and not os.path.isabs(dbPath):
+        if db_path != ':memory:' and not os.path.isabs(db_path):
             # convert relative path to be absolute
-            dbPath = os.path.abspath(os.path.join(os.getcwd(), dbPath))
-        self.dbPath = dbPath
-        super().__init__(dbPath)
+            db_path = os.path.abspath(os.path.join(os.getcwd(), db_path))
+        self.db_path = db_path
+        super().__init__(db_path)
 
     def connect(self):
         import sqlite3
         self.driver = sqlite3
-        dbPath = self.dbPath
-        if dbPath != ':memory:' and not os.path.isfile(dbPath):
+        db_path = self.db_path
+        if db_path != ':memory:' and not os.path.isfile(db_path):
             raise orm.ConnectionError('"%s" is not a file.\nFor a new database create an empty '
-                                      'file.' % dbPath)
-        return sqlite3.Connection(self.dbPath, **self.driverArgs)
+                                      'file.' % db_path)
+        return sqlite3.Connection(self.db_path, **self.driver_args)
 
-    def _truncate(self, table, mode=''):
-        tableName = str(table)
-        return ['DELETE FROM %s;' % tableName,
-                "DELETE FROM sqlite_sequence WHERE name='%s';" % tableName]
+    def _truncate(self, model, mode=''):
+        table_name = str(model)
+        return ['DELETE FROM %s;' % table_name,
+                "DELETE FROM sqlite_sequence WHERE name='%s';" % table_name]
 
     @classmethod
     def _get_create_table_indexes(cls, model):
         assert orm.is_model(model)
         indexes = []
-        for index in model._indexes:
+        for index in model._meta.indexes:
             if index.type != 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
-            indexType = 'PRIMARY KEY'
+            index_type = 'PRIMARY KEY'
             columns = []
             for index_field in index.index_fields:
                 column = index_field.field.column.name
@@ -786,7 +791,7 @@ class SqliteAdapter(GenericAdapter):
                 column += ' %s' % sort_order.upper()
                 columns.append(column)
 
-            indexes.append('%s (%s)' % (indexType, ', '.join(columns)))
+            indexes.append('%s (%s)' % (index_type, ', '.join(columns)))
 
         return indexes
 
@@ -794,13 +799,13 @@ class SqliteAdapter(GenericAdapter):
     def _get_create_table_other(cls, model):
         assert orm.is_model(model)
         indexes = []
-        for index in model._indexes:
+        for index in model._meta.indexes:
             if index.type == 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             elif index.type == 'unique':
-                indexType = 'UNIQUE INDEX'
+                index_type = 'UNIQUE INDEX'
             else:
-                indexType = 'INDEX'
+                index_type = 'INDEX'
             columns = []
             for index_field in index.index_fields:
                 column = index_field.field.column.name
@@ -811,33 +816,33 @@ class SqliteAdapter(GenericAdapter):
                 column += ' %s' % sort_order.upper()
                 columns.append(column)
                 # al fields are checked to have the same table, so take the first one
-            table = index.index_fields[0].field.table
+            model = index.index_fields[0].field.model
             indexes.append('CREATE %s "%s" ON "%s" (%s)'
-                           % (indexType, index.name, table, ', '.join(columns)))
+                           % (index_type, index.name, model, ', '.join(columns)))
 
         return indexes
 
     @classmethod
-    def _CHAR(cls, column):
+    def _declare_CHAR(cls, column):
         return 'TEXT'
 
     @classmethod
-    def _INT(cls, column):
+    def _declare_INT(cls, column):
         """INTEGER column type for Sqlite."""
-        maxInt = int('9' * column.precision)
-        bytesCount = math.ceil((maxInt.bit_length() - 1) / 8)  # add one bit for sign
-        if bytesCount > 8:
+        max_int = int('9' * column.precision)
+        bytes_count = math.ceil((max_int.bit_length() - 1) / 8)  # add one bit for sign
+        if bytes_count > 8:
             raise Exception('Too many digits specified.')
         return 'INTEGER'
 
     @classmethod
-    def _DATE(cls, column):
+    def _declare_DATE(cls, column):
         """Sqlite db does have native DATE data type.
         We will stores dates in it as integer number of days since the Epoch."""
         return 'INTEGER'
 
     @classmethod
-    def _encodeDATE(cls, value, column):
+    def _encode_DATE(cls, value, column):
         if isinstance(value, str):
             value = DateTime.strptime(value, '%Y-%m-%d').date()
         if isinstance(value, Date):
@@ -845,21 +850,21 @@ class SqliteAdapter(GenericAdapter):
         raise SyntaxError('Expected "YYYY-MM-DD" or datetime.date.')
 
     @classmethod
-    def _decodeDATE(cls, value, column):
+    def _decode_DATE(cls, value, column):
         return cls.epoch + TimeDelta(days=value)
 
     @classmethod
-    def _DECIMAL(cls, column):
+    def _declare_DECIMAL(cls, column):
         """In Sqlite there is a special DECIMAL, which we won't use.
         We will store decimals as integers."""
         return 'INTEGER'
 
     @classmethod
-    def _encodeDECIMAL(cls, value, column):
+    def _encode_DECIMAL(cls, value, column):
         return Decimal(value) * (10 ** column.scale)
 
     @classmethod
-    def _decodeDECIMAL(cls, value, column):
+    def _decode_DECIMAL(cls, value, column):
         return Decimal(value) / (10 ** column.scale)
 
     def get_tables(self):
@@ -873,15 +878,15 @@ class SqliteAdapter(GenericAdapter):
         columns = {}
         for row in self.cursor.fetchall():
             logger.debug('Found table column: %s, %s' % (table_name, row))
-            typeName = row[2].lower()
+            type_name = row[2].lower()
             # INTEGER PRIMARY KEY fields are auto-generated in sqlite
             # INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
-            autoincrement = bool(typeName == 'integer' and row[5])
-            if 'int' in typeName or 'bool' in typeName:  # booleans are sotred as ints in sqlite
-                typeName = 'int'
-            elif typeName not in ('blob', 'text'):
-                raise TypeError('Unexpected data type: %s' % typeName)
-            column = Column(type=typeName, field=None, name=row[1], default=row[4],
+            autoincrement = bool(type_name == 'integer' and row[5])
+            if 'int' in type_name or 'bool' in type_name:  # booleans are sotred as ints in sqlite
+                type_name = 'int'
+            elif type_name not in ('blob', 'text'):
+                raise TypeError('Unexpected data type: %s' % type_name)
+            column = Column(type=type_name, name=row[1], default=row[4],
                             precision=19, nullable=(not row[3]), autoincrement=autoincrement)
             columns[column.name] = column
             logger.debug('Reproduced table column: %s, %s' % (table_name, column))
@@ -892,72 +897,72 @@ class SqliteAdapter(GenericAdapter):
 #    def _DATE(self, **kwargs):
 #        return 'TEXT'
 #
-#    def _encodeDATE(self, value, **kwargs):
+#    def _encode_DATE(self, value, **kwargs):
 #        if isinstance(value, str):
 #            value = self.decodeDATE(value)
 #        if isinstance(value, Date):
 #            return value.strftime("'%Y-%m-%d'")
 #        raise SyntaxError('Expected "YYYY-MM-DD" or datetime.date.')
 #
-#    def _decodeDATE(self, value, **kwargs):
+#    def _decode_DATE(self, value, **kwargs):
 #        return DateTime.strptime(value, '%Y-%m-%d').date()
 #
 #    def _DATETIME(self, **kwargs):
 #        return 'TEXT'
 #
-#    def _encodeDATETIME(self, value, **kwargs):
+#    def _encode_DATETIME(self, value, **kwargs):
 #        if isinstance(value, DateTime):
 #            return value.strftime("'%Y-%m-%d %H:%M:%S.%f'")
 #        raise SyntaxError('Expected datetime.datetime.')
 #
-#    def _decodeDATETIME(self, value, **kwargs):
+#    def _decode_DATETIME(self, value, **kwargs):
 #        return DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
 #
 #    def _DECIMAL(self, **kwargs):
 #        return 'TEXT'
 #
-#    def _encodeDECIMAL(self, value, max_digits, fractionDigits, **kwargs):
+#    def _encode_DECIMAL(self, value, max_digits, fractionDigits, **kwargs):
 #        _format = "'%% %i.%if'" % (max_digits + 1, fractionDigits)
 #        return _format % Decimal(value)
 #
-#    def _decodeDECIMAL(self, value, **kwargs):
+#    def _decode_DECIMAL(self, value, **kwargs):
 #        return Decimal(str(value))
 
 
 ####################################################################################################
 
 class MysqlAdapter(GenericAdapter):
-    """Adapter for MySql databases."""
-
+    """Adapter for MySql databases.
+    """
     protocol = 'mysql'
 
-    def __init__(self, uri, **kwargs):
-        m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
-                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
-        assert m, "Invalid database URI: %s" % self.uri
-        kwargs['user'] = m.group('user')
+    def __init__(self, url, **kwargs):
+        match = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
+                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', url)
+        assert match, "Invalid database URL: %s" % self.url
+        kwargs['user'] = match.group('user')
         assert kwargs['user'], 'User required'
-        kwargs['passwd'] = m.group('password') or ''
-        kwargs['host'] = m.group('host')
+        kwargs['passwd'] = match.group('password') or ''
+        kwargs['host'] = match.group('host')
         assert kwargs['host'], 'Host name required'
-        kwargs['db'] = m.group('db')
+        kwargs['db'] = match.group('db')
         assert kwargs['db'], 'Database name required'
-        kwargs['port'] = int(m.group('port') or 3306)
+        kwargs['port'] = int(match.group('port') or 3306)
         kwargs['charset'] = 'utf8'
-        self.driverArgs = kwargs
-        super().__init__(uri)
+        self.driver_args = kwargs
+        super().__init__(url)
 
     def connect(self):
         import pymysql
         self.driver = pymysql
-        connection = pymysql.connect(**self.driverArgs)
+        connection = pymysql.connect(**self.driver_args)
         connection.execute('SET FOREIGN_KEY_CHECKS=1;')
         connection.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
         return connection
 
     @classmethod
-    def _get_create_table_other(cls, table):
-        return ["ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % table.__doc__]
+    def _get_create_table_other(cls, model):
+        return ["ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='%s'" % model.__doc__]
 
     @classmethod
     def _RANDOM(cls):
@@ -966,38 +971,38 @@ class MysqlAdapter(GenericAdapter):
     @classmethod
     def _CONCAT(cls, expressions):  # CONCAT(str1,str2,...)
         "Concatenate two or more expressions."
-        renderedExpressions = []
+        rendered_expressions = []
         for expression in expressions:
-            renderedExpressions.append('(' + cls.render(expression) + ')')
-        return 'CONCAT(' + ', '.join(renderedExpressions) + ')'
+            rendered_expressions.append('(' + cls.render(expression) + ')')
+        return 'CONCAT(' + ', '.join(rendered_expressions) + ')'
 
     def get_tables(self):
         """Get list of tables (names) in this DB."""
         self.execute("SHOW TABLES")
         return [row[0] for row in self.cursor.fetchall()]
 
-    def get_columns(self, tableName):
+    def get_columns(self, table_name):
         """Get columns of a table"""
         self.execute("SELECT column_name, data_type, column_default, is_nullable,"
                      "       character_maximum_length, numeric_precision, numeric_scale,"
                      "       column_type, extra, column_comment "
                      "FROM information_schema.columns "
                      "WHERE table_schema = '%s' AND table_name = '%s'"
-                     % (self.driverArgs['db'], tableName))
+                     % (self.driver_args['db'], table_name))
         columns = {}
         for row in self.cursor.fetchall():
-            typeName = row[1].lower()
-            if 'int' in typeName:
-                typeName = 'int'
-            elif 'char' in typeName:
-                typeName = 'char'
-            elif typeName not in ('text', 'datetime', 'date'):
-                raise Exception('Unexpected data type: %s' % typeName)
+            type_name = row[1].lower()
+            if 'int' in type_name:
+                type_name = 'int'
+            elif 'char' in type_name:
+                type_name = 'char'
+            elif type_name not in ('text', 'datetime', 'date'):
+                raise Exception('Unexpected data type: %s' % type_name)
             precision = row[4] or row[5]
             nullable = row[3].lower() == 'yes'
             autoincrement = 'auto_increment' in row[8].lower()
             unsigned = row[7].lower().endswith('unsigned')
-            column = Column(type=typeName, field=None, name=row[0], default=row[2],
+            column = Column(type=type_name, field=None, name=row[0], default=row[2],
                             precision=precision, scale=row[6], unsigned=unsigned,
                             nullable=nullable, autoincrement=autoincrement, comment=row[9])
             columns[column.name] = column
@@ -1007,37 +1012,37 @@ class MysqlAdapter(GenericAdapter):
 ####################################################################################################
 
 class PostgreSqlAdapter(GenericAdapter):
-    """Adapter for PostgreSql databases."""
-
+    """Adapter for PostgreSql databases.
+    """
     protocol = 'postgresql'
 
-    def __init__(self, uri, **kwargs):
-        m = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
-                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', uri)
-        assert m, "Invalid database URI: %s" % self.uri
-        kwargs['user'] = m.group('user')
+    def __init__(self, url, **kwargs):
+        match = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
+                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', url)
+        assert match, "Invalid database URL: %s" % self.url
+        kwargs['user'] = match.group('user')
         assert kwargs['user'], 'User required'
-        kwargs['password'] = m.group('password') or ''
-        kwargs['host'] = m.group('host')
+        kwargs['password'] = match.group('password') or ''
+        kwargs['host'] = match.group('host')
         assert kwargs['host'], 'Host name required'
-        kwargs['database'] = m.group('db')
+        kwargs['database'] = match.group('db')
         assert kwargs['database'], 'Database name required'
-        kwargs['port'] = int(m.group('port') or 5432)
-        self.driverArgs = kwargs
-        super().__init__(uri)
+        kwargs['port'] = int(match.group('port') or 5432)
+        self.driver_args = kwargs
+        super().__init__(url)
 
     def connect(self):
 
         import psycopg2
         self.driver = psycopg2
-        connection = psycopg2.connect(**self.driverArgs)
+        connection = psycopg2.connect(**self.driver_args)
         connection.set_client_encoding('UTF8')
 #        connection.execute('SET FOREIGN_KEY_CHECKS=1;')
 #        connection.execute("SET sql_mode='NO_BACKSLASH_ESCAPES';")
         return connection
 
     @classmethod
-    def _INT(cls, column, int_map=[(2, 'SMALLINT'), (4, 'INTEGER'), (8, 'BIGINT')]):
+    def _declare_INT(cls, column, int_map=[(2, 'SMALLINT'), (4, 'INTEGER'), (8, 'BIGINT')]):
         """Render declaration of INT column type.
         """
         max_int = int('9' * column.precision)
@@ -1064,7 +1069,7 @@ class PostgreSqlAdapter(GenericAdapter):
         return column_str
 
     @classmethod
-    def _DATETIME(cls, column):
+    def _declare_DATETIME(cls, column):
         column_str = 'timestamp (6) without time zone'
         if not column.nullable:
             column_str += ' NOT'
@@ -1072,7 +1077,7 @@ class PostgreSqlAdapter(GenericAdapter):
         return column_str
 
     @classmethod
-    def _encodeDATETIME(cls, value, column):
+    def _encode_DATETIME(cls, value, column):
         if isinstance(value, str):
             return DateTime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
         if isinstance(value, DateTime):
@@ -1080,7 +1085,7 @@ class PostgreSqlAdapter(GenericAdapter):
         raise SyntaxError('Expected datetime.datetime')
 
     @classmethod
-    def _decodeDATETIME(cls, value, column):
+    def _decode_DATETIME(cls, value, column):
         return value
 
     @classmethod
@@ -1090,7 +1095,7 @@ class PostgreSqlAdapter(GenericAdapter):
         for index in model._meta.indexes:
             if index.type.lower() != 'primary':  # only primary index in the CREATE TABLE query
                 continue
-            indexType = 'PRIMARY KEY'
+            index_type = 'PRIMARY KEY'
             columns = []
             for index_field in index.index_fields:
                 column = index_field.field.column.name
@@ -1101,7 +1106,7 @@ class PostgreSqlAdapter(GenericAdapter):
 #                column += ' %s' % sort_order.upper()
                 columns.append(column)
 
-            indexes.append('%s (%s)' % (indexType, ', '.join(columns)))
+            indexes.append('%s (%s)' % (index_type, ', '.join(columns)))
 
         return indexes
 
@@ -1113,9 +1118,9 @@ class PostgreSqlAdapter(GenericAdapter):
             if index.type.lower() == 'primary':  # primary index is in the CREATE TABLE query
                 continue
             elif index.type.lower() == 'unique':
-                indexType = 'UNIQUE INDEX'
+                index_type = 'UNIQUE INDEX'
             else:
-                indexType = 'INDEX'
+                index_type = 'INDEX'
             columns = []
             for index_field in index.index_fields:
                 column = index_field.field.column.name
@@ -1128,7 +1133,7 @@ class PostgreSqlAdapter(GenericAdapter):
                 # all fields are checked to have the same table, so take the first one
             model = index.index_fields[0].field.model
             queries.append('CREATE %s %s ON %s (%s)'
-                           % (indexType, index.name, model, ', '.join(columns)))
+                           % (index_type, index.name, model, ', '.join(columns)))
 
         for field in model._meta.fields.values():
             column = field.column
@@ -1205,12 +1210,12 @@ class PostgreSqlAdapter(GenericAdapter):
         return 'DROP TABLE IF EXISTS %s' % table_name
 
 
-def xorify(orderBy):
-    if hasattr(orderBy, '__iter__'):
-        return orderBy
-    if not orderBy:
+def xorify(orderby):
+    if hasattr(orderby, '__iter__'):
+        return orderby
+    if not orderby:
         return None
-    orderBy2 = orderBy[0]
-    for item in orderBy[1:]:
-        orderBy2 = orderBy2 | item
-    return orderBy2
+    orderby2 = orderby[0]
+    for item in orderby[1:]:
+        orderby2 = orderby2 | item
+    return orderby2

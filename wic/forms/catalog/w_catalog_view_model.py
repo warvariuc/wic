@@ -56,7 +56,7 @@ class Styles:
             """Walk over all role attributes of this style and put them in `data` attribute as dictionary {QtStyle: value}.
             """
             roles = {}
-            for attrName, attrValue in inspect.getmembers(self):
+            for attr_name, attrValue in inspect.getmembers(self):
                 if isinstance(attrValue, Role):
                     assert attrValue.QtRole not in roles, 'The same role is met twice with different names.'
                     roles[attrValue.QtRole] = attrValue.value

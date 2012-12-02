@@ -5,7 +5,7 @@ class IndexField():
     """Helper class for defining a field for index
     """
     def __init__(self, field, sort_order='asc', prefix_length=None):
-        assert isinstance(field, fields.ModelField), 'Pass Field instances.'
+        assert isinstance(field, model_fields.ModelField), 'Pass Field instances.'
         assert sort_order in ('asc', 'desc'), 'Sort order must be `asc` or `desc`.'
         assert isinstance(prefix_length, int) or prefix_length is None, \
             'Index prefix length must None or int.'
@@ -31,14 +31,14 @@ class Index(models.ModelAttr):
         for i, index_field in enumerate(index_fields):
             if isinstance(index_field, str):  # field name passed
                 index_field = self._model_attr_info.model.__dict__[index_field]
-            if isinstance(index_field, fields.ModelField):  # a field
+            if isinstance(index_field, model_fields.ModelField):  # a field
                 index_field = IndexField(index_field)
                 index_fields[i] = index_field
             else:
                 assert isinstance(index_field, IndexField), \
                     'Pass a field name or Field/IndexField instances.'
             model = model or index_field.field.model
-            assert index_field.field.model is model, 'Indexed fields should be from the same table!'
+            assert index_field.field.model is model, 'Indexed fields should be from the same model!'
 
         if type is True:
             type = 'index'
@@ -81,4 +81,4 @@ class Unique(Index):
         super().__init__(*index_fields, type='unique', name=name, method=method)
 
 
-from . import fields
+from . import model_fields

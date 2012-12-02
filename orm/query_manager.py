@@ -5,7 +5,7 @@ class QueryManager(models.ModelAttr):
     """Through this manager a Model interfaces with a database.
     """
     def __init__(self):
-        # URIs of database adapters the model was successfully checked against
+        # URLs of database adapters the model was successfully checked against
         self.model = self._model_attr_info.model
         self._checked_dbs = set()
 
@@ -14,7 +14,7 @@ class QueryManager(models.ModelAttr):
         columns. Add check_table call in very model method that uses a db.
         """
         assert isinstance(db, adapters.GenericAdapter), 'Need a database adapter'
-        if db.uri in self._checked_dbs:
+        if db.url in self._checked_dbs:
             # this db was already checked
             return
         model = self.model
@@ -31,7 +31,7 @@ class QueryManager(models.ModelAttr):
             if not db_column:  # model column is not found in the db
                 print('Column in the db not found: %s' % column.str())
         logger.debug('CREATE TABLE query:\n%s' % db.get_create_table_query(model))
-        self._checked_dbs.add(db.uri)
+        self._checked_dbs.add(db.url)
 
     def create(self, db, *args, **kwargs):
         record = self.model(db, *args, **kwargs)
@@ -44,8 +44,6 @@ class QueryManager(models.ModelAttr):
         @param where: expression to use for filter
         @param id: id of the record, if you want to fetch one record by its id
         """
-        self.check_table(db)
-
         if id:
             where = (self.model.id == id)
 
@@ -65,57 +63,72 @@ class QueryManager(models.ModelAttr):
         @param limit: tuple (from, to)
         @param select_related: whether to retrieve objects related by foreign keys in the same query
         """
+        self.check_table(db)
+
         model = self.model
         logger.debug("Model.get('%s', db= %s, where= %s, limit= %s)" % (model, db, where, limit))
         self.check_table(db)
         orderby = orderby or model._meta.ordering  # use default table ordering if no ordering given
-        fields_ = list(model)
+        fields = list(model)
         from_ = [model]
-        record_fields = []
+        record_fields = []  # list of RecordField fields
         if select_related:
             for i, field in enumerate(model):
-                if isinstance(field, fields.RecordField):
+                if isinstance(field, model_fields.RecordField):
                     record_fields.append((i, field))
-                    fields_.extend(field.refer_model)
-                    from_.append(models.LeftJoin(field.refer_model, field == field.refer_model.id))
+                    fields.extend(field.related_model)
+                    # left join
+                    from_.append(models.LeftJoin(field.related_model,
+                                                 on = (field == field.related_model.id)))
+
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
-        rows = db.select(*fields_, from_=from_, where=where, orderby=orderby, limit=limit)
+        # retrieve the values from the DB
+        rows = db.select(*fields, from_=from_, where=where, orderby=orderby, limit=limit)
+
         for row in rows:
-            record = model(db, *zip(model, row))
+            data = {}
+            for i, field in enumerate(model._meta.fields.values()):
+                field_name = field.name
+                if isinstance(field, model_fields.RecordField):
+                    field_name = field._name
+                data[field_name] = row[i]
+            # create the record from the values
+            record = model(db, **data)
             if select_related:
                 field_offset = len(model)
                 for i, record_field in record_fields:
-                    refer_model = record_field.refer_model
+                    related_model = record_field.related_model
                     if row[i] is None:
-                        refer_record = None
+                        related_record = None
                     else:
                         # if referRecord.id is None: # missing record !!! integrity error
-                        refer_record = refer_model(db, *zip(refer_model, row[field_offset:]))
-                    setattr(record, record_field.name, refer_record)
-                    field_offset += len(refer_model)
+                        related_record = related_model(db, *zip(related_model, row[field_offset:]))
+                    setattr(record, record_field.name, related_record)
+                    field_offset += len(related_model)
             yield record
 
     def delete(self, db, where):
-        """Delete records in this table which fall under the given condition.
+        """Delete records in the table which fall under the given condition.
         """
         self.check_table(db)
         db.delete(self, where=where)
         db.commit()
 
     def get_count(self, db, where=None):
-        """Request number of records in this table.
+        """Request number of records in the table.
         """
+        self.check_table(db)
         model = self.model
-        model.check_table(db)
-        count = model.COUNT(where)
-        count = db.select(count, from_=model).value(0, count)
-        logger.debug('Model.get_count(%s, db= %s, where= %s) = %s' % (model, db, where, count))
+        count_expression = model.COUNT(where)
+        count = db.select(count_expression, from_=model).value(0, count_expression)
+        logger.debug('Model.get_count(%s, db= %s, where= %s) = %s'
+                     % (model, db, where, count))
         return count
 
     def _handle_table_missing(self, db):
-        """Default implementation of situation when upon checking
-        there was not found the table corresponding to this model in the db.
+        """Default implementation of situation when upon checking there was not found the table
+        corresponding to this model in the db.
         """
         raise exceptions.TableMissing(db, self.model)
 
-from . import adapters, fields, exceptions, logger
+from . import adapters, model_fields, exceptions, logger
