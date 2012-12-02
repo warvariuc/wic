@@ -7,14 +7,18 @@ class DbError(Exception):
 
 
 class ConnectionError(DbError):
-    """"""
+    """."""
 
 
 class OrmError(Exception):
-    """Base exception for ORM errors"""
+    """Base exception for ORM errors."""
 
 
-class AdapterNotFound(OrmError):
+class AdapterError(OrmError):
+    """."""
+
+
+class AdapterNotFound(AdapterError):
     """Suitable db adapter no found for the specified protocol."""
 
 
@@ -31,7 +35,7 @@ class RecordError(ModelError):
 
 
 class RecordNotFound(RecordError):
-    """"""
+    """."""
 
 
 class TooManyRecords(RecordError):
@@ -47,7 +51,7 @@ class RecordValueError(ModelError):
 
 
 class QueryError(OrmError):
-    """Bad parameters to a query"""
+    """Bad parameters to a query."""
 
 
 class TableMissing(TableError):

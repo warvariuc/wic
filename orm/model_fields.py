@@ -328,6 +328,20 @@ class _RecordId():
                                                  self._record_field._name))
         record.__dict__[self._record_field._name] = value
 
+    def __get__(self, record, model):
+        if record is None:  # called as a class attribute
+            return self
+
+        # called as an instance attribute
+        value = record.__dict__.get(self._record_field._name)
+        if value is None or isinstance(value, int):
+            return value
+        elif isinstance(value, self._record_field.related_model):
+            return value.id
+        else:
+            raise TypeError('This should not have happened: private attribute is not a record of '
+                            'required model, id or None')
+
 
 class RecordField(ModelField):
     """Field for storing ids to related records.
@@ -352,24 +366,25 @@ class RecordField(ModelField):
             return super().__get__(None, model)
 
         # called as an instance attribute
-        related_record = record.__dict__.get(self.name)
-        related_record_id = getattr(record, self._name)
-        if related_record_id is None:
-            related_record = None
-        elif related_record is not None and related_record.id == related_record_id:
+        value = record.__dict__.get(self._name)
+        if value is None or isinstance(value, self.related_model):
+            # the attribute was set None or record
+            return value
+        elif isinstance(value, int):
+            # the attribute was set to an integer id
+            related_record = self.related_model.objects.get_one(record._db, id=value)
+            record.__dict__[self._name] = related_record
             return related_record
         else:
-            related_record = self.related_model.objects.get_one(record._db, id=related_record_id)
-        record.__dict__[self.name] = related_record
-        return related_record
+            raise TypeError('This should not have happened: private attribute is not a record of '
+                            'required model, id or None')
 
     def __set__(self, record, value):
         """Setter for this field."""
         if not isinstance(value, self.related_model) and value is not None:
             raise exceptions.RecordValueError('You can assign only instances of model `%s` or None'
                                               % orm.get_object_path(self.related_model))
-        record.__dict__[self.name] = value
-        record.__dict__[self._name] = value.id if value is not None else None
+        record.__dict__[self._name] = value
 
     def __call__(self, value):
         """You can use Field(...)(value) to return a tuple for INSERT.

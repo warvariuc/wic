@@ -184,11 +184,17 @@ class TestModelFields(unittest.TestCase):
         self.assertEqual(record2.record_field_id, None)
 
         record2.record_field_id = record1.id
-        self.assertEqual(record2.record_field, record1)
+        # no adapter was given, when the record was created
+        self.assertRaises(orm.AdapterError, getattr, record2, 'record_field')
         self.assertEqual(record2.record_field_id, record1.id)
 
         record2.record_field = None
+        self.assertEqual(record2.record_field, None)
+        self.assertEqual(record2.record_field_id, None)
+
         record2.record_field_id = None
+        self.assertEqual(record2.record_field, None)
+        self.assertEqual(record2.record_field_id, None)
 
 
 class TestExpressions(unittest.TestCase):

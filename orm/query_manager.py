@@ -13,7 +13,8 @@ class QueryManager(models.ModelAttr):
         """Check if corresponding table for this model exists in the db and has all necessary
         columns. Add check_table call in very model method that uses a db.
         """
-        assert isinstance(db, adapters.GenericAdapter), 'Need a database adapter'
+        if not isinstance(db, adapters.GenericAdapter):
+            raise exceptions.AdapterError('Need a database adapter.')
         if db.url in self._checked_dbs:
             # this db was already checked
             return

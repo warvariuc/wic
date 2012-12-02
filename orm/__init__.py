@@ -37,9 +37,9 @@ logger.addHandler(stream)
 logger.setLevel(logging.ERROR)  # logging level
 
 sql_logger = logging.getLogger('orm.sql')
-stream = logging.StreamHandler()
-stream.setFormatter(logging.Formatter())
-sql_logger.addHandler(stream)
+#stream = logging.StreamHandler()
+#stream.setFormatter(logging.Formatter())
+#sql_logger.addHandler(stream)
 sql_logger.setLevel(logging.ERROR)  # logging level
 
 

@@ -279,12 +279,11 @@ class Model(metaclass=ModelBase):
         """
         values = []
         for field_name, field in self._meta.fields.items():
+            if isinstance(field, model_fields.RecordField):
+                field_name = field._name
             field_value = getattr(self, field_name)
             if isinstance(field_value, (Date, DateTime, Decimal)):
                 field_value = str(field_value)
-            if isinstance(field, model_fields.RecordField):
-                field_name = field._name
-                field_value = field_value.id
             values.append("%s= %r" % (field_name, field_value))
         return '%s(%s)' % (self.__class__.__name__, ', '.join(values))
 

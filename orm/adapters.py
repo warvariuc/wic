@@ -509,14 +509,14 @@ class GenericAdapter():
             if model is None:
                 model = _model
             assert model is _model, 'Pass fields from the same model'
-        sql_w = ' WHERE ' + self.render(where) if where else ''
+        sql_w = (' WHERE ' + self.render(where)) if where else ''
         sql_v = ', '.join(['%s= %s' % (field.column.name, self.render(value, field))
                            for (field, value) in fields])
         return 'UPDATE %s SET %s%s' % (model, sql_v, sql_w)
 
     def update(self, *fields, where=None, limit=None):
         """Update records
-        @param *args: tuples in form (Field, value)
+        @param *args: tuples in form (ModelField, value)
         @param where: an Expression or string for WHERE part of the DELETE query
         @param limit: a tuple in form (start, end) which specifies the range dor deletion.
         """
@@ -1205,7 +1205,7 @@ class PostgreSqlAdapter(GenericAdapter):
         """
         if orm.is_model(table_name):
             table_name = table_name._meta.db_name
-        elif not isinstance(table_name, str):
+        if not isinstance(table_name, str):
             raise AssertionError('Expecting a str or a Model')
         return 'DROP TABLE IF EXISTS %s' % table_name
 

@@ -9,6 +9,9 @@ import orm
 from datetime import datetime as DateTime
 
 
+orm.sql_logger.setLevel(orm.logging.DEBUG)
+
+
 class Author(orm.Model):
     """Author catalog"""
     # id field is already present 
@@ -113,7 +116,11 @@ print(book, book.author)
 
 print('\nUPDATE query:')
 print(db._update(Book.name('_' + book.name), Book.price(Book.price + 1), where=(Book.id == book.id)))
-db.update(Book.name('A new title with raised price'), Book.price(Book.price + 1), where=(Book.id == book.id))
+db.update(
+    Book.name('A new title with raised price'),
+    Book.price(Book.price + 1),
+    where=(Book.id == book.id)
+)
 print(Book.objects.get_one(db, where=(Book.id == book.id)))
 
 
@@ -133,17 +140,23 @@ author = Author(db, **dict(first_name='Linus', last_name='Torvalds'))
 print('\nCreated a new author, but did not save it:\n ', author)
 
 book.author = author # No! It's Linus Tovalds the author of this book!
-import ipdb; ipdb.set_trace()
-print('\nAssigned the book this new unsaved author. book.author_id should be None as the new author is not saved yet:\n ', book)
+print('\nAssigned the book this new unsaved author. `book.author_id` should be None as the new author is not saved yet:\n ', book)
 print('But book.author should be the one we assigned:', book.author)
 
 author.save()
 print('\nSaved the new author. It should have now an id and a timestamp:\n ', author)
 
-print('\nAfter saving the new author book.author_id should have changed:\n ', book)
+print('\nAfter saving the new author `book.author_id` should have changed:\n ', book)
 
 print('\nRetreving book with id 1:')
-book = Book.get_one(db, id=1, select_related=True)
+book = Book.objects.get_one(db, id=1)
 print(book)
-print('\nbook.author automatically retrives the author from the db:\n ', book.author)
+print('\nAccessing `book.author` should automatically retrieve the author from the db:')
+print(book.author)
+
+print('\nRetreving book with id 1:')
+book = Book.objects.get_one(db, id=1, select_related=True)
+print(book)
+print('\nAccessing `book.author` should NOT making a query to the db, as `select_related` was used:')
+print(book.author)
 #os.unlink(filePath) # delete the temporary db file
