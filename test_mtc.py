@@ -9,12 +9,12 @@ class Regions(orm.Model):
     region_type_name = orm.CharField(max_length= 20)
 
 class Locations(orm.Model):
-    region = orm.RecordField(Regions)
+    region = orm.RelatedRecordField(Regions)
     location_name = orm.CharField(max_length= 100)
     location_type_name = orm.CharField(max_length= 20)
 
 class Streets(orm.Model):
-    location = orm.RecordField(Locations)
+    location = orm.RelatedRecordField(Locations)
     street_name = orm.CharField(max_length= 100)
     street_old_name = orm.CharField(max_length= 100)
     street_type_name = orm.CharField(max_length= 20)
@@ -25,8 +25,8 @@ class Persons(orm.Model):
     middle_name = orm.CharField(max_length= 100)
     phone_prefix = orm.IntegerField(max_digits= 3) # phone prefix code of the location
     phone_number = orm.IntegerField(max_digits= 10)
-    location = orm.RecordField(Locations)
-    street = orm.RecordField(Streets)
+    location = orm.RelatedRecordField(Locations)
+    street = orm.RelatedRecordField(Streets)
     
     def checkNames(self):
         """An item function, like in Django"""

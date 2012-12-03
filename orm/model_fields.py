@@ -317,7 +317,7 @@ class _RecordId():
         """
         @param record_field: related record field
         """
-        assert isinstance(record_field, RecordField)
+        assert isinstance(record_field, RelatedRecordField)
         self._record_field = record_field
 
     def __set__(self, record, value):
@@ -343,7 +343,7 @@ class _RecordId():
                             'required model, id or None')
 
 
-class RecordField(ModelField):
+class RelatedRecordField(ModelField):
     """Field for storing ids to related records.
     """
     def __init__(self, related_model, index='', db_name='', label='', db_default=Nil,
@@ -432,7 +432,7 @@ class RecordField(ModelField):
 #        except ValueError:
 #            raise SyntaxError('Table ID must be an integer.')
 #
-#class AnyRecordField(Field):
+#class AnyRelatedRecordField(Field):
 #    """This field stores id of a row of any table.
 #    It's a virtual field - it creates two real fields: one for keeping Record ID and another one
 #     for Table ID.

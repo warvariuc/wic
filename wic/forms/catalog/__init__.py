@@ -141,7 +141,7 @@ class CatalogItemForm(forms.WForm):
             label = ''
         elif isinstance(field, orm.TextField):
             widget = QtGui.QPlainTextEdit()
-        elif isinstance(field, orm.RecordField):
+        elif isinstance(field, orm.RelatedRecordField):
             widget = widgets.WCatalogItemWidget()
         else:
             raise Exception('Could not create a widget for field `%s`' % field)
@@ -166,7 +166,7 @@ class CatalogItemForm(forms.WForm):
             if isinstance(widget, widgets.WDecimalEdit):
                 widget.setMaxDigits(field.column.precision)
                 widget.setFractionDigits(field.column.scale)
-        elif isinstance(field, orm.RecordField):
+        elif isinstance(field, orm.RelatedRecordField):
             if isinstance(widget, widgets.WCatalogItemWidget):
                 catalogModel = field.referTable
                 widget.setModel(catalogModel.__module__ + '.' + catalogModel.__name__)

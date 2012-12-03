@@ -163,7 +163,7 @@ class TestModelFields(unittest.TestCase):
 
         class TestModel2(orm.Model):
             integer_field = orm.IntegerField()
-            record_field = orm.RecordField('self')
+            record_field = orm.RelatedRecordField('self')
 
         class TestModel3(orm.Model):
             pass
@@ -206,7 +206,7 @@ class TestExpressions(unittest.TestCase):
             field2 = orm.CharField(max_length=100)
 
         class TestModel2(orm.Model):
-            field3 = orm.RecordField(TestModel1)
+            field3 = orm.RelatedRecordField(TestModel1)
 
         self.assertEqual(str(TestModel1.id == 1), '(test_model1s.id = 1)')
         self.assertEqual(str(TestModel1.field1 == 1), '(test_model1s.field1 = 1)')
@@ -248,7 +248,7 @@ class TestModelsPostgresql(unittest.TestCase):
             name = orm.CharField(max_length=100, default='A very good book!!!')
             price = orm.DecimalField(max_digits=10, decimal_places=2, default='0.00',
                                      index=True)  # 2 decimal places
-            author = orm.RecordField(Author, index=True)
+            author = orm.RelatedRecordField(Author, index=True)
             publication_date = orm.DateField()
 
         db = self.db

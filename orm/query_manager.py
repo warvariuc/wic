@@ -64,23 +64,22 @@ class QueryManager(models.ModelAttr):
         @param limit: tuple (from, to)
         @param select_related: whether to retrieve objects related by foreign keys in the same query
         """
-        self.check_table(db)
-
         model = self.model
         logger.debug("Model.get('%s', db= %s, where= %s, limit= %s)" % (model, db, where, limit))
         self.check_table(db)
         orderby = orderby or model._meta.ordering  # use default table ordering if no ordering given
         fields = list(model)
         from_ = [model]
-        record_fields = []  # list of RecordField fields
+        record_fields = []  # list of RelatedRecordField fields
         if select_related:
-            for i, field in enumerate(model):
-                if isinstance(field, model_fields.RecordField):
+            for i, field_expression in enumerate(model):
+                field = field_expression.left
+                if isinstance(field, model_fields.RelatedRecordField):
                     record_fields.append((i, field))
                     fields.extend(field.related_model)
                     # left join
                     from_.append(models.LeftJoin(field.related_model,
-                                                 on = (field == field.related_model.id)))
+                                                 on = (field_expression == field.related_model.id)))
 
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
         # retrieve the values from the DB
@@ -90,7 +89,7 @@ class QueryManager(models.ModelAttr):
             data = {}
             for i, field in enumerate(model._meta.fields.values()):
                 field_name = field.name
-                if isinstance(field, model_fields.RecordField):
+                if isinstance(field, model_fields.RelatedRecordField):
                     field_name = field._name
                 data[field_name] = row[i]
             # create the record from the values

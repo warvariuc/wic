@@ -198,7 +198,7 @@ class Model(metaclass=ModelBase):
         for field_name, field in self._meta.fields.items():
             # is this a field name?
             field_value = kwargs.pop(field_name, Nil)
-            if field_value is Nil and isinstance(field, model_fields.RecordField):
+            if field_value is Nil and isinstance(field, model_fields.RelatedRecordField):
                 # a related record id?
                 field_value = kwargs.pop(field._name, Nil)
                 if field_value is not Nil:
@@ -253,7 +253,7 @@ class Model(metaclass=ModelBase):
         values = []  # list of tuples (Field, value)
         for field in model._meta.fields.values():
             value = Nil
-            if isinstance(field, model_fields.RecordField):
+            if isinstance(field, model_fields.RelatedRecordField):
                 value = getattr(self, field._name)
             else:
                 value = self[field]
@@ -279,7 +279,7 @@ class Model(metaclass=ModelBase):
         """
         values = []
         for field_name, field in self._meta.fields.items():
-            if isinstance(field, model_fields.RecordField):
+            if isinstance(field, model_fields.RelatedRecordField):
                 field_name = field._name
             field_value = getattr(self, field_name)
             if isinstance(field_value, (Date, DateTime, Decimal)):

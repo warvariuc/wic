@@ -133,7 +133,7 @@ class Styles:
             return cls.DateStyle(fieldName = field.name)
         elif isinstance(field, orm.BooleanField):
             return cls.BoolStyle(fieldName = field.name)
-        elif isinstance(field, orm.RecordField):
+        elif isinstance(field, orm.RelatedRecordField):
             return cls.RecordStyle(fieldName = field.name)
         else:
             return cls.Style(fieldName = field.name)

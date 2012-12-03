@@ -24,10 +24,10 @@ class Book(orm.Model):
     # id field is already present 
     name = orm.CharField(max_length=100, default='a very good book!!!')
     price = orm.DecimalField(max_digits=10, decimal_places=2, default='0.00', index=True) # 2 decimal places
-    author = orm.RecordField('Author', index=True)
+    author = orm.RelatedRecordField('Author', index=True)
     publication_date = orm.DateField()
     timestamp = orm.DateTimeField()
-#    fan = orm.AnyRecordField(index=True) # None means that this field may contain reference to any other table in the DB
+#    fan = orm.AnyRelatedRecordField(index=True) # None means that this field may contain reference to any other table in the DB
 
 #    _indexes = [orm.Index([author, fan])] # additional and/or more sophisticated (f.e. composite) indexes
 
@@ -128,7 +128,10 @@ print('\nAuthors count')
 pprint.pprint(list(db.select(Author.COUNT()).dictresult()))
 pprint.pprint(list(db.select(Author.first_name, Author.last_name).dictresult()))
 
-print('\nSelecting one book with id=1:\n ', db.select('*', from_=[Book, orm.Join(Author, Book.author == Author.id)], where=(Book.id == 1)))
+print('\nSelecting all fields for book with id=1:\n ',
+      db.select('*',
+                from_=[Book, orm.Join(Author, Book.author == Author.id)],
+                where=(Book.id == 1)))
 
 book = Book(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),
             ('publication_date', '2002-12-01'))
