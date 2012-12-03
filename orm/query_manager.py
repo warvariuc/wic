@@ -52,9 +52,9 @@ class QueryManager(models.ModelAttr):
                                               select_related=select_related))
         if not records:  # not found
             raise exceptions.RecordNotFound(db.render(where))
-        if len(records) == 1:
-            return records[0]
-        raise exceptions.TooManyRecords
+        if len(records) > 1:
+            raise exceptions.TooManyRecords
+        return records[0]
 
     def get(self, db, where, orderby=False, limit=False, select_related=False):
         """Get records from this table which fall under the given condition.
@@ -79,7 +79,7 @@ class QueryManager(models.ModelAttr):
                     fields.extend(field.related_model)
                     # left join
                     from_.append(models.LeftJoin(field.related_model,
-                                                 on = (field_expression == field.related_model.id)))
+                                                 on=(field_expression == field.related_model.id)))
 
         #print(db._select(*fields, from_ = from_, where = where, orderby = orderby, limit = limit))
         # retrieve the values from the DB
@@ -130,5 +130,6 @@ class QueryManager(models.ModelAttr):
         corresponding to this model in the db.
         """
         raise exceptions.TableMissing(db, self.model)
+
 
 from . import adapters, model_fields, exceptions, logger

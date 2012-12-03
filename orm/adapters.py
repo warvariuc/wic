@@ -63,7 +63,7 @@ class GenericAdapter():
         """
         self.url = url
         logger.debug('Creating adapter for `%s`' % self)
-        self._timings = []
+        self._queries = []  # [(query_start_time, query_str, query_execution_duration),]
         if connect:
             self.connection = self.connect()
             self.cursor = self.connection.cursor()
@@ -102,7 +102,8 @@ class GenericAdapter():
         except Exception:
             logger.warning(query)
             raise
-        self._timings.append((query, round(time.time() - start_time, 4)))
+        finish_time = time.time()
+        self._queries.append((start_time, query, finish_time - start_time))
         return result
 
     def execute(self, *args, **kwargs):
@@ -111,7 +112,7 @@ class GenericAdapter():
         return self._execute(*args, **kwargs)
 
     def get_last_query(self):
-        return self._timings[-1]
+        return self._queries[-1]
 
     # TODO: remove classmethods
     @classmethod

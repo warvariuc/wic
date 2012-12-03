@@ -158,7 +158,7 @@ class TestModelFields(unittest.TestCase):
         self.assertIsInstance(TestModel2.integer_field, orm.FieldExpression)
         self.assertEqual(TestModel2.integer_field.left.name, 'integer_field')
         self.assertIsInstance(TestModel2.integer_field, orm.FieldExpression)
-        
+
     def test_record_values(self):
 
         class TestModel2(orm.Model):
@@ -291,3 +291,67 @@ class TestModelsPostgresql(unittest.TestCase):
             book = Book.objects.create(db=db, **data)
 #            print(book)
             books.append(book)
+
+        # `where` in form of `where = (14 < Book.price < '15.00')` do not work as expected
+        # as it is transformed by Python into `where = (14 < Book.price) and (Book.price < '15.00')` 
+        # making as result `where = (Book.price < '15.00')`
+        self.assertEqual(str((15 > Book.price > '14.00')), "(books.price > '14.00')")
+        # SELECT query
+        db.select(Book.id, from_=Book, where=(Book.price > '15'), limit=10)
+        book = Book.objects.get_one(db, where=(Book.price > 15))
+
+        # UPDATE query
+        old_price = book.price
+        new_title = 'A new title with raised price'
+        last_query = db.get_last_query()
+        db.update(
+            Book.name(new_title),
+            Book.price(Book.price + 1),
+            where=(Book.id == book.id)
+        )
+        self.assertEqual(db._queries[-2], last_query)        
+        book = Book.objects.get_one(db, where=(Book.id == book.id))
+        self.assertEqual(db._queries[-3], last_query)        
+        self.assertEqual(book.price, old_price + 1)
+        self.assertEqual(book.name, new_title)
+
+        # Authors count
+        list(db.select(Author.COUNT()).dictresult())
+        list(db.select(Author.first_name, Author.last_name).dictresult())
+
+        # Selecting all fields for book with id=1
+        db.select('*',
+            from_=[Book, orm.Join(Author, Book.author == Author.id)],
+            where=(Book.id == 1)
+        )
+
+        book = Book(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),
+                    ('publication_date', '2002-12-01'))
+        book.author = Author.objects.get_one(db, id=3) # Richard Stallman (?)
+        # New saved book with wrong author
+        book.save()
+
+        author = Author(db, **dict(first_name='Linus', last_name='Torvalds'))
+        # Created a new author, but did not save it
+
+        book.author = author  # No! It's Linus Torvalds the author of this book!
+        # Assigned the book this new unsaved author. `book.author_id` should be None as the new author is not saved yet:\n ', book)
+        # But book.author should be the one we assigned:', book.author)
+
+        author.save()
+        # Saved the new author. It should have now an id and a timestamp:\n ', author)
+
+        self.assertEqual(book.author_id, author.id)
+        # After saving the new author `book.author_id` should have changed:\n ', book)
+
+        #('\nRetreving book with id 1:')
+        book = Book.objects.get_one(db, id=1)
+        # Accessing `book.author` should automatically retrieve the author from the db:')
+        # print(book.author)
+
+        # nRetreving book with id 1
+        book = Book.objects.get_one(db, id=1, select_related=True)
+        last_query = db.get_last_query()
+        # Accessing `book.author` should NOT make a query to the db, as `select_related` was used
+        book.author
+        self.assertEqual(db.get_last_query(), last_query)

@@ -130,5 +130,6 @@ def connect(url):
             url_start = AdapterClass.protocol + '://'
             if url.startswith(url_start):
                 db_adapter = AdapterClass(url[len(url_start):])
+                assert isinstance(db_adapter, GenericAdapter)
                 return db_adapter
     raise AdapterNotFound('Could not find a suitable adapter for the URL `%s`' % url)
