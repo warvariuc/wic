@@ -461,7 +461,7 @@ class GenericAdapter():
 #            tables |= cls._getExpressionTables(expression.right)
 #        return tables
 
-    def lastInsertId(self):
+    def last_insert_id(self):
         """Last insert ID."""
         return self.cursor.lastrowid
 

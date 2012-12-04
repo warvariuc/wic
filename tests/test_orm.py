@@ -293,9 +293,9 @@ class TestModelsPostgresql(unittest.TestCase):
 #            print(book)
             books.append(book)
 
-        # `where` in form of `where = (14 < Book.price < '15.00')` do not work as expected
-        # as it is transformed by Python into `where = (14 < Book.price) and (Book.price < '15.00')` 
-        # making as result `where = (Book.price < '15.00')`
+        # `where` in form of `(14 < Book.price < '15.00')` does not work as expected
+        # as it is transformed by Python into `(14 < Book.price) and (Book.price < '15.00')` 
+        # resulting in `where = (Book.price < '15.00')`
         self.assertEqual(str((15 > Book.price > '14.00')), "(books.price > '14.00')")
         # SELECT query
         db.select(Book.id, from_=Book, where=(Book.price > '15'), limit=10)
@@ -321,10 +321,12 @@ class TestModelsPostgresql(unittest.TestCase):
         list(db.select(Author.first_name, Author.last_name).dictresult())
 
         # Selecting all fields for book with id=1
-        db.select('*',
+        rows = db.select(
+            *(list(Book) + list(Author)),
             from_=[Book, orm.Join(Author, Book.author == Author.id)],
             where=(Book.id == 1)
         )
+        self.assertIsInstance(rows.value(0, Book.id), int)
 
         # New saved book with wrong author
         book = Book(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),
