@@ -108,7 +108,7 @@ class FieldExpression(Expression):
         super().__init__('_MODELFIELD', field)
         # `model` attribute is needed to extract `from_` tables
         self.model = field.model
-        
+
     def __call__(self, value):
         return self.left(value)
 

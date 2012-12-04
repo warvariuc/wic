@@ -9,6 +9,13 @@ class QueryManager(models.ModelAttr):
         self.model = self._model_attr_info.model
         self._checked_dbs = set()
 
+    def __get__(self, record, model):
+        if record is not None:
+            # called as an instance attribute
+            raise AttributeError('Query manager is not accessible via records (Model instances)')
+        # called as a class attribute
+        return self
+
     def check_table(self, db):
         """Check if corresponding table for this model exists in the db and has all necessary
         columns. Add check_table call in very model method that uses a db.

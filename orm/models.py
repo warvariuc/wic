@@ -247,8 +247,8 @@ class Model(metaclass=ModelBase):
 
     def save(self):
         db = self._db
-        self.objects.check_table(db)
         model = self.__class__
+        model.objects.check_table(db)
         self.timestamp = DateTime.now()
         values = []  # list of tuples (Field, value)
         for field in model._meta.fields.values():
