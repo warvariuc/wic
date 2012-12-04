@@ -293,6 +293,21 @@ class TestModelsPostgresql(unittest.TestCase):
 #            print(book)
             books.append(book)
 
+        for book_id in range(1, 4):
+            db.execute("""
+                SELECT id, name, price, author_id, publication_date
+                FROM books
+                WHERE id = %s
+            """, (book_id,))
+            rows = db.cursor.fetchall()
+            rows2 = db.select(*Book, where=(Book.id == book_id))
+            book = Book.objects.get_one(db, id=book_id)
+            self.assertIsInstance(rows[0][0], int)
+            self.assertIsInstance(rows2.value(0, Book.id), int)
+            self.assertIsInstance(book.id, int)
+            self.assertEqual(rows[0][0], rows2.value(0, Book.id))
+            self.assertEqual(rows[0][0], book.id)
+
         # `where` in form of `(14 < Book.price < '15.00')` does not work as expected
         # as it is transformed by Python into `(14 < Book.price) and (Book.price < '15.00')` 
         # resulting in `where = (Book.price < '15.00')`
