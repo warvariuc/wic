@@ -4,6 +4,7 @@ Unit tests for ORM
 __author__ = 'Victor Varvariuc <victor.varvariuc@gmail.com>'
 
 import unittest
+import datetime
 
 import orm
 
@@ -309,9 +310,9 @@ class TestModelsPostgresql(unittest.TestCase):
             Book.price(Book.price + 1),
             where=(Book.id == book.id)
         )
-        self.assertEqual(db._queries[-2], last_query)        
+        self.assertEqual(db._queries[-2], last_query)
         book = Book.objects.get_one(db, where=(Book.id == book.id))
-        self.assertEqual(db._queries[-3], last_query)        
+        self.assertEqual(db._queries[-3], last_query)
         self.assertEqual(book.price, old_price + 1)
         self.assertEqual(book.name, new_title)
 
@@ -325,31 +326,39 @@ class TestModelsPostgresql(unittest.TestCase):
             where=(Book.id == 1)
         )
 
+        # New saved book with wrong author
         book = Book(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),
                     ('publication_date', '2002-12-01'))
         book.author = Author.objects.get_one(db, id=3) # Richard Stallman (?)
-        # New saved book with wrong author
         book.save()
 
-        author = Author(db, **dict(first_name='Linus', last_name='Torvalds'))
         # Created a new author, but did not save it
+        author = Author(db, **dict(first_name='Linus', last_name='Torvalds'))
+        self.assertIsNone(author.id)
 
         book.author = author  # No! It's Linus Torvalds the author of this book!
-        # Assigned the book this new unsaved author. `book.author_id` should be None as the new author is not saved yet:\n ', book)
-        # But book.author should be the one we assigned:', book.author)
+        # Assigned the book this new unsaved author
+        # `book.author_id` should be None as the new author was not saved yet
+        self.assertIsNone(book.author_id)
+        # But `book.author` should be the one we assigned
+        self.assertEqual(book.author, author)
 
+        # Saved the new author. It should have now an id and a timestamp
         author.save()
-        # Saved the new author. It should have now an id and a timestamp:\n ', author)
+        self.assertIsInstance(author.id, int)
+        self.assertIsInstance(author.timestamp, datetime.datetime)
 
+        # After saving the new author `book.author_id` should have changed
         self.assertEqual(book.author_id, author.id)
-        # After saving the new author `book.author_id` should have changed:\n ', book)
 
-        #('\nRetreving book with id 1:')
+        # Retreving book with id 1
         book = Book.objects.get_one(db, id=1)
         # Accessing `book.author` should automatically retrieve the author from the db:')
-        # print(book.author)
+        last_query = db.get_last_query()
+        book.author
+        self.assertEqual(db._queries[-2], last_query)
 
-        # nRetreving book with id 1
+        # Retreving book with id 1
         book = Book.objects.get_one(db, id=1, select_related=True)
         last_query = db.get_last_query()
         # Accessing `book.author` should NOT make a query to the db, as `select_related` was used
