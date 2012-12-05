@@ -4,7 +4,8 @@ Unit tests for ORM
 __author__ = 'Victor Varvariuc <victor.varvariuc@gmail.com>'
 
 import unittest
-import datetime
+from datetime import date as Date, datetime as DateTime
+from decimal import Decimal
 
 import orm
 
@@ -264,7 +265,6 @@ class TestModelsPostgresql(unittest.TestCase):
             ('Sam', 'Williams'),
             ('Steven', 'Levy'),
             ('Richard', 'Stallman'),
-            ('Имя', 'Фамилия'),
         )
         authors = []
         for data in author_data[1:]:
@@ -284,7 +284,7 @@ class TestModelsPostgresql(unittest.TestCase):
             ("Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
              authors[1], '23.00', '2002-01-15'),
             ("Книга с русским названием",
-             authors[3], '00.00', '2000-02-29'),
+             None, '00.00', '2000-02-29'),
         )
         books = []
         for data in book_data[1:]:
@@ -302,6 +302,18 @@ class TestModelsPostgresql(unittest.TestCase):
             rows = db.cursor.fetchall()
             rows2 = db.select(*Book, where=(Book.id == book_id))
             book = Book.objects.get_one(db, id=book_id)
+            field_data = (
+                ('id', int),
+                ('name', str),
+                ('price', Decimal),
+                ('author_id', int),
+                ('publication_date', Date),
+            )
+            for i, (field_name, value_type) in enumerate(field_data):
+                self.assertIsInstance(rows[0][i], value_type)
+#                self.assertIsInstance(rows2.value(0, getattr(Book, field_name)), value_type)
+                self.assertIsInstance(getattr(book, field_name), value_type)
+
             self.assertIsInstance(rows[0][0], int)
             self.assertIsInstance(rows2.value(0, Book.id), int)
             self.assertIsInstance(book.id, int)
@@ -346,7 +358,7 @@ class TestModelsPostgresql(unittest.TestCase):
         # New saved book with wrong author
         book = Book(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),
                     ('publication_date', '2002-12-01'))
-        book.author = Author.objects.get_one(db, id=3) # Richard Stallman (?)
+        book.author = Author.objects.get_one(db, id=3)  # Richard Stallman (?)
         book.save()
 
         # Created a new author, but did not save it
@@ -363,7 +375,7 @@ class TestModelsPostgresql(unittest.TestCase):
         # Saved the new author. It should have now an id and a timestamp
         author.save()
         self.assertIsInstance(author.id, int)
-        self.assertIsInstance(author.timestamp, datetime.datetime)
+        self.assertIsInstance(author.timestamp, DateTime)
 
         # After saving the new author `book.author_id` should have changed
         self.assertEqual(book.author_id, author.id)

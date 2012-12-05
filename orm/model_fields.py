@@ -1,3 +1,5 @@
+# TODO: rename `index` to `db_index; store it in Column, not in ModelField
+
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from datetime import datetime as DateTime, date as Date
