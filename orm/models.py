@@ -164,6 +164,10 @@ class Model(metaclass=ModelBase):
     objects = query_manager.QueryManager()
     _meta = model_options.ModelOptions()
 
+    # TODO: make exception subclass per model, like in Django
+    RecordNotFound = exceptions.RecordNotFound
+    MultipleRecordsFound = exceptions.MultipleRecordsFound
+
     # default fields
     # row id. This field is present in all model
     id = model_fields.IdField()

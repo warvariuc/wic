@@ -38,7 +38,7 @@ class RecordNotFound(RecordError):
     """."""
 
 
-class TooManyRecords(RecordError):
+class MultipleRecordsFound(RecordError):
     """Got too many records (usually where one was expected - got more than one)."""
 
 

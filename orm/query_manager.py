@@ -60,7 +60,7 @@ class QueryManager(models.ModelAttr):
         if not records:  # not found
             raise exceptions.RecordNotFound(db.render(where))
         if len(records) > 1:
-            raise exceptions.TooManyRecords
+            raise exceptions.MultipleRecordsFound
         return records[0]
 
     def get(self, db, where, orderby=False, limit=False, select_related=False):

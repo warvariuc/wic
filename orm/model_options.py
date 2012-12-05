@@ -1,3 +1,5 @@
+# TODO: add `abstract` argument
+
 from collections import OrderedDict
 
 import orm
