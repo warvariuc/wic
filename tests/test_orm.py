@@ -276,15 +276,15 @@ class TestModelsPostgresql(unittest.TestCase):
         book_data = (
             ('name', 'author', 'price', 'publication_date'),
             ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
-             authors[0], '9.55', '2002-03-08'),
+             authors[0], Decimal('9.55'), Date(2002, 3, 8)),
             ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
-             authors[1], '14.95', '2010-03-27'),
+             authors[1], Decimal('14.95'), Date(2010, 3, 27)),
             ("In The Plex: How Google Thinks, Works, and Shapes Our Lives",
-             authors[1], '13.98', '2011-04-12'),
+             authors[1], Decimal('13.98'), Date(2011, 4, 12)),
             ("Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
-             authors[1], '23.00', '2002-01-15'),
+             authors[1], Decimal('23.00'), Date(2002, 1, 15)),
             ("Книга с русским названием",
-             None, '00.00', '2000-02-29'),
+             None, Decimal('0.00'), Date(2000, 2, 29)),
         )
         books = []
         for data in book_data[1:]:
@@ -295,30 +295,41 @@ class TestModelsPostgresql(unittest.TestCase):
 
         for book_id in range(1, 4):
             db.execute("""
-                SELECT id, name, price, author_id, publication_date
+                SELECT id, name, author_id, price, publication_date
                 FROM books
                 WHERE id = %s
             """, (book_id,))
-            rows = db.cursor.fetchall()
-            rows2 = db.select(*Book, where=(Book.id == book_id))
+            raw = db.cursor.fetchall()
+            rows = db.select(*Book, where=(Book.id == book_id))
             book = Book.objects.get_one(db, id=book_id)
             field_data = (
                 ('id', int),
                 ('name', str),
-                ('price', Decimal),
                 ('author_id', int),
+                ('price', Decimal),
                 ('publication_date', Date),
             )
             for i, (field_name, value_type) in enumerate(field_data):
-                self.assertIsInstance(rows[0][i], value_type)
-#                self.assertIsInstance(rows2.value(0, getattr(Book, field_name)), value_type)
+                field = getattr(Book, field_name)
+                if isinstance(field, orm.model_fields._RecordId):
+                    field = getattr(Book, field._record_field.name)
+                # check value type
+                # value in the DB
+                self.assertIsInstance(raw[0][i], value_type)
+                # value in Rows instance
+                self.assertIsInstance(rows.value(0, field), value_type)
+                # value in the record
                 self.assertIsInstance(getattr(book, field_name), value_type)
-
-            self.assertIsInstance(rows[0][0], int)
-            self.assertIsInstance(rows2.value(0, Book.id), int)
-            self.assertIsInstance(book.id, int)
-            self.assertEqual(rows[0][0], rows2.value(0, Book.id))
-            self.assertEqual(rows[0][0], book.id)
+                # check value equality
+                if i == 0:
+                    original_value = i
+                else:
+                    original_value = book_data[book_id][i - 1]
+                    if isinstance(original_value, orm.Model):
+                        original_value = original_value.id
+                    self.assertEqual(original_value, raw[0][i])
+                self.assertEqual(raw[0][i], rows.value(0, field))
+                self.assertEqual(raw[0][i], getattr(book, field_name))
 
         # `where` in form of `(14 < Book.price < '15.00')` does not work as expected
         # as it is transformed by Python into `(14 < Book.price) and (Book.price < '15.00')` 
