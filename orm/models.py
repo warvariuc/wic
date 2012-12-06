@@ -232,7 +232,6 @@ class Model(metaclass=ModelBase):
             try:
                 setattr(self, field_name, field_value)
             except exceptions.RecordValueError as exc:
-                import ipdb; from pprint import pprint; ipdb.set_trace()
                 raise exceptions.RecordValueError(str(exc))
 
         if kwargs:

@@ -41,7 +41,7 @@ class MainWindow(w_main_window.WMainWindow):
         from wic import menus
         catalogs = ('persons', 'locations', 'districts', 'regions', 'streets')
         for catalog in catalogs:
-            modelName = catalog.capitalize()
+            modelName = catalog.capitalize()[:-1]
             modelPath = 'papp.catalogs.' + catalog + '.' + modelName
             menus.addActionsToMenu(menu, (
                 menus.createAction(menu, modelName, lambda *args, p = modelPath: forms.openCatalogForm(p, db),

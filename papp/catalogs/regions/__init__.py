@@ -5,7 +5,7 @@ from wic import forms
 import orm
 
 
-class Regions(forms.catalog.CatalogModel):
+class Region(forms.catalog.CatalogModel):
     region_name = orm.CharField(max_length= 50)
     region_type_name = orm.CharField(max_length= 20)
 

@@ -3,10 +3,10 @@ from PyQt4 import QtCore, QtGui
 
 from wic import forms
 import orm
-from ..locations import Locations
+from ..locations import Location
 
 
-class Districts(forms.catalog.CatalogModel):
+class District(forms.catalog.CatalogModel):
     localitate = orm.CharField(max_length= 100)
     judet = orm.CharField(max_length= 50)
     raion = orm.CharField(max_length= 50)

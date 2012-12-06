@@ -31,9 +31,6 @@ class Person(orm.Model):
     location = orm.RelatedRecordField(Location)
     street = orm.RelatedRecordField(Street)
 
-    def check_names(self):
-        """An item function, like in Django"""
-        pass
 
 
 db = orm.connect('sqlite://papp/databases/mtc.sqlite')

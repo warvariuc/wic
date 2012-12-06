@@ -48,9 +48,9 @@ class CatalogItemForm(forms.WForm):
         """
         formLayout = QtGui.QFormLayout(self)
         formLayout.setMargin(2)
-        for field in self._catalogItem.__class__:
-            fieldName = field.name
-            assert not hasattr(self, fieldName), 'Form already has attribute with name `%s`' % fieldName
+        for fieldName, field in self._catalogItem.__class__._meta.fields.items():
+            assert not hasattr(self, fieldName), \
+                'Form already has attribute with name `%s`' % fieldName
             widget, label = self.createWidgetForField(field)
             widget.setObjectName(fieldName)
             setattr(self, fieldName, widget)
@@ -69,8 +69,8 @@ class CatalogItemForm(forms.WForm):
         """Set up widgets which are mapped to catalog model fields. 
         Connect button box signals to the corresponding handlers.
         """
-        for field in self._catalogItem.__class__:
-            widget = getattr(self, field.name, None)
+        for fieldName, field in self._catalogItem.__class__._meta.fields.items():
+            widget = getattr(self, fieldName, None)
             if widget:
                 self.setupWidgetForField(widget, field)
 
@@ -81,8 +81,7 @@ class CatalogItemForm(forms.WForm):
         """Automatically fill the form fields using the values from the catalog item fields.
         """
         catalogItem = self._catalogItem
-        for field in catalogItem.__class__:
-            fieldName = field.name
+        for fieldName, field in catalogItem.__class__._meta.fields.items():
             fieldValue = catalogItem[field]
             widget = getattr(self, fieldName, None)
             if widget:
@@ -92,8 +91,7 @@ class CatalogItemForm(forms.WForm):
         """Automatically fill the item field values from the corresponding form widgets.
         """
         catalogItem = self._catalogItem
-        for field in catalogItem.__class__:
-            fieldName = field.name
+        for fieldName, field in catalogItem.__class__._meta.fields.items():
             widget = getattr(self, fieldName, None)
             if widget:
                 fieldValue = forms.getValue(widget)
@@ -128,7 +126,7 @@ class CatalogItemForm(forms.WForm):
         @param field: model field
         @return: tuple (widget, label); widget - QWidget, label - QLabel
         """
-        assert isinstance(field, orm.Field)
+        assert isinstance(field, orm.ModelField)
         label = field.label
         if isinstance(field, (orm.CharField, orm.IntegerField, orm.IdField, orm.DateTimeField)):
             widget = QtGui.QLineEdit()
@@ -152,7 +150,7 @@ class CatalogItemForm(forms.WForm):
         """Set up a widget which corresponds to an model field - only the details related to data entering to appearance.
         The widget might be autocreated or one from a *.ui file.
         """
-        assert isinstance(field, orm.Field) and isinstance(widget, QtGui.QWidget)
+        assert isinstance(field, orm.ModelField) and isinstance(widget, QtGui.QWidget)
         if isinstance(field, orm.CharField):
             if isinstance(widget, QtGui.QLineEdit):
                 widget.setMaxLength(field.column.precision)
@@ -168,7 +166,7 @@ class CatalogItemForm(forms.WForm):
                 widget.setFractionDigits(field.column.scale)
         elif isinstance(field, orm.RelatedRecordField):
             if isinstance(widget, widgets.WCatalogItemWidget):
-                catalogModel = field.referTable
+                catalogModel = field.related_model
                 widget.setModel(catalogModel.__module__ + '.' + catalogModel.__name__)
                 widget.setDb(self._catalogItem._db)
 
@@ -402,7 +400,7 @@ def openCatalogForm(catalogModel, db, FormClass = None, **kwargs):
     if isinstance(catalogModel, str):
         catalogModel = wic.get_object_by_path(catalogModel)
     assert orm.is_model(catalogModel), 'Pass a model class.'
-    catalogModel.check_table(db) # before opening the form
+    catalogModel.objects.check_table(db) # before opening the form
     if not FormClass:
         formModulePath = catalogModel.__module__
         FormClass = getattr(sys.modules[formModulePath], 'CatalogForm', CatalogForm)

@@ -125,7 +125,7 @@ class Styles:
 
     @classmethod
     def createStyleForField(cls, field):
-        assert isinstance(field, orm.Field)
+        assert isinstance(field, orm.ModelField)
 
         if isinstance(field, orm.DecimalField):
             return cls.DecimalStyle(format = ',.%if ' % field.fractionDigits, fieldName = field.name)
@@ -175,7 +175,7 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
         self.vHeaderStyle = self._styles.VHeaderStyle() # one style for all rows
         self.hHeaderStyles = []
         self.columnStyles = []
-        for field in catalogModel:
+        for field in catalogModel._meta.fields.values():
             self.hHeaderStyles.append(self._styles.HHeaderStyle(field = field))
             columnStyle = self._styles.createStyleForField(field)
             self.columnStyles.append(columnStyle)
@@ -213,7 +213,7 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
             #print('Trying to retrieve row %d', rowNo)
             self._updateTimer.stop()
             rangeStart = max(rowNo - self._fetchCount // 3, 0)
-            items = self._catalogModel.get(self._db, where = self._where, limit = (rangeStart, self._fetchCount), select_related = True)
+            items = self._catalogModel.objects.get(self._db, where = self._where, limit = (rangeStart, self._fetchCount), select_related = True)
             now = time.time()
             expiredTime = now - self._updatePeriod
             cache = self._cache
@@ -243,7 +243,8 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
     def rowCount(self, parent):
         _rowCount = self._rowCount # cached row count
         if _rowCount is None: # if it's not filled yet - fetch it from the db
-            _rowCount = self._rowCount = self._catalogModel.get_count(self._db, where = self._where)
+            _rowCount = self._rowCount = self._catalogModel.objects.get_count(self._db,
+                                                                              where = self._where)
             #print('rowCount', _rowsCount)
         return _rowCount
 
