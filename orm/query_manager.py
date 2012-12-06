@@ -58,9 +58,9 @@ class QueryManager(models.ModelAttr):
         records = list(self.model.objects.get(db, where, limit=2,
                                               select_related=select_related))
         if not records:  # not found
-            raise exceptions.RecordNotFound(db.render(where))
+            raise self.model.RecordNotFound(db.render(where))
         if len(records) > 1:
-            raise exceptions.MultipleRecordsFound
+            raise self.model.MultipleRecordsFound
         return records[0]
 
     def get(self, db, where, orderby=False, limit=False, select_related=False):

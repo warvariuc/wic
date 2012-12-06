@@ -1,5 +1,3 @@
-# TODO: rename `index` to `db_index; store it in Column, not in ModelField
-
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 from datetime import datetime as DateTime, date as Date
@@ -119,10 +117,10 @@ class ModelField(Expression, models.ModelAttr):
     """Abstract model field. It's inherited from Expression just for the sake of autocomplete
     in Python IDEs.
     """
-    def __init__(self, column, index='', label='', default=None):
+    def __init__(self, column, db_index='', label='', default=None):
         """Base initialization method. Called from subclasses.
         @param column: Column instance
-        @param index: name of the index type, or True - 'index' to be used
+        @param db_index: name of the index type, or True - 'index' to be used
         @param label: verbose name, can be used in forms
         @param default: default value, can be callable
         """
@@ -134,8 +132,8 @@ class ModelField(Expression, models.ModelAttr):
                                  % (self.name, orm.get_object_path(self._model_attr_info.model)))
         assert isinstance(column, adapters.Column)
         self.column = column
-        assert isinstance(index, (str, bool, indexes.Index))
-        self.index = index
+        assert isinstance(db_index, (str, bool, db_indexes.DbIndex))
+        self.db_index = db_index
         assert isinstance(label, str)
         self.label = label or self.name.replace('_', ' ').capitalize()
         self._default = default
@@ -196,13 +194,13 @@ class IdField(ModelField):
 class CharField(ModelField):
     """Field for storing strings of certain length.
     """
-    def __init__(self, max_length, default=None, index='', db_name='', label='',
+    def __init__(self, max_length, default=None, db_index='', db_name='', label='',
                  comment='', nullable=True, db_default=Nil):
         """Initialize a CHAR field.
         @param max_length: maximum length in bytes of the string to be stored in the DB
         @param default: default value to store in the DB
             If no default value is declared explicitly, the default value is the null value.
-        @param index: index type to be applied on the corresponding column in the DB
+        @param db_index: index type to be applied on the corresponding column in the DB
         @param db_name: name of the column in the DB table
         @param label: short description of the field (e.g.for for forms)
         @param comment: comment for the field
@@ -212,29 +210,29 @@ class CharField(ModelField):
         super().__init__(adapters.Column('CHAR', db_name or self._model_attr_info.name,
                                          precision=max_length, default=db_default,
                                          comment=comment, nullable=nullable),
-                         index, label, default)
+                         db_index, label, default)
 
 
 class TextField(ModelField):
     """Field for storing strings of any length."""
-    def __init__(self, default=None, index='', db_name='', label='', comment='',
+    def __init__(self, default=None, db_index='', db_name='', label='', comment='',
                  nullable=True, db_default=Nil):
-        if index:
-            assert isinstance(index, orm.Index)
+        if db_index:
+            assert isinstance(db_index, orm.DbIndex)
         super().__init__(adapters.Column('TEXT', db_name or self._model_attr_info.name,
                                          default=db_default, comment=comment),
-                         index, label, default)
+                         db_index, label, default)
 
 
 class IntegerField(ModelField):
 
-    def __init__(self, max_digits=9, default=None, autoincrement=False, index='',
+    def __init__(self, max_digits=9, default=None, autoincrement=False, db_index='',
                  db_name='', label='', nullable=True, db_default=Nil, comment=''):
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
                                          precision=max_digits, unsigned=True,
                                          nullable=nullable, default=db_default,
                                          autoincrement=autoincrement, comment=comment),
-                         index, label, default)
+                         db_index, label, default)
 
     def __set__(self, record, value):
         if not isinstance(value, int) and value is not None:
@@ -244,13 +242,13 @@ class IntegerField(ModelField):
 
 class DecimalField(ModelField):
 
-    def __init__(self, max_digits, decimal_places, default=None, index='', db_name='',
+    def __init__(self, max_digits, decimal_places, default=None, db_index='', db_name='',
                  label='', nullable=True, db_default=Nil, comment=''):
         super().__init__(adapters.Column('DECIMAL', db_name or self._model_attr_info.name,
                                          precision=max_digits, scale=decimal_places,
                                          default=db_default, nullable=nullable,
                                          comment=comment),
-                         index, label, default)
+                         db_index, label, default)
 
     def __set__(self, record, value):
         if not isinstance(value, Decimal) and value is not None:
@@ -263,12 +261,12 @@ class DecimalField(ModelField):
 
 class DateField(ModelField):
 
-    def __init__(self, default=None, index='', db_name='', label='', nullable=True,
+    def __init__(self, default=None, db_index='', db_name='', label='', nullable=True,
                  db_default=Nil, comment=''):
         super().__init__(adapters.Column('DATE', db_name or self._model_attr_info.name,
                                          default=db_default, nullable=nullable,
                                          comment=comment),
-                         index, label, default)
+                         db_index, label, default)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -281,12 +279,12 @@ class DateField(ModelField):
 
 class DateTimeField(ModelField):
 
-    def __init__(self, default=None, index='', db_name='', label='', db_default=Nil,
+    def __init__(self, default=None, db_index='', db_name='', label='', db_default=Nil,
                  nullable=True, comment=''):
         super().__init__(adapters.Column('DATETIME', db_name or self._model_attr_info.name,
                                          default=db_default, nullable=nullable,
                                          comment=comment),
-                         index, label, default)
+                         db_index, label, default)
 
     def __set__(self, record, value):
         if isinstance(value, str):
@@ -299,12 +297,12 @@ class DateTimeField(ModelField):
 
 class BooleanField(ModelField):
 
-    def __init__(self, default=None, index='', db_name='', label='', db_default=Nil,
+    def __init__(self, default=None, db_index='', db_name='', label='', db_default=Nil,
                  nullable=True, comment=''):
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
                                          precision=1, default=db_default, nullable=nullable,
                                          comment=comment),
-                         index, label, default)
+                         db_index, label, default)
 
     def __set__(self, record, value):
         if not isinstance(value, bool) and value is not None:
@@ -348,7 +346,7 @@ class _RecordId():
 class RelatedRecordField(ModelField):
     """Field for storing ids to related records.
     """
-    def __init__(self, related_model, index='', db_name='', label='', db_default=Nil,
+    def __init__(self, related_model, db_index='', db_name='', label='', db_default=Nil,
                  nullable=True, comment=''):
         """
         @param related_model: a Model subclass of which record is referenced
@@ -358,7 +356,7 @@ class RelatedRecordField(ModelField):
         super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name + '_id',
                                          precision=9, unsigned=True, default=db_default,
                                          nullable=nullable, comment=comment),
-                         index, label)
+                         db_index, label)
         self._related_model = related_model  # path to the model
         self._name = self.name + '_id'  # name of the attribute which keeps id of the related record
         setattr(self.model, self._name, _RecordId(self))
@@ -498,4 +496,4 @@ def CONCAT(*expressions):
     return Expression('_CONCAT', expressions)
 
 
-from . import indexes, exceptions
+from . import db_indexes, exceptions

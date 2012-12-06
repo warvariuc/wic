@@ -778,7 +778,7 @@ class SqliteAdapter(GenericAdapter):
     def _get_create_table_indexes(cls, model):
         assert orm.is_model(model)
         indexes = []
-        for index in model._meta.indexes:
+        for index in model._meta.db_indexes:
             if index.type != 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             index_type = 'PRIMARY KEY'
@@ -800,7 +800,7 @@ class SqliteAdapter(GenericAdapter):
     def _get_create_table_other(cls, model):
         assert orm.is_model(model)
         indexes = []
-        for index in model._meta.indexes:
+        for index in model._meta.db_indexes:
             if index.type == 'primary':  # Sqlite has only primary indexes in the CREATE TABLE query
                 continue
             elif index.type == 'unique':
@@ -1093,7 +1093,7 @@ class PostgreSqlAdapter(GenericAdapter):
     def _get_create_table_indexes(cls, model):
         assert orm.is_model(model)
         indexes = []
-        for index in model._meta.indexes:
+        for index in model._meta.db_indexes:
             if index.type.lower() != 'primary':  # only primary index in the CREATE TABLE query
                 continue
             index_type = 'PRIMARY KEY'
@@ -1115,7 +1115,7 @@ class PostgreSqlAdapter(GenericAdapter):
     def _get_create_table_other(cls, model):
         assert orm.is_model(model)
         queries = []
-        for index in model._meta.indexes:
+        for index in model._meta.db_indexes:
             if index.type.lower() == 'primary':  # primary index is in the CREATE TABLE query
                 continue
             elif index.type.lower() == 'unique':

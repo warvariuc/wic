@@ -1,5 +1,5 @@
 """
-Unit tests for ORM
+Tests for ORM
 """
 __author__ = 'Victor Varvariuc <victor.varvariuc@gmail.com>'
 
@@ -86,32 +86,32 @@ class TestModels(unittest.TestCase):
             first_name = orm.CharField(max_length=100)
             # you can specify name of the fields in indexes
             _meta = orm.ModelOptions(
-                indexes=orm.Unique('last_name', 'first_name'),
+                db_indexes=orm.DbUnique('last_name', 'first_name'),
             )
 
         # test indexes in _meta
-        self.assertIsInstance(Author._meta.indexes, list)
+        self.assertIsInstance(Author._meta.db_indexes, list)
         # primary index for id and our compound index
-        self.assertEqual(len(Author._meta.indexes), 2)
-        for index in Author._meta.indexes:
-            self.assertIsInstance(index, orm.Index)
+        self.assertEqual(len(Author._meta.db_indexes), 2)
+        for index in Author._meta.db_indexes:
+            self.assertIsInstance(index, orm.DbIndex)
             self.assertIsInstance(index.index_fields, list)
 
-        self.assertEqual(len(Author._meta.indexes[0].index_fields), 2)
-        self.assertIsInstance(Author._meta.indexes[0].index_fields[0].field, orm.CharField)
-        self.assertIsInstance(Author._meta.indexes[0].index_fields[1].field, orm.CharField)
-        self.assertEqual(Author._meta.indexes[0].type, 'unique')
+        self.assertEqual(len(Author._meta.db_indexes[0].index_fields), 2)
+        self.assertIsInstance(Author._meta.db_indexes[0].index_fields[0].field, orm.CharField)
+        self.assertIsInstance(Author._meta.db_indexes[0].index_fields[1].field, orm.CharField)
+        self.assertEqual(Author._meta.db_indexes[0].type, 'unique')
 
-        self.assertEqual(len(Author._meta.indexes[1].index_fields), 1)
-        self.assertIsInstance(Author._meta.indexes[1].index_fields[0].field, orm.IdField)
-        self.assertEqual(Author._meta.indexes[1].type, 'primary')
+        self.assertEqual(len(Author._meta.db_indexes[1].index_fields), 1)
+        self.assertIsInstance(Author._meta.db_indexes[1].index_fields[0].field, orm.IdField)
+        self.assertEqual(Author._meta.db_indexes[1].type, 'primary')
 
         # you can specify fields in indexes
         class Author1(orm.Model):
             last_name = orm.CharField(max_length=100)
             first_name = orm.CharField(max_length=100)
             _meta = orm.ModelOptions(
-                indexes=orm.Unique(last_name, first_name)
+                db_indexes=orm.DbUnique(last_name, first_name)
             )
 
         # you can specify more sophisticated indexes
@@ -120,9 +120,9 @@ class TestModels(unittest.TestCase):
             description = orm.TextField()
             birth_date = orm.DateField()
             _meta = orm.ModelOptions(
-                indexes=(orm.Index(orm.IndexField(name, 'desc'),
-                                   orm.IndexField(description, prefix_length=30)),
-                         orm.Index(birth_date))
+                db_indexes=(orm.DbIndex(orm.DbIndexField(name, 'desc'),
+                                   orm.DbIndexField(description, prefix_length=30)),
+                         orm.DbIndex(birth_date))
             )
 
     def test_model_inheritance(self):
@@ -241,7 +241,7 @@ class TestModelsPostgresql(unittest.TestCase):
 
             _meta = orm.ModelOptions(
                 db_name='authors',
-                indexes=orm.Unique(last_name, first_name),
+                db_indexes=orm.DbUnique(last_name, first_name),
             )
 
         class Book(orm.Model):
@@ -249,8 +249,8 @@ class TestModelsPostgresql(unittest.TestCase):
             """
             name = orm.CharField(max_length=100, default='A very good book!!!')
             price = orm.DecimalField(max_digits=10, decimal_places=2, default='0.00',
-                                     index=True)  # 2 decimal places
-            author = orm.RelatedRecordField(Author, index=True)
+                                     db_index=True)  # 2 decimal places
+            author = orm.RelatedRecordField(Author, db_index=True)
             publication_date = orm.DateField()
 
         db = self.db
@@ -365,6 +365,11 @@ class TestModelsPostgresql(unittest.TestCase):
             where=(Book.id == 1)
         )
         self.assertIsInstance(rows.value(0, Book.id), int)
+
+        assert issubclass(Author.RecordNotFound, orm.RecordNotFound)
+        self.assertIsNot(Author.RecordNotFound, orm.RecordNotFound)
+        # try to get non-existent record
+        self.assertRaises(Author.RecordNotFound, Author.objects.get_one, db, id=12345)
 
         # New saved book with wrong author
         book = Book(db, ('name', "Just for Fun."), ('author', authors[0]), ('price', '11.20'),

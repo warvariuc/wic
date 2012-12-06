@@ -1,7 +1,7 @@
 from . import models
 
 
-class IndexField():
+class DbIndexField():
     """Helper class for defining a field for index
     """
     def __init__(self, field, sort_order='asc', prefix_length=None):
@@ -14,17 +14,17 @@ class IndexField():
         self.prefix_length = prefix_length
 
 
-class Index(models.ModelAttr):
+class DbIndex(models.ModelAttr):
     """A database table index.
     """
     def __init__(self, *index_fields, type='index', name='', method=''):
         """
-        @param index_fields: list of IndexField instances
+        @param index_fields: list of DbIndexField instances
         @param type: index, primary, unique, fulltext, spatial - specific fot the db
         @param method: btree, hash, gist, gin - specific fot the db
         """
 #        print('Index.__init')
-        assert index_fields, 'Need at least one Field or IndexField'
+        assert index_fields, 'Need at least one Field or DbIndexField'
 
         model = None
         index_fields = list(index_fields)
@@ -32,11 +32,11 @@ class Index(models.ModelAttr):
             if isinstance(index_field, str):  # field name passed
                 index_field = self._model_attr_info.model.__dict__[index_field]
             if isinstance(index_field, model_fields.ModelField):  # a field
-                index_field = IndexField(index_field)
+                index_field = DbIndexField(index_field)
                 index_fields[i] = index_field
             else:
-                assert isinstance(index_field, IndexField), \
-                    'Pass a field name or Field/IndexField instances.'
+                assert isinstance(index_field, DbIndexField), \
+                    'Pass a field name or Field/DbIndexField instances.'
             model = model or index_field.field.model
             assert index_field.field.model is model, 'Indexed fields should be from the same model!'
 
@@ -69,16 +69,16 @@ class Index(models.ModelAttr):
 #        return Index(index_fields, self.type, self.name, self.method, **self.other)
 
 
-class Unique(Index):
+class DbUnique(DbIndex):
     """Convenience class for defining a unique index.
     """
-    def __init__(self, *index_fields, name='', method=''):
+    def __init__(self, *db_index_fields, name='', method=''):
         """
-        @param index_fields: list of IndexField instances
+        @param index_fields: list of DbIndexField instances
         @param method: btree, hash, gist, gin - specific fot the db
         """
-#        print('Unique.__init')
-        super().__init__(*index_fields, type='unique', name=name, method=method)
+#        print('DbUnique.__init')
+        super().__init__(*db_index_fields, type='unique', name=name, method=method)
 
 
 from . import model_fields

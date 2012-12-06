@@ -94,6 +94,11 @@ class ModelBase(type):
     def __new__(cls, name, bases, attrs):
         NewModel = super().__new__(cls, name, bases, attrs)
 
+        parent_models = [base for base in bases if isinstance(base, ModelBase)]
+        if not parent_models:
+            # If this isn't a subclass of Model, don't do anything special.
+            return NewModel
+
         try:
 
             logger.debug('Finishing initialization of model `%s`' % orm.get_object_path(NewModel))
@@ -129,6 +134,20 @@ class ModelBase(type):
             _meta.__init__(model_attr_info=ModelAttrInfo(NewModel, '_meta'))
             NewModel._meta = _meta
 
+            # make per model exceptions
+            NewModel.RecordNotFound = type(
+                'RecordNotFound',
+                tuple(parent_model.RecordNotFound
+                      for parent_model in parent_models),
+                {'__module__': NewModel.__module__}
+            )
+            NewModel.MultipleRecordsFound = type(
+                'MultipleRecordsFound',
+                tuple(parent_model.MultipleRecordsFound
+                      for parent_model in parent_models),
+                {'__module__': NewModel.__module__}
+            )
+
         except Exception as exc:
             raise exceptions.ModelError(str(exc))
 
@@ -162,9 +181,8 @@ class Model(metaclass=ModelBase):
     Instance attributes - the values for the corresponding model fields.
     """
     objects = query_manager.QueryManager()
-    _meta = model_options.ModelOptions()
+    _meta = model_options.ModelOptions(abstract=True)
 
-    # TODO: make exception subclass per model, like in Django
     RecordNotFound = exceptions.RecordNotFound
     MultipleRecordsFound = exceptions.MultipleRecordsFound
 

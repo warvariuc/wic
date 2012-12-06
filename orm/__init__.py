@@ -115,7 +115,7 @@ from .adapters import *  # NOQA
 from .models import *  # NOQA
 from .model_options import ModelOptions  # NOQA
 from .query_manager import QueryManager  # NOQA
-from .indexes import *  # NOQA
+from .db_indexes import *  # NOQA
 from .model_fields import *  # NOQA
 
 
