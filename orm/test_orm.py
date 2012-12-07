@@ -81,7 +81,7 @@ class TestModels(unittest.TestCase):
         # as db_name was not given, it is calculated from Model name
         self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
 
-        class Author(orm.Model):
+        class TestModel3(orm.Model):
             last_name = orm.CharField(max_length=100)
             first_name = orm.CharField(max_length=100)
             # you can specify name of the fields in indexes
@@ -90,24 +90,24 @@ class TestModels(unittest.TestCase):
             )
 
         # test indexes in _meta
-        self.assertIsInstance(Author._meta.db_indexes, list)
+        self.assertIsInstance(TestModel3._meta.db_indexes, list)
         # primary index for id and our compound index
-        self.assertEqual(len(Author._meta.db_indexes), 2)
-        for index in Author._meta.db_indexes:
+        self.assertEqual(len(TestModel3._meta.db_indexes), 2)
+        for index in TestModel3._meta.db_indexes:
             self.assertIsInstance(index, orm.DbIndex)
             self.assertIsInstance(index.index_fields, list)
 
-        self.assertEqual(len(Author._meta.db_indexes[0].index_fields), 2)
-        self.assertIsInstance(Author._meta.db_indexes[0].index_fields[0].field, orm.CharField)
-        self.assertIsInstance(Author._meta.db_indexes[0].index_fields[1].field, orm.CharField)
-        self.assertEqual(Author._meta.db_indexes[0].type, 'unique')
+        self.assertEqual(len(TestModel3._meta.db_indexes[0].index_fields), 2)
+        self.assertIsInstance(TestModel3._meta.db_indexes[0].index_fields[0].field, orm.CharField)
+        self.assertIsInstance(TestModel3._meta.db_indexes[0].index_fields[1].field, orm.CharField)
+        self.assertEqual(TestModel3._meta.db_indexes[0].type, 'unique')
 
-        self.assertEqual(len(Author._meta.db_indexes[1].index_fields), 1)
-        self.assertIsInstance(Author._meta.db_indexes[1].index_fields[0].field, orm.IdField)
-        self.assertEqual(Author._meta.db_indexes[1].type, 'primary')
+        self.assertEqual(len(TestModel3._meta.db_indexes[1].index_fields), 1)
+        self.assertIsInstance(TestModel3._meta.db_indexes[1].index_fields[0].field, orm.IdField)
+        self.assertEqual(TestModel3._meta.db_indexes[1].type, 'primary')
 
         # you can specify fields in indexes
-        class Author1(orm.Model):
+        class TestModel4(orm.Model):
             last_name = orm.CharField(max_length=100)
             first_name = orm.CharField(max_length=100)
             _meta = orm.ModelOptions(
@@ -115,7 +115,7 @@ class TestModels(unittest.TestCase):
             )
 
         # you can specify more sophisticated indexes
-        class Author2(orm.Model):
+        class TestModel5(orm.Model):
             name = orm.CharField(max_length=100)
             description = orm.TextField()
             birth_date = orm.DateField()
@@ -260,6 +260,12 @@ class TestModelsPostgresql(unittest.TestCase):
                 db.execute(query)
         db.commit()
 
+        # several ways creating new records
+        # Model(db, (Model.field1, field1_value), (Model.field2, field2_value), ...)
+        # Model(db, Model.field1(field1_value), Model.field2(field2_value), ...)
+        # Model(db, (field1_name, field1_value), (field2_name, field2_value), ...)
+        # Model(db, field1_name=field1_value, field2_name=field2_value, ...)
+
         author_data = (
             ('first_name', 'last_name'),
             ('Sam', 'Williams'),
@@ -270,11 +276,10 @@ class TestModelsPostgresql(unittest.TestCase):
         for data in author_data[1:]:
             data = dict(zip(author_data[0], data))
             author = Author.objects.create(db=db, **data)
-#            print(author)
             authors.append(author)
 
         book_data = (
-            ('name', 'author', 'price', 'publication_date'),
+            (Book.name, 'author', 'price', 'publication_date'),
             ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
              authors[0], Decimal('9.55'), Date(2002, 3, 8)),
             ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
@@ -288,9 +293,8 @@ class TestModelsPostgresql(unittest.TestCase):
         )
         books = []
         for data in book_data[1:]:
-            data = dict(zip(book_data[0], data))
-            book = Book.objects.create(db=db, **data)
-#            print(book)
+            data = zip(book_data[0], data)
+            book = Book.objects.create(db, *data)
             books.append(book)
 
         for book_id in range(1, 4):

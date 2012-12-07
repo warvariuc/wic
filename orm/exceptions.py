@@ -26,6 +26,10 @@ class ModelError(OrmError):
     """A problem with a model."""
 
 
+class ModelFieldError(OrmError):
+    """A problem with a model field."""
+
+
 class TableError(OrmError):
     """A problem with a db table structure."""
 
@@ -35,11 +39,15 @@ class RecordError(ModelError):
 
 
 class RecordNotFound(RecordError):
-    """."""
+    """A requested record was not found in the DB table.
+    Each model has its own subclass of this exception.
+    """
 
 
 class MultipleRecordsFound(RecordError):
-    """Got too many records (usually where one was expected - got more than one)."""
+    """Got too many records (usually where one was expected - got more than one).
+    Each model has its own subclass of this exception.
+    """
 
 
 class RecordSaveError(RecordError):

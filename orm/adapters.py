@@ -114,7 +114,7 @@ class GenericAdapter():
     def get_last_query(self):
         return self._queries[-1]
 
-    # TODO: remove classmethods
+    # TODO: remove classmethods, if possible
     @classmethod
     def _MODELFIELD(cls, field):
         """Render a table column name."""

@@ -154,11 +154,11 @@ class ModelBase(type):
         return NewModel
 
     def __getitem__(self, field_name):
-        """Get a Table Field by name - Table['field_name'].
+        """Get a Model field by name - Model['field_name'].
         """
         if field_name in self._meta.fields:
             return getattr(self, field_name)  # to ensure descriptor behavior
-        raise KeyError
+        raise exceptions.ModelFieldError
 
     def __iter__(self):
         """Get Table fields.

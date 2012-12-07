@@ -1,3 +1,5 @@
+"""QueryManager methods are intended to do "table-wide" things.
+"""
 from . import models
 
 
@@ -10,10 +12,13 @@ class QueryManager(models.ModelAttr):
         self._checked_dbs = set()
 
     def __get__(self, record, model):
+        assert model is self.model
         if record is not None:
             # called as an instance attribute
             raise AttributeError('Query manager is not accessible via records (Model instances)')
         # called as a class attribute
+        if model._meta.abstract:
+            raise exceptions.ModelError('You cannot use query manager on abstract models.')
         return self
 
     def check_table(self, db):

@@ -1,3 +1,6 @@
+"""Note: model options (db table name, ordering, ...) in kept in `Model._meta` attribute are not
+inherited from the parent model.
+"""
 from collections import OrderedDict
 
 import orm
@@ -10,9 +13,16 @@ class ModelOptions(models.ModelAttr):
                  abstract=False):
         """Model settings
         @param db_name: name of the corresponding table in the database
-        @param ordering: default fetching order
-        @param abstract: whether the model is abstract
+        @param ordering: The default ordering for DB rows. This is a tuple or list of fields.
+            Each field can be prefixed with '-' or '+' to indicate ascending/descending fethcing
+            order. Fields without a leading "-" will be ordered ascending. Use None to order
+            randomly.
+        @param abstract: whether the model is abstract. Abstract base classes are useful when you
+            want to put some common information into a number of other models. You write your base
+            class and put abstract=True in the _meta attribute. This model will then not be used to
+            create any database table.
         """
+        # TODO: add `proxy` argument, similarly to Django
         if not db_name:
             # create db name from model class name
             db_name = self._model_attr_info.model.__name__ + 's'
