@@ -79,7 +79,7 @@ class TestModels(unittest.TestCase):
         # _meta should be per Model, as each model contains its own fields, name, etc.
         self.assertIsNot(TestModel1._meta, TestModel2._meta)
         # as db_name was not given, it is calculated from Model name
-        self.assertEqual(TestModel2._meta.db_name, 'test_model2s')
+        self.assertEqual(TestModel2._meta.db_name, 'test_model2')
 
         class TestModel3(orm.Model):
             last_name = orm.CharField(max_length=100)
@@ -121,8 +121,8 @@ class TestModels(unittest.TestCase):
             birth_date = orm.DateField()
             _meta = orm.ModelOptions(
                 db_indexes=(orm.DbIndex(orm.DbIndexField(name, 'desc'),
-                                   orm.DbIndexField(description, prefix_length=30)),
-                         orm.DbIndex(birth_date))
+                            orm.DbIndexField(description, prefix_length=30)),
+                            orm.DbIndex(birth_date))
             )
 
     def test_model_inheritance(self):
@@ -210,10 +210,10 @@ class TestExpressions(unittest.TestCase):
         class TestModel2(orm.Model):
             field3 = orm.RelatedRecordField(TestModel1)
 
-        self.assertEqual(str(TestModel1.id == 1), '(test_model1s.id = 1)')
-        self.assertEqual(str(TestModel1.field1 == 1), '(test_model1s.field1 = 1)')
-        self.assertEqual(str(TestModel1.field2 == 1), "(test_model1s.field2 = '1')")
-        self.assertEqual(str(TestModel2.field3 == 3), "(test_model2s.field3_id = 3)")
+        self.assertEqual(str(TestModel1.id == 1), '(test_model1.id = 1)')
+        self.assertEqual(str(TestModel1.field1 == 1), '(test_model1.field1 = 1)')
+        self.assertEqual(str(TestModel1.field2 == 1), "(test_model1.field2 = '1')")
+        self.assertEqual(str(TestModel2.field3 == 3), "(test_model2.field3_id = 3)")
 
 
 class TestModelsPostgresql(unittest.TestCase):
@@ -256,6 +256,8 @@ class TestModelsPostgresql(unittest.TestCase):
         db = self.db
         for model in (Author, Book):
             db.execute(db._drop_table(model))
+            # TODO: implement db._drop_index
+#            db.execute(db._drop_index(model))
             for query in db.get_create_table_query(model):
                 db.execute(query)
         db.commit()
@@ -300,7 +302,7 @@ class TestModelsPostgresql(unittest.TestCase):
         for book_id in range(1, 4):
             db.execute("""
                 SELECT id, name, author_id, price, publication_date
-                FROM books
+                FROM book
                 WHERE id = %s
             """, (book_id,))
             raw = db.cursor.fetchall()
@@ -336,7 +338,7 @@ class TestModelsPostgresql(unittest.TestCase):
                 self.assertEqual(raw[0][i], getattr(book, field_name))
 
         # `where` in form of `(14 < Book.price < '15.00')` does not work as expected
-        # as it is transformed by Python into `(14 < Book.price) and (Book.price < '15.00')` 
+        # as it is transformed by Python into `(14 < Book.price) and (Book.price < '15.00')`
         # resulting in `where = (Book.price < '15.00')`
         self.assertEqual(str((15 > Book.price > '14.00')), "(books.price > '14.00')")
         # SELECT query

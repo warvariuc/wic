@@ -1,0 +1,13 @@
+It is a DAL (Database Abstraction Layer) *and* ORM (Object-Relational Mapper).
+The design is driven by the idea to have Python IDE autocomplete work.
+Django ORM has *too* much magic - you have too look into docs to know all the params.
+In our case the code is trying to be self-explanatory. Using autocomplete and code following you can
+find out all params and their meaning.
+
+
+Models and database tables are named in singular.
+
+>I stick with Singular for table names and any programming entity. The reason? The fact that there
+are irregular plurals in English like mouse --> mice and sheep --> sheep.
+
+city -> cities ?

@@ -8,9 +8,12 @@ from ..regions import Region
 
 
 class Location(forms.catalog.CatalogModel):
-    location_name = orm.CharField(max_length= 50)
-    location_type_name = orm.CharField(max_length= 50)
+
+    location_name = orm.CharField(max_length=50)
+    location_type_name = orm.CharField(max_length=50)
     region = orm.RelatedRecordField(Region)
+
+    _meta = orm.ModelOptions(db_name='locations')
 
     def __str__(self):
         return self.location_name

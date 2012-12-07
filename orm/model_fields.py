@@ -382,8 +382,11 @@ class RelatedRecordField(ModelField):
     def __set__(self, record, value):
         """Setter for this field."""
         if not isinstance(value, self.related_model) and value is not None:
-            raise exceptions.RecordValueError('You can assign only instances of model `%s` or None'
-                                              % orm.get_object_path(self.related_model))
+            raise exceptions.RecordValueError(
+                'You can assign to `%s.%s` attribute only instances of model `%s` or None'
+                % (orm.get_object_path(self.model), self.name,
+                   orm.get_object_path(self.related_model))
+            )
         record.__dict__[self._name] = value
 
     def __call__(self, value):

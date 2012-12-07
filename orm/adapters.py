@@ -939,7 +939,7 @@ class MysqlAdapter(GenericAdapter):
 
     def __init__(self, url, **kwargs):
         match = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
-                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', url)
+                         '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', url)
         assert match, "Invalid database URL: %s" % self.url
         kwargs['user'] = match.group('user')
         assert kwargs['user'], 'User required'
@@ -1019,7 +1019,7 @@ class PostgreSqlAdapter(GenericAdapter):
 
     def __init__(self, url, **kwargs):
         match = re.match('^(?P<user>[^:@]+)(:(?P<password>[^@]*))?@(?P<host>[^:/]+)'
-                     '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', url)
+                         '(:(?P<port>[0-9]+))?/(?P<db>[^?]+)$', url)
         assert match, "Invalid database URL: %s" % self.url
         kwargs['user'] = match.group('user')
         assert kwargs['user'], 'User required'

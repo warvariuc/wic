@@ -25,7 +25,7 @@ class ModelOptions(models.ModelAttr):
         # TODO: add `proxy` argument, similarly to Django
         if not db_name:
             # create db name from model class name
-            db_name = self._model_attr_info.model.__name__ + 's'
+            db_name = self._model_attr_info.model.__name__
             db_name = ''.join('_' + c.lower() if c.isupper() else c for c in db_name).strip('_')
         self.db_name = db_name  # db table name
 

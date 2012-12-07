@@ -4,33 +4,47 @@ import orm
 from orm import Join, LeftJoin
 
 
+orm.sql_logger.setLevel(orm.logging.DEBUG)
+
+
 class Region(orm.Model):
+
     region_name = orm.CharField(max_length=60)
     region_type_name = orm.CharField(max_length=20)
 
+    _meta = orm.ModelOptions(db_name='regions')
+
 
 class Location(orm.Model):
+
     region = orm.RelatedRecordField(Region)
     location_name = orm.CharField(max_length=100)
     location_type_name = orm.CharField(max_length=20)
 
+    _meta = orm.ModelOptions(db_name='locations')
+
 
 class Street(orm.Model):
+
     location = orm.RelatedRecordField(Location)
     street_name = orm.CharField(max_length=100)
     street_old_name = orm.CharField(max_length=100)
     street_type_name = orm.CharField(max_length=20)
 
+    _meta = orm.ModelOptions(db_name='streets')
+
 
 class Person(orm.Model):
+
     last_name = orm.CharField(max_length=100)
     first_name = orm.CharField(max_length=100)
     middle_name = orm.CharField(max_length=100)
-    phone_prefix = orm.IntegerField(max_digits=3) # phone prefix code of the location
+    phone_prefix = orm.IntegerField(max_digits=3)  # phone prefix code of the location
     phone_number = orm.IntegerField(max_digits=10)
     location = orm.RelatedRecordField(Location)
     street = orm.RelatedRecordField(Street)
 
+    _meta = orm.ModelOptions(db_name='persons')
 
 
 db = orm.connect('sqlite://papp/databases/mtc.sqlite')
@@ -54,7 +68,6 @@ rows = db.select(
     limit=10
 )
 pprint(list(zip(rows.fields, rows)))
-print(db.get_last_query(), '\n')
 
 #pprint(dbAdapter.execute('SELECT COUNT(*) FROM persons;').fetchall())
 #print(dbAdapter.get_last_query(), '\n')
@@ -135,4 +148,6 @@ print(db.get_last_query(), '\n')
 #for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
 #    print(str(person), str(Locations.get_one(db, id = person.location_id)))
 pprint(list(db.select(*Person, where=(orm.UPPER(Person.last_name) == 'VARVARIUC'), limit=5)))
-print(db.get_last_query(), '\n')
+
+for person in Person.objects.get(db, where=None, limit=(0, 10), select_related=True):
+    print(person, person.location)

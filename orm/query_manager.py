@@ -3,6 +3,18 @@
 from . import models
 
 
+def _prepare_record_values(model, row):
+    """Prepare values to be passed to Model instance init.
+    """
+    data = {}
+    for i, field in enumerate(model._meta.fields.values()):
+        field_name = field.name
+        if isinstance(field, model_fields.RelatedRecordField):
+            field_name = field._name
+        data[field_name] = row[i]
+    return data
+
+
 class QueryManager(models.ModelAttr):
     """Through this manager a Model interfaces with a database.
     """
@@ -98,25 +110,23 @@ class QueryManager(models.ModelAttr):
         rows = db.select(*fields, from_=from_, where=where, orderby=orderby, limit=limit)
 
         for row in rows:
-            data = {}
-            for i, field in enumerate(model._meta.fields.values()):
-                field_name = field.name
-                if isinstance(field, model_fields.RelatedRecordField):
-                    field_name = field._name
-                data[field_name] = row[i]
             # create the record from the values
+            data = _prepare_record_values(model, row)
             record = model(db, **data)
+
             if select_related:
-                field_offset = len(model)
+                field_start = len(model)
                 for i, record_field in record_fields:
                     related_model = record_field.related_model
+                    field_end = field_start + len(related_model)
                     if row[i] is None:
                         related_record = None
                     else:
-                        # if referRecord.id is None: # missing record !!! integrity error
-                        related_record = related_model(db, *zip(related_model, row[field_offset:]))
+                        # if related_record.id is None: # missing record !!! integrity error
+                        data = _prepare_record_values(related_model, row[field_start:field_end])
+                        related_record = related_model(db, **data)
                     setattr(record, record_field.name, related_record)
-                    field_offset += len(related_model)
+                    field_start = field_end
             yield record
 
     def delete(self, db, where):

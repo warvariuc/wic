@@ -15,7 +15,7 @@ class ModelAttrInfo():
     def __init__(self, model, name):
         """
         @param model: model class to which the attribute belongs
-        @param name: name of the attribute in the model class 
+        @param name: name of the attribute in the model class
         """
         if model is not None:
             assert orm.is_model(model)
