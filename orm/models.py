@@ -255,7 +255,9 @@ class Model(metaclass=ModelBase):
         return getattr(self, attr_name)
 
     def delete(self):
-        """Delete this record.
+        """Delete this record. Issues a SQL DELETE for the object. This only deletes the object in
+        the database; the Python instance will still exist and will still have data in its fields.
+        `record.id` will be set to None.
         """
         db = self._db
         self.objects.check_table(db)
