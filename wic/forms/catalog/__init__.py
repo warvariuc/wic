@@ -15,7 +15,7 @@ widgets = sys.modules['wic.widgets']
 menus = sys.modules['wic.menus']
 from wic import Bunch
 
-from .w_catalog_view_model import WCatalogViewModel, CatalogModel, DefaultSectionSizeRole
+from .w_catalog_view_model import WCatalogViewModel, CatalogModel, default_section_size_role
 
 
 class CatalogItemForm(forms.WForm):
@@ -244,7 +244,7 @@ class CatalogForm(forms.WForm):
         #self.tableView.verticalHeader().hide()
         tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
         #rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
-        rowHeight = catalogViewModel.headerData(0, QtCore.Qt.Vertical, DefaultSectionSizeRole)
+        rowHeight = catalogViewModel.headerData(0, QtCore.Qt.Vertical, default_section_size_role)
         tableView.verticalHeader().setDefaultSectionSize(rowHeight)
         #tableView.setIconSize(QtCore.QSize(16, 16))
         #tableView.horizontalHeader().setResizeMode(QtGui.QHeaderView.ResizeToContents) # very slow - it queries all items

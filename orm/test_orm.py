@@ -223,7 +223,16 @@ class TestModelsPostgresql(unittest.TestCase):
 #        CREATE USER test WITH PASSWORD 'test';
 #        CREATE DATABASE test;
 #        GRANT ALL PRIVILEGES ON DATABASE test TO test;
-        cls.db = orm.connect('postgresql://test:test@localhost/test')
+        db = orm.connect('postgresql://test:test@localhost/test')
+        cls.db = db
+
+        # Drops all tables from the postgres database
+        db.execute("""
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema='public' AND table_type != 'VIEW' AND table_name NOT LIKE 'pg_ts_%%'
+        """)
+        for (table_name,) in db.cursor.fetchall():
+            db.execute('DROP TABLE %s CASCADE' % table_name)
 
     @classmethod
     def tearDownClass(cls):
@@ -255,9 +264,6 @@ class TestModelsPostgresql(unittest.TestCase):
 
         db = self.db
         for model in (Author, Book):
-            db.execute(db._drop_table(model))
-            # TODO: implement db._drop_index
-#            db.execute(db._drop_index(model))
             for query in db.get_create_table_query(model):
                 db.execute(query)
         db.commit()
@@ -340,7 +346,7 @@ class TestModelsPostgresql(unittest.TestCase):
         # `where` in form of `(14 < Book.price < '15.00')` does not work as expected
         # as it is transformed by Python into `(14 < Book.price) and (Book.price < '15.00')`
         # resulting in `where = (Book.price < '15.00')`
-        self.assertEqual(str((15 > Book.price > '14.00')), "(books.price > '14.00')")
+        self.assertEqual(str((15 > Book.price > '14.00')), "(book.price > '14.00')")
         # SELECT query
         db.select(Book.id, from_=Book, where=(Book.price > '15'), limit=10)
         book = Book.objects.get_one(db, where=(Book.price > 15))

@@ -1,6 +1,7 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
 import sys, traceback, html
+import threading
 from PyQt4 import QtCore, QtGui
 
 
@@ -11,7 +12,7 @@ class WMainWindow(QtGui.QMainWindow):
     _authenticationEnabled = True
     _unconditionalQuit = True # whether to allow unconditional quit (if some forms didn't close)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle(self._windowTitle)
@@ -48,7 +49,7 @@ class WMainWindow(QtGui.QMainWindow):
 
         self.printMessage = self.messagesWindow.printMessage # not nice
 
-        sys.stdout = MessagesOut(self.printMessage)  # hook the real STDOUT
+        sys.stdout = MessagesOut(self.printMessage)  # hook the stdout
         sys.excepthook = exception_hook # set our exception hook
 
 
@@ -112,7 +113,7 @@ class WMainWindow(QtGui.QMainWindow):
     def authenticate(self):
         """Show log in window."""
 
-    def requestQuit(self, unconditional = False):
+    def requestQuit(self, unconditional=False):
         """Request application quit."""
         #self._unconditionalQuit = unconditional
         self.close() # TODO: check for self._unconditionalQuit when closing forms and mainWindow
@@ -144,12 +145,32 @@ class TabBarEventFilter(QtCore.QObject):
         return super().eventFilter(tabBar, event) # standard event processing        
 
 
-def exception_hook(excType, excValue, excTraceback): 
+def _flush_last_traceback():
+    global _last_traceback, _last_traceback_count
+    if _last_traceback_count:
+        sys.stdout.write('Last exception happened another %d times.\n' % _last_traceback_count)
+        _last_traceback_count = 0
+    _flush_timer.start(1000)  # milliseconds
+
+
+_last_traceback = None
+_last_traceback_count = 0
+_flush_timer = QtCore.QTimer()  # timer for updating the view
+_flush_timer.setSingleShot(True)
+_flush_timer.timeout.connect(_flush_last_traceback)
+
+
+def exception_hook(exc_type, exc_value, exc_traceback):
     """Global function to catch unhandled exceptions (mostly in user modules).
     """
-    #traceback.print_exc()
-    info = ''.join(traceback.format_exception(excType, excValue, excTraceback))
-    print(info)
+    global _last_traceback, _last_traceback_count
+    info = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback)) + '\n'
+    if info == _last_traceback:
+        _last_traceback_count += 1
+        return
+    _flush_last_traceback()
+    _last_traceback = info
+    sys.stdout.write(info)
 #    import inspect
 #    records = inspect.getinnerframes(exc_traceback) # http://docs.python.org/dev/library/inspect.html#inspect.getinnerframes
 #    info = '<b>Произошло исключение</b>. История вызовов:\n'
@@ -162,22 +183,19 @@ def exception_hook(excType, excValue, excTraceback):
 #    info = info + '<br>Описание ошибки: <span style="background-color:#EDEFF4">&nbsp;' + exc_type.__name__ + ' </span>: ' \
 #        '<span style="color:maroon">&nbsp;' + str(exc_value).replace('\n', '\n&nbsp;') + '</span>'
 
-    #mainWindow.messagesWindow.printMessage(info)
-
 
 class MessagesOut():
-    """Our replacement for stdout. It prints messages also the the messages window. 
-    If txt does not start with '<>' it is escaped to be properly shown in QTextEdit.
+    """Replacement for stdout, which prints messages also the the message window. 
+    If the message does not start with '<>' it is escaped to be properly shown in QTextEdit.
     """
-
-    def __init__(self, printMessageFunc):
-        self.printMessage = printMessageFunc
+    def __init__(self, print_message_func):
+        self.print_message = print_message_func
 
     def write(self, txt):
-        print(txt, end = '', file = sys.__stdout__)
+        sys.__stdout__.write(txt)
         if not txt.startswith('<>'):
-            txt = html.escape(txt)
-        self.printMessage(txt, end = '')
+            txt = html.escape(txt).replace('\n', '<br>')
+        self.print_message(txt, end='')
 
     def flush(self):
         sys.__stdout__.flush()

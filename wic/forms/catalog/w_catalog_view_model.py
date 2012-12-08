@@ -12,12 +12,12 @@ import orm, wic
 class Role():
     """
     """
-    def __init__(self, QtRole, value=None):
+    def __init__(self, qt_role, value=None):
         """
-        @param QtRole: http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
+        @param qt_role: http://doc.qt.nokia.com/stable/qt.html#ItemDataRole-enum
         """
-        assert isinstance(QtRole, int)
-        self.QtRole = QtRole
+        assert isinstance(qt_role, int)
+        self.qt_role = qt_role
         self.value = value
 
     def __call__(self, func):
@@ -25,7 +25,8 @@ class Role():
         return self
 
 
-DefaultSectionSizeRole = QtCore.Qt.UserRole
+default_section_size_role = QtCore.Qt.UserRole
+
 
 class Styles:
 
@@ -34,7 +35,7 @@ class Styles:
         """
         def __init__(self, **kwargs):
             self.__dict__.update(kwargs)
-            self.getRoles()
+            self.get_roles()
     #        print(self.data)
 
         @Role(QtCore.Qt.DisplayRole)
@@ -47,20 +48,30 @@ class Styles:
             return value
             #return None if value is None else str(value)
 
-        textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
+        text_alignment = Role(QtCore.Qt.TextAlignmentRole,
+                              QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
         decoration = Role(QtCore.Qt.DecorationRole, None)
-        checkState = Role(QtCore.Qt.CheckStateRole, None)
-        sizeHint = Role(QtCore.Qt.SizeHintRole, None)
+        check_state = Role(QtCore.Qt.CheckStateRole, None)
+        size_hint = Role(QtCore.Qt.SizeHintRole, None)
 
-        def getRoles(self):
-            """Walk over all role attributes of this style and put them in `data` attribute as dictionary {QtStyle: value}.
+        def get_roles(self):
+            """Walk over all role attributes of this style and put them in `data` attribute as
+            dictionary {QtStyle: value}.
             """
             roles = {}
-            for attr_name, attrValue in inspect.getmembers(self):
-                if isinstance(attrValue, Role):
-                    assert attrValue.QtRole not in roles, 'The same role is met twice with different names.'
-                    roles[attrValue.QtRole] = attrValue.value
+            for attr_name, attr_value in inspect.getmembers(self):
+                if isinstance(attr_value, Role):
+                    assert attr_value.qt_role not in roles, \
+                        'The same role is met twice with different names.'
+                    roles[attr_value.qt_role] = attr_value.value
             self.data = roles
+
+
+    class RecordIdStyle(Style):
+        """Style for items with record ids.
+        """
+        text_alignment = Role(QtCore.Qt.TextAlignmentRole,
+                              QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
 
 
     class DecimalStyle(Style):
@@ -76,28 +87,31 @@ class Styles:
                     format_ = format_[:-1]
                 return format(value, format_)
 
-        textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
+        text_alignment = Role(QtCore.Qt.TextAlignmentRole,
+                              QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
 
 
     class DateStyle(Style):
         """Style for items with Date values.
         """
         display = Role(QtCore.Qt.DisplayRole, formatDate)
-        textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
+        text_alignment = Role(QtCore.Qt.TextAlignmentRole,
+                              QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
 
 
     class BoolStyle(Style):
         """Style for items with bool values.
         """
         @Role(QtCore.Qt.CheckStateRole)
-        def checkState(self, value, checked=QtCore.Qt.Checked, unchecked=QtCore.Qt.Unchecked):  # attr lookup optimization
+        def check_state(self, value, checked=QtCore.Qt.Checked, unchecked=QtCore.Qt.Unchecked):  # attr lookup optimization
             return checked if value else unchecked
 
-        textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
+        text_alignment = Role(QtCore.Qt.TextAlignmentRole,
+                              QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
         display = Role(QtCore.Qt.DisplayRole, None)
 
 
-    class RecordStyle(Style):
+    class RelatedRecordStyle(Style):
         """Style for items which contains record ids.
         """
         @Role(QtCore.Qt.DisplayRole)
@@ -105,8 +119,7 @@ class Styles:
             return None if record is None else str(record)
 
 
-
-    class HHeaderStyle(Style):
+    class HorizontalHeaderStyle(Style):
         """Style for a horizontal header.
         """
         def __init__(self, *args, field, **kwargs):
@@ -114,29 +127,31 @@ class Styles:
             super().__init__(*args, **kwargs)
 
 
-    class VHeaderStyle(Style):
+    class VerticalHeaderStyle(Style):
         """Style for a vertical header.
         """
         def __init__(self, *args, **kwargs):
-            rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4  # font height and some spare pixels
-            self.defaultSectionSize = Role(DefaultSectionSizeRole, rowHeight)
+            row_height = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4  # font height and some spare pixels
+            self.default_section_size = Role(default_section_size_role, row_height)
             super().__init__(*args, **kwargs)
 
 
     @classmethod
-    def createStyleForField(cls, field):
+    def create_style_for_field(cls, field):
         assert isinstance(field, orm.ModelField)
 
-        if isinstance(field, orm.DecimalField):
-            return cls.DecimalStyle(format=',.%if ' % field.fractionDigits, fieldName=field.name)
+        if isinstance(field, orm.IdField):
+            return cls.RecordIdStyle(field_name=field.name)
+        elif isinstance(field, orm.DecimalField):
+            return cls.DecimalStyle(format=',.%if ' % field.decimal_places, field_name=field.name)
         elif isinstance(field, orm.DateField):
-            return cls.DateStyle(fieldName=field.name)
+            return cls.DateStyle(field_name=field.name)
         elif isinstance(field, orm.BooleanField):
-            return cls.BoolStyle(fieldName=field.name)
+            return cls.BoolStyle(field_name=field.name)
         elif isinstance(field, orm.RelatedRecordField):
-            return cls.RecordStyle(fieldName=field.name)
+            return cls.RelatedRecordStyle(field_name=field.name)
         else:
-            return cls.Style(fieldName=field.name)
+            return cls.Style(field_name=field.name)
 
 
 
@@ -145,7 +160,7 @@ class Styles:
 class CatalogModel(orm.Model):
     """Base model for all catalogs.
     """
-    deleted = orm.BooleanField()
+    deleted = orm.BooleanField(comment='Whether the record is marked as deleted.')
 
     @classmethod
     def _handle_table_missing(cls, db):
@@ -155,10 +170,12 @@ class CatalogModel(orm.Model):
         if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?',
                 'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
                 'Do you want it to be automatically created?'
-                % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+                % (cls, cls.__module__, cls.__name__, db.uri),
+                QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
                 QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
-            db.execute(db.get_create_table_query(cls))
-            QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
+            for query in db.get_create_table_query(cls):
+                db.execute(query)
+            wic.app.mainWindow.showInformation('Done', 'The table was successfully created.')
         else:
             super()._handle_table_missing(db)
 
@@ -169,102 +186,105 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
     """
     _styles = Styles
 
-    def __init__(self, db, catalogModel, where=None):
-        assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'
+    def __init__(self, db, catalog_model, where=None):
+        assert isinstance(catalog_model, type) and issubclass(catalog_model, CatalogModel), \
+            'Pass a CatalogModel subclass'
         super().__init__(None)  # no parent
-        self.vHeaderStyle = self._styles.VHeaderStyle()  # one style for all rows
-        self.hHeaderStyles = []
-        self.columnStyles = []
-        for field in catalogModel._meta.fields.values():
-            self.hHeaderStyles.append(self._styles.HHeaderStyle(field=field))
-            columnStyle = self._styles.createStyleForField(field)
-            self.columnStyles.append(columnStyle)
+        self.v_header_style = self._styles.VerticalHeaderStyle()  # one style for all rows
+        self.h_header_styles = []
+        self.column_styles = []
+        for field in catalog_model._meta.fields.values():
+            self.h_header_styles.append(self._styles.HorizontalHeaderStyle(field=field))
+            column_style = self._styles.create_style_for_field(field)
+            self.column_styles.append(column_style)
 
-        self._columnCount = len(self.columnStyles)
+        self._column_count = len(self.column_styles)
         self._db = db
-        self._catalogModel = catalogModel
+        self._catalog_model = catalog_model
         self._where = where
 
-        self._updatePeriod = 5  # seconds
-        self._fetchCount = 150  # number of records to fetch in one db request
-        self._updateTimer = QtCore.QTimer(self)  # timer for updating the view
-        self._updateTimer.setSingleShot(True)
-        self._updateTimer.timeout.connect(self._resetCache)
-        orm.signals.post_save.connect(self._resetCache, catalogModel)  # to update the view...
-        orm.signals.post_delete.connect(self._resetCache, catalogModel)  # ...when a record was modified
-        self._resetCache()
+        self._update_interval = 5  # seconds
+        self._fetch_count = 150  # number of records to fetch in one db query
+        self._refresh_timer = QtCore.QTimer(self)  # timer for updating the view
+        self._refresh_timer.setSingleShot(True)
+        self._refresh_timer.timeout.connect(self._reset_cache)
+        orm.signals.post_save.connect(self._reset_cache, catalog_model)  # to update the view...
+        orm.signals.post_delete.connect(self._reset_cache, catalog_model)  # ...when a record was modified
+        self._reset_cache()
 
-    def _resetCache(self, **kwargs):
+    def _reset_cache(self, **kwargs):
         #print('clearCache')
-        self._updateTimer.stop()
+        self._refresh_timer.stop()
         self.beginResetModel()
-        self._cache = {}  # {rowNo: (catalogItem, fetch_time)}
-        self._rowCount = None
+        self._cache = {}  # {row_no: (catalogItem, fetch_time)}
+        self._row_count = None
         self.endResetModel()
-        self._updateTimer.start(self._updatePeriod * 1000)
+        self._refresh_timer.start(self._update_interval * 1000)
 
-    def item(self, rowNo):
-        """Get an item from the cache. If it's not in the cache, fetch a range from DB and update the cache.
-        @param rowNo: row number from the view for which to get the item
+    def item(self, row_no):
+        """Get an item from the cache. If it's not in the cache, fetch a range from DB and update
+            the cache.
+        @param row_no: row number from the view for which to get the item
         """
-        try:  # find the row in the cache
-            return self._cache[rowNo][0]
-        except KeyError:  # fill the cache
-            #print('Trying to retrieve row %d', rowNo)
-            self._updateTimer.stop()
-            rangeStart = max(rowNo - self._fetchCount // 3, 0)
-            items = self._catalogModel.objects.get(
-                self._db,
-                where=self._where,
-                limit=(rangeStart, self._fetchCount),
-                select_related=True
-            )
-            now = time.time()
-            expiredTime = now - self._updatePeriod
-            cache = self._cache
-            # clean the cache of expired rows
-            for _rowNo in tuple(cache.keys()):
-                if cache[_rowNo][1] <= expiredTime:
-                    cache.pop(_rowNo)
-            #print('for rowNo, item in enumerate(items, rangeStart):')
-            for _rowNo, item in enumerate(items, rangeStart):
-                cache[_rowNo] = (item, now)
-            self._updateTimer.start(self._updatePeriod * 1000)
-            return cache[rowNo][0]
+        try:
+            # find the row in the cache
+            return self._cache[row_no][0]
+        except KeyError:
+            pass
+        # fill the cache
+        #print('Trying to retrieve row %d', row_no)
+        self._refresh_timer.stop()
+        range_start = max(row_no - self._fetch_count // 3, 0)
+        items = self._catalog_model.objects.get(
+            self._db,
+            where=self._where,
+            limit=(range_start, self._fetch_count),
+            select_related=True
+        )
+        now = time.time()
+        expired_time = now - self._update_interval
+        cache = self._cache
+        # clean the cache of expired rows
+        for _row_no in tuple(cache.keys()):
+            if cache[_row_no][1] <= expired_time:
+                cache.pop(_row_no)
+        #print('for row_no, item in enumerate(items, range_start):')
+        for _row_no, item in enumerate(items, range_start):
+            cache[_row_no] = (item, now)
+        self._refresh_timer.start(self._update_interval * 1000)
+        return cache[row_no][0]
 
     def data(self, index, role):
         if index.isValid():
-            style = self.columnStyles[index.column()]
+            style = self.column_styles[index.column()]
             data = style.data.get(role)
 
-            if not hasattr(data, '__call__'):  # not a function to call
+            if not callable(data):  # not a function to call
                 return data
 
             item = self.item(index.row())
-            value = getattr(item, style.fieldName)
+            value = getattr(item, style.field_name)
 
             return data(style, value)  # call the function
 
     def rowCount(self, parent):
-        _rowCount = self._rowCount  # cached row count
-        if _rowCount is None:  # if it's not filled yet - fetch it from the db
-            _rowCount = self._rowCount = self._catalogModel.objects.get_count(self._db,
-                                                                              where=self._where)
+        if self._row_count is None:  # cached row count; if it's not filled yet - fetch it from the db
+            self._row_count = self._catalog_model.objects.get_count(self._db, where=self._where)
             #print('rowCount', _rowsCount)
-        return _rowCount
+        return self._row_count
 
     def columnCount(self, parent):
-        return self._columnCount
+        return self._column_count
 
 #    def flags(self, index):
 #        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
-    def headerData(self, section, orientation, role):
+    def headerData(self, section_no, orientation, role):
         if orientation == QtCore.Qt.Horizontal:
-            style = self.hHeaderStyles[section]
+            style = self.h_header_styles[section_no]
         elif orientation == QtCore.Qt.Vertical:
-            style = self.vHeaderStyle
+            style = self.v_header_style
         else:
             return None
         data = style.data.get(role)
-        return data(style, section) if hasattr(data, '__call__') else data
+        return data(style, section_no) if callable(data) else data
