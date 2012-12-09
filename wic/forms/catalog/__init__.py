@@ -74,7 +74,7 @@ class CatalogItemForm(forms.WForm):
             if widget:
                 self.setupWidgetForField(widget, field)
 
-    def onReset(self):
+    def on_reset(self):
         self.fillFormFromItem()
 
     def fillFormFromItem(self):

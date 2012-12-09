@@ -16,7 +16,7 @@ class Form(forms.WForm):
     _formTitle = 'Repayment Schedule'
     _iconPath = ':/icons/fugue/receipt-invoice.png'
     
-    def onOpen(self): # called by the system after it loads the Form
+    def on_open(self): # called by the system after it loads the Form
 
         self._.equalInstallments = True
         self._.disbursDate = Date.today()

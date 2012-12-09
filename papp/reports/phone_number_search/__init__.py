@@ -9,7 +9,7 @@ class Form(forms.WForm):
 
     _iconPath = ':/icons/fugue/telephone-handset-wire.png'
 
-    def onOpen(self):
+    def on_open(self):
         """Called by the system after it loads the Form."""
         self.phoneNumber.returnPressed.connect(self.search.animateClick)
         self.lastName.returnPressed.connect(self.search.animateClick)

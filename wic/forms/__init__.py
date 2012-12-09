@@ -142,7 +142,7 @@ class WForm(QtGui.QDialog):
         self._ = WFormWidgetsProxy(self)
 
         try:
-            self.onOpen()
+            self.on_open()
         except Exception:
             traceback.print_exc()
 
@@ -166,7 +166,7 @@ class WForm(QtGui.QDialog):
                 saveShortCut.activated.connect(saveButton.animateClick)
             resetButton = buttonBox.button(buttonBox.Reset)
             if resetButton:
-                resetButton.clicked.connect(self.onReset)
+                resetButton.clicked.connect(self.on_reset)
             buttonBox.rejected.connect(self.reject)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -192,18 +192,18 @@ class WForm(QtGui.QDialog):
         self.close()
 
     def closeEvent(self, event):
-        if self.onClose() == False: # вызов предопределенной процедуры
+        if self.on_close() == False: # вызов предопределенной процедуры
             event.ignore()
             return
         self.closed.emit()
 
-    def onClose(self):
+    def on_close(self):
         ""
 
-    def onOpen(self):
+    def on_open(self):
         ""
 
-    def onReset(self):
+    def on_reset(self):
         ""
 
     def showWarning(self, title, text):

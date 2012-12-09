@@ -8,7 +8,7 @@ from wic import forms
 class Form(forms.WForm):
     """Info about application"""
 
-    def onOpen(self):
+    def on_open(self):
         aboutInfo = """<h3>Несколько слов об этой платформе.</h3>
         Данная платформа называется 'wic' - получше названия не придумал пока что :)
         
