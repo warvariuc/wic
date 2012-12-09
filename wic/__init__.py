@@ -12,8 +12,7 @@ except ImportError as exc:
     raise SystemExit('Looks like resources are not compiled:\n%s\n\nIf so, run `compile_resources.py`.' % exc)
 
 try: # monkeypatch: use cdecimal instead of decimal, if present - it is faster
-    import cdecimal
-    sys.modules['decimal'] = cdecimal
+    sys.modules['decimal'] = __import__('cdecimal')
 except ImportError:
     pass
 

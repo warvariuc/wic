@@ -299,14 +299,14 @@ class BooleanField(ModelField):
 
     def __init__(self, default=None, db_index='', db_name='', label='', db_default=Nil,
                  nullable=True, comment=''):
-        super().__init__(adapters.Column('INT', db_name or self._model_attr_info.name,
-                                         precision=1, default=db_default, nullable=nullable,
-                                         comment=comment),
+        super().__init__(adapters.Column('BOOL', db_name or self._model_attr_info.name,
+                                         default=db_default, nullable=nullable, comment=comment),
                          db_index, label, default)
 
     def __set__(self, record, value):
         if not isinstance(value, bool) and value is not None:
-            raise exceptions.RecordValueError('Provide a bool or None.')
+            raise exceptions.RecordValueError('Provide a bool or None (got `%s`).'
+                                              % orm.get_object_path(value))
         record.__dict__[self.name] = value
 
 

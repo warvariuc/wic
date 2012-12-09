@@ -47,10 +47,12 @@ def get_object_path(obj):
     """Having an object return path to its class in form of `path.to.module.ClassName`
     """
     if isinstance(obj, type):
-        return obj.__module__ + '.' + obj.__name__
+        suffix = ''
     else:
+        suffix = '()'
         obj = obj.__class__
-        return obj.__module__ + '.' + obj.__name__ + '()'
+    module_path = '' if obj.__module__ == 'builtins' else  obj.__module__ + '.'
+    return module_path + obj.__name__ + suffix
 
 
 def get_object_by_path(object_path, package_path=None):

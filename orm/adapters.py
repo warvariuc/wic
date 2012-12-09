@@ -385,6 +385,32 @@ class GenericAdapter():
         return str(int(value))
 
     @classmethod
+    def _declare_BOOL(cls, column):
+        """Render declaration of BOOLEAN column type. Store boolean as 0/1 integer.
+        """
+        column_str = 'TINYINT'
+        if not column.nullable:
+            column_str += ' NOT'
+        column_str += ' NULL'
+        if column.default is not Nil:
+            column_str += ' DEFAULT ' + cls._render(column.default, None)
+        if column.comment:
+            column_str += ' COMMENT ' + cls._render(column.comment, None)
+        return column_str
+
+    @classmethod
+    def _encode_BOOL(cls, value, column):
+        """Encode a value for insertion in a column of INT type.
+        """
+        return str(int(value))
+
+    @classmethod
+    def _decode_BOOL(cls, value, column):
+        """Decode a value from the DB to a value good for the corresponding model field.
+        """
+        return bool(int(value))
+
+    @classmethod
     def _declare_CHAR(cls, column):
         """CHAR, VARCHAR
         """
@@ -697,9 +723,8 @@ class GenericAdapter():
 ####################################################################################################
 
 class Rows():
-    """Keeps results of a SELECT and has methods for convenient access.
+    """Keeps results of a SELECT and provides methods for convenient access.
     """
-
     def __init__(self, db, fields, rows):
         """
         @param fields: list of queried fields
@@ -1070,6 +1095,32 @@ class PostgreSqlAdapter(GenericAdapter):
         return column_str
 
     @classmethod
+    def _declare_BOOL(cls, column):
+        """Render declaration of BOOLEAN column type.
+        """
+        column_str = 'BOOLEAN'
+        if not column.nullable:
+            column_str += ' NOT'
+        column_str += ' NULL'
+        if column.default is not Nil:
+            column_str += ' DEFAULT ' + cls._render(column.default, None)
+        if column.comment:
+            column_str += ' COMMENT ' + cls._render(column.comment, None)
+        return column_str
+
+    @classmethod
+    def _encode_BOOL(cls, value, column):
+        """Encode a value for insertion in a column of INT type.
+        """
+        return bool(int(value))
+
+    @classmethod
+    def _decode_BOOL(cls, value, column):
+        """Decode a value from the DB to a value good for the corresponding model field.
+        """
+        return bool(int(value))
+
+    @classmethod
     def _declare_DATETIME(cls, column):
         column_str = 'timestamp (6) without time zone'
         if not column.nullable:
@@ -1168,13 +1219,15 @@ class PostgreSqlAdapter(GenericAdapter):
         for row in rows.dictresult():
             type_name = row['data_type'].lower()
             if 'int' in type_name:
-                type_name = 'int'
+                type_name = 'INT'
+            elif type_name == 'boolean':
+                type_name = 'BOOL'
             elif 'char' in type_name:
-                type_name = 'char'
+                type_name = 'CHAR'
             elif type_name == 'timestamp without time zone':
-                type_name = 'datetime'
+                type_name = 'DATETIME'
             elif type_name == 'numeric':
-                type_name = 'decimal'
+                type_name = 'DECIMAL'
             elif type_name not in ('text', 'date'):
                 raise Exception('Unexpected data type: `%s`' % type_name)
             precision = row['character_maximum_length'] or row['numeric_precision']

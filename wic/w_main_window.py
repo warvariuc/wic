@@ -83,7 +83,7 @@ class WMainWindow(QtGui.QMainWindow):
         if self.mdiArea.subWindowList(): # there are still open subwindows
             event.ignore()
             return
-        if self.onSystemAboutToQuit() is False: # именно False, иначе None тоже считается отрицательным
+        if self.onSystemAboutToQuit() is False:  # именно False, иначе None тоже считается отрицательным
             event.ignore()
             return
         self.settings.saveSettings()
@@ -96,10 +96,10 @@ class WMainWindow(QtGui.QMainWindow):
         for window in self.mdiArea.subWindowList():
             window.showMinimized()
 
-    def addSubWindow(self, widget): # https://bugreports.qt.nokia.com/browse/QTBUG-9462
+    def addSubWindow(self, widget):  # https://bugreports.qt.nokia.com/browse/QTBUG-9462
         """Add a new subwindow with the given widget
         """
-        subWindow = QtGui.QMdiSubWindow() # no parent
+        subWindow = QtGui.QMdiSubWindow()  # no parent
         subWindow.setWidget(widget)
         subWindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.mdiArea.addSubWindow(subWindow)
@@ -107,7 +107,7 @@ class WMainWindow(QtGui.QMainWindow):
         subWindow.show()
         from wic import forms
         if isinstance(widget, forms.WForm):
-            widget.closed.connect(subWindow.close) # when form closes - close subWindow too
+            widget.closed.connect(subWindow.close)  # when form closes - close subWindow too
         return subWindow
 
     def authenticate(self):
@@ -116,7 +116,7 @@ class WMainWindow(QtGui.QMainWindow):
     def requestQuit(self, unconditional=False):
         """Request application quit."""
         #self._unconditionalQuit = unconditional
-        self.close() # TODO: check for self._unconditionalQuit when closing forms and mainWindow
+        self.close()  # TODO: check for self._unconditionalQuit when closing forms and mainWindow
 
     def onSystemStarted(self):
         """Called on startup when everything is ready."""
@@ -141,14 +141,14 @@ class TabBarEventFilter(QtCore.QObject):
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
             if event.button() == QtCore.Qt.LeftButton:
                 self.parent().onTabBarLeftDblClick()
-                return True # message processed
-        return super().eventFilter(tabBar, event) # standard event processing        
+                return True  # message processed
+        return super().eventFilter(tabBar, event)  # standard event processing        
 
 
 def _flush_last_traceback():
     global _last_traceback, _last_traceback_count
     if _last_traceback_count:
-        sys.stdout.write('Last exception happened another %d times.\n' % _last_traceback_count)
+        sys.stdout.write('The last exception repeated %d times.\n' % _last_traceback_count)
         _last_traceback_count = 0
     _flush_timer.start(1000)  # milliseconds
 

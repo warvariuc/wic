@@ -226,7 +226,7 @@ class TestModelsPostgresql(unittest.TestCase):
         db = orm.connect('postgresql://test:test@localhost/test')
         cls.db = db
 
-        # Drops all tables from the postgres database
+        # Drops all tables from the test database
         db.execute("""
             SELECT table_name FROM information_schema.tables
             WHERE table_schema='public' AND table_type != 'VIEW' AND table_name NOT LIKE 'pg_ts_%%'
@@ -261,6 +261,7 @@ class TestModelsPostgresql(unittest.TestCase):
                                      db_index=True)  # 2 decimal places
             author = orm.RelatedRecordField(Author, db_index=True)
             publication_date = orm.DateField()
+            is_favorite = orm.BooleanField()
 
         db = self.db
         for model in (Author, Book):
@@ -287,17 +288,17 @@ class TestModelsPostgresql(unittest.TestCase):
             authors.append(author)
 
         book_data = (
-            (Book.name, 'author', 'price', 'publication_date'),
+            (Book.name, 'author', 'price', 'publication_date', 'is_favorite'),
             ("Free as in Freedom: Richard Stallman's Crusade for Free Software",
-             authors[0], Decimal('9.55'), Date(2002, 3, 8)),
+             authors[0], Decimal('9.55'), Date(2002, 3, 8), False),
             ("Hackers: Heroes of the Computer Revolution - 25th Anniversary Edition",
-             authors[1], Decimal('14.95'), Date(2010, 3, 27)),
+             authors[1], Decimal('14.95'), Date(2010, 3, 27), True),
             ("In The Plex: How Google Thinks, Works, and Shapes Our Lives",
-             authors[1], Decimal('13.98'), Date(2011, 4, 12)),
+             authors[1], Decimal('13.98'), Date(2011, 4, 12), False),
             ("Crypto: How the Code Rebels Beat the Government Saving Privacy in the Digital Age",
-             authors[1], Decimal('23.00'), Date(2002, 1, 15)),
+             authors[1], Decimal('23.00'), Date(2002, 1, 15), False),
             ("Книга с русским названием",
-             None, Decimal('0.00'), Date(2000, 2, 29)),
+             None, Decimal('0.00'), Date(2000, 2, 29), True),
         )
         books = []
         for data in book_data[1:]:
@@ -307,7 +308,7 @@ class TestModelsPostgresql(unittest.TestCase):
 
         for book_id in range(1, 4):
             db.execute("""
-                SELECT id, name, author_id, price, publication_date
+                SELECT id, name, author_id, price, publication_date, is_favorite
                 FROM book
                 WHERE id = %s
             """, (book_id,))
@@ -320,6 +321,7 @@ class TestModelsPostgresql(unittest.TestCase):
                 ('author_id', int),
                 ('price', Decimal),
                 ('publication_date', Date),
+                ('is_favorite', bool),
             )
             for i, (field_name, value_type) in enumerate(field_data):
                 field = getattr(Book, field_name)
