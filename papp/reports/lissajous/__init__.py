@@ -36,8 +36,8 @@ class Form(WForm):
     def on_antialiasing_stateChanged(self, state):
         self.dt.antialiasing = state
         
-    def on_close(self):
-        self.dt.stop()  # stop the timer when the from is being closed
+#    def on_close(self):
+#        self.dt.stop()  # stop the timer when the from is being closed
 
 
 
@@ -45,7 +45,8 @@ class Liss(QtGui.QWidget):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.timer = QtCore.QTimer()
+        # specify the parent, for timer to be stopped when the form is closed
+        self.timer = QtCore.QTimer(self) 
         self.timer.timeout.connect(self.next_step)
 
         self.reset_params()
