@@ -18,12 +18,13 @@ def tearDownModule():
 
 
 class TestModel(orm.Model):
-    char_field = orm.CharField(maxLength = 100)
+    char_field = orm.CharField(maxLength=100)
     text_field = orm.TextField()
-    decimal_field = orm.fields.DecimalField(maxDigits = 10, fractionDigits = 2, default = '0.00')
-    author = orm.RecordField('TestModel', index = True)
+    decimal_field = orm.fields.DecimalField(maxDigits=10, fractionDigits=2, default='0.00')
+    author = orm.RecordField('TestModel', index=True)
     date_field = orm.fields.DateField()
     date_time_field = orm.fields.DateTimeField()
+
 
 #
 #class TestModelsSqlite(unittest.TestCase):
@@ -45,9 +46,8 @@ class TestModel(orm.Model):
 class TestModelsPostgresql(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-#        CREATE USER test WITH PASSWORD 'test';
-#        CREATE DATABASE test;
-#        GRANT ALL PRIVILEGES ON DATABASE test TO test;
+        # CREATE USER test WITH PASSWORD 'test';
+        # CREATE DATABASE test OWNER test;
         cls.db = orm.connect('postgresql://test:test@localhost/test')
 
     @classmethod
@@ -55,16 +55,12 @@ class TestModelsPostgresql(unittest.TestCase):
         cls.db = None  # disconnect?
 
     def test_create_table_from_model(self):
-
         query = self.db.getCreateTableQuery(TestModel)
         for _query in query.split('\n\n'):
             self.db.execute(_query)
 
 
 class TestModels(unittest.TestCase):
-
-
-
     def testFieldName(self):
 
         try:

@@ -1,22 +1,24 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
-import sys, os
+import sys
+import os
 
-pythonRequiredVersion = '3.2' # tested with this version or later
-if sys.version < pythonRequiredVersion:
-    raise SystemExit('Python %s or newer required (you are using: %s).' % (pythonRequiredVersion, sys.version))
+REQUIRED_PYTHON_VERSION = '3.3.2'  # tested with this version or later
+if sys.version < REQUIRED_PYTHON_VERSION:
+    raise SystemExit('Python %s or newer required (you are using: %s).'
+                     % (REQUIRED_PYTHON_VERSION, sys.version))
 
-try: # load Qt resources (icons, etc.)
+try:  # load Qt resources (icons, etc.)
     from .widgets import w_widgets_rc
 except ImportError as exc:
-    raise SystemExit('Looks like resources are not compiled:\n%s\n\nIf so, run `compile_resources.py`.' % exc)
+    raise SystemExit('Looks like the resources are not compiled:\n%s\n\n'
+                     'If so, run `wic/compile_resources.py`.' % exc)
 
-try: # monkeypatch: use cdecimal instead of decimal, if present - it is faster
+try:  # monkeypatch: use cdecimal instead of decimal, if present - it is faster
     import cdecimal
     sys.modules['decimal'] = cdecimal
 except ImportError:
     pass
-
 
 
 class Bunch(dict):

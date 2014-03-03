@@ -5,33 +5,35 @@ from orm import Join, LeftJoin
 
 
 class Regions(orm.Model):
-    region_name = orm.CharField(maxLength= 60)
-    region_type_name = orm.CharField(maxLength= 20)
+    region_name = orm.CharField(maxLength=60)
+    region_type_name = orm.CharField(maxLength=20)
+
 
 class Locations(orm.Model):
     region = orm.RecordField(Regions)
-    location_name = orm.CharField(maxLength= 100)
-    location_type_name = orm.CharField(maxLength= 20)
+    location_name = orm.CharField(maxLength=100)
+    location_type_name = orm.CharField(maxLength=20)
+
 
 class Streets(orm.Model):
     location = orm.RecordField(Locations)
-    street_name = orm.CharField(maxLength= 100)
-    street_old_name = orm.CharField(maxLength= 100)
-    street_type_name = orm.CharField(maxLength= 20)
+    street_name = orm.CharField(maxLength=100)
+    street_old_name = orm.CharField(maxLength=100)
+    street_type_name = orm.CharField(maxLength=20)
+
 
 class Persons(orm.Model):
-    last_name = orm.CharField(maxLength= 100)
-    first_name = orm.CharField(maxLength= 100)
-    middle_name = orm.CharField(maxLength= 100)
-    phone_prefix = orm.IntegerField(maxDigits= 3) # phone prefix code of the location
-    phone_number = orm.IntegerField(maxDigits= 10)
+    last_name = orm.CharField(maxLength=100)
+    first_name = orm.CharField(maxLength=100)
+    middle_name = orm.CharField(maxLength=100)
+    phone_prefix = orm.IntegerField(maxDigits=3)  # phone prefix code of the location
+    phone_number = orm.IntegerField(maxDigits=10)
     location = orm.RecordField(Locations)
     street = orm.RecordField(Streets)
-    
+
     def checkNames(self):
         """An item function, like in Django"""
         pass
-
 
 
 db = orm.connect('sqlite://papp/databases/mtc.sqlite')
@@ -47,11 +49,12 @@ db = orm.connect('sqlite://papp/databases/mtc.sqlite')
 #pprint(dbAdapter.execute('SELECT persons.*, locations.* FROM persons JOIN locations ON (locations.id = persons.location_id) WHERE (persons.phone_number = 763533) LIMIT 10 OFFSET 0;').fetchall())
 #print(dbAdapter.getLastQuery(), '\n')
 
-rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name, Regions.region_name,
-              from_ = [Persons, LeftJoin(Locations, Locations.id == Persons.location),
-              Join(Regions, Regions.id == Locations.region)],
-              where= Persons.phone_number == '763533', 
-              limit= 10)
+rows = db.select(Persons.last_name, Persons.first_name, Locations.location_name,
+                 Regions.region_name,
+                 from_=[Persons, LeftJoin(Locations, Locations.id == Persons.location),
+                        Join(Regions, Regions.id == Locations.region)],
+                 where=Persons.phone_number == '763533',
+                 limit=10)
 pprint(list(zip(rows.fields, rows)))
 print(db.getLastQuery(), '\n')
 
@@ -133,5 +136,5 @@ print(db.getLastQuery(), '\n')
 
 #for person in Persons.get(db, (Persons.last_name == 'Varvariuc') & (Persons.phone_prefix == 236)):
 #    print(str(person), str(Locations.getOne(db, id = person.location_id)))
-pprint(list(db.select(*Persons, where = (orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit = 5)))
+pprint(list(db.select(*Persons, where=(orm.UPPER(Persons.last_name) == 'VARVARIUC'), limit=5)))
 print(db.getLastQuery(), '\n')
