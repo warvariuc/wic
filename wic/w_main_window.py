@@ -1,10 +1,10 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
 import sys, traceback, html
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 
-class WMainWindow(QtGui.QMainWindow):
+class WMainWindow(QtWidgets.QMainWindow):
 
     _windowIcon = ':/icons/fugue/leaf-plant.png'
     _windowTitle = 'wic'
@@ -17,18 +17,18 @@ class WMainWindow(QtGui.QMainWindow):
         self.setWindowTitle(self._windowTitle)
         self.setWindowIcon(QtGui.QIcon(self._windowIcon))
 
-        mdiArea = QtGui.QMdiArea()
+        mdiArea = QtWidgets.QMdiArea()
         mdiArea.setDocumentMode(True)
         mdiArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         mdiArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         mdiArea.setViewMode(mdiArea.TabbedView)
-        mdiArea.setTabPosition(QtGui.QTabWidget.North)
+        mdiArea.setTabPosition(QtWidgets.QTabWidget.North)
         mdiArea.setActivationOrder(mdiArea.ActivationHistoryOrder)
         mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
         self.setCentralWidget(mdiArea)
         self.mdiArea = mdiArea
 
-        tabBar = mdiArea.findChildren(QtGui.QTabBar)[0] # hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
+        tabBar = mdiArea.findChildren(QtWidgets.QTabBar)[0] # hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
         tabBar.setTabsClosable(True)
         tabBar.setExpanding(False)
         tabBar.setMovable(True)
@@ -98,7 +98,7 @@ class WMainWindow(QtGui.QMainWindow):
     def addSubWindow(self, widget): # https://bugreports.qt.nokia.com/browse/QTBUG-9462
         """Add a new subwindow with the given widget
         """
-        subWindow = QtGui.QMdiSubWindow() # no parent
+        subWindow = QtWidgets.QMdiSubWindow() # no parent
         subWindow.setWidget(widget)
         subWindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.mdiArea.addSubWindow(subWindow)
@@ -125,12 +125,11 @@ class WMainWindow(QtGui.QMainWindow):
 
     def showWarning(self, title, text):
         """Convenience function to show a warning message box."""
-        QtGui.QMessageBox.warning(self, title, text)
+        QtWidgets.QMessageBox.warning(self, title, text)
 
     def showInformation(self, title, text):
         """Convenience function to show an information message box."""
-        QtGui.QMessageBox.information(self, title, text)
-
+        QtWidgets.QMessageBox.information(self, title, text)
 
 
 class TabBarEventFilter(QtCore.QObject):

@@ -1,6 +1,6 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
-from PyQt4 import QtCore, QtGui, QtWebKit
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from wic.datetime import Date, TimeInterval
 from decimal import Decimal as Dec
@@ -46,7 +46,7 @@ class Form(forms.WForm):
         self.totalsTableView.insertRow(0)
         for columnIndex in range(table.columnCount()):
             self.totalsTableView.insertColumn(columnIndex)
-            item = QtGui.QTableWidgetItem()
+            item = QtWidgets.QTableWidgetItem()
             item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
             item.setFlags(QtCore.Qt.ItemIsEnabled)
             item.setFont(boldFont)
@@ -107,7 +107,7 @@ class Form(forms.WForm):
     def on_calculate_clicked(self):
         if not (self._.disbursDate and self._.loanAmount and self._.numInstallments
                 and self._.annInterestRate and self._.firstInstallmDate):
-            QtGui.QMessageBox.warning(self, 'Заполните поля', 'Заполните все необходимые поля')
+            QtWidgets.QMessageBox.warning(self, 'Заполните поля', 'Заполните все необходимые поля')
         else:
             self.CalculateSchedule()
 
@@ -211,8 +211,8 @@ class Form(forms.WForm):
         window.setWindowTitle('Print schedule')
         window.show()
 
-        printer = QtGui.QPrinter()
-        printDialog = QtGui.QPrintPreviewDialog(printer)
+        printer = QtWidgets.QPrinter()
+        printDialog = QtWidgets.QPrintPreviewDialog(printer)
         #printDialog.printer()->setPaperSize(QPrinter::A4);
         #printDialog.printer()->setOrientation(QPrinter::Portrait);
         #printDialog.printer()->setPageMargins(10.0,10.0,10.0,10.0,QPrinter::Millimeter);

@@ -1,6 +1,6 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from wic.forms import WForm, setValue, getValue
 from wic.datetime import Date, RelDelta

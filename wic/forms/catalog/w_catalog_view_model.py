@@ -1,7 +1,7 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
-from PyQt4 import QtGui, QtCore
-from decimal import Decimal as Dec
+from PyQt5 import QtGui, QtCore, QtWidgets
+# from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
 import traceback, time, inspect, sys
 
@@ -118,7 +118,7 @@ class Styles:
         """Style for a vertical header.
         """
         def __init__(self, *args, **kwargs):
-            rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
+            rowHeight = QtGui.QFontMetrics(QtWidgets.QApplication.font()).height() + 4 # font height and some spare pixels
             self.defaultSectionSize = Role(DefaultSectionSizeRole, rowHeight)
             super().__init__(*args, **kwargs)
 
@@ -152,13 +152,13 @@ class CatalogModel(orm.Model):
         """Default implementation of situation when upon checking there was not found the table 
         corresponding to this model in the db.
         """
-        if QtGui.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?',
+        if QtWidgets.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?',
                 'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
                 'Do you want it to be automatically created?'
-                % (cls, cls.__module__, cls.__name__, db.uri), QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
-                QtGui.QMessageBox.Yes) == QtGui.QMessageBox.Yes:
+                % (cls, cls.__module__, cls.__name__, db.uri), QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.Yes) == QtWidgets.QMessageBox.Yes:
             db.execute(db.getCreateTableQuery(cls))
-            QtGui.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
+            QtWidgets.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
         else:
             super()._handleTableMissing(db)
 

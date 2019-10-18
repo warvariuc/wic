@@ -1,9 +1,9 @@
 """Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
 
-import os, sys
+# import os, sys
 import math, random
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from wic.forms import WForm, setValue, getValue
 
@@ -36,7 +36,7 @@ class Form(WForm):
 
 
 
-class Liss(QtGui.QWidget):
+class Liss(QtWidgets.QWidget):
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -115,4 +115,3 @@ class Liss(QtGui.QWidget):
         self.w = self.width()
         self.h = self.height()
         self.pixmap = QtGui.QPixmap(self.w, self.h)
-    

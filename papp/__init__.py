@@ -2,7 +2,7 @@ __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import sys, os
 
-from PyQt4 import QtCore, QtGui
+# from PyQt5 import QtCore, QtGui
 
 import orm
 
@@ -27,7 +27,6 @@ class MainWindow(w_main_window.WMainWindow):
         from .reports import phone_number_search
         forms.openForm(phone_number_search.Form)
         #self.mainWindow.restoreSubwindows()
-
 
     def onSystemAboutToExit(self): # предопределенная процедура запускаемая при завершении работы системы
         return True # return False to cancel quitting
@@ -57,7 +56,6 @@ class MainWindow(w_main_window.WMainWindow):
                 menus.createAction(menu, reportName, lambda *args, p = reportPath: forms.openForm(p),
                                    icon = ':/icons/fugue/application-form.png'),
             ))
-
 
 
 def test():

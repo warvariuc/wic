@@ -1,19 +1,18 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from wic.datetime import DateTime
 from wic import menus
 
 
-
-class MessagesWindow(QtGui.QDockWidget):
+class MessagesWindow(QtWidgets.QDockWidget):
     def __init__(self, mainWindow):
         super().__init__('Messages', mainWindow)
 
         self.setObjectName('messagesWindowDock')
         self.setFocusPolicy(QtCore.Qt.NoFocus)
 
-        self.textEdit = QtGui.QTextEdit(self)
+        self.textEdit = QtWidgets.QTextEdit(self)
         self.textEdit.setAcceptRichText(False)
-        self.textEdit.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+        self.textEdit.setLineWrapMode(QtWidgets.QTextEdit.NoWrap)
         self.textEdit.setReadOnly(True)
         self.textEdit.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.textEdit.customContextMenuRequested.connect(self.showContextMenu)
@@ -22,7 +21,7 @@ class MessagesWindow(QtGui.QDockWidget):
 
     def showContextMenu(self, coord):
         if not hasattr(self, 'menu'): # create the context menu for Message Window
-            self.menu = QtGui.QMenu(self.textEdit)
+            self.menu = QtWidgets.QMenu(self.textEdit)
             menus.addActionsToMenu(self.menu, (
                 menus.createAction(self.textEdit, 'Clear', self.textEdit.clear, icon = ':/icons/fugue/eraser.png'),
                 menus.createAction(self.textEdit, 'Copy', self.textEdit.copy, QtGui.QKeySequence.Copy, ':/icons/fugue/document-copy.png'),

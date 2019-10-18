@@ -1,7 +1,7 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import os, sys, traceback
-from PyQt4 import QtGui, QtCore, uic
+from PyQt5 import QtGui, QtCore, uic, QtWidgets
 import orm
 from orm import Nil
 import wic
@@ -27,28 +27,28 @@ def value(widget, value = Nil):
 def setValue(widget, value):
     """Automatically set a widget's value depending on its type.
     """
-    if isinstance(widget, QtGui.QPlainTextEdit):
+    if isinstance(widget, QtWidgets.QPlainTextEdit):
         widget.setPlainText('' if value is None else str(value))
-    elif isinstance(widget, QtGui.QTextEdit):
+    elif isinstance(widget, QtWidgets.QTextEdit):
         widget.setHtml('' if value is None else str(value))
-    elif isinstance(widget, QtGui.QCheckBox):
+    elif isinstance(widget, QtWidgets.QCheckBox):
         widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
         widget.setChecked(bool(value))
         widget.blockSignals(False)
     elif isinstance(widget, WDateEdit): # this goes before checking QLineEdit, because WDateEdit is subclass of QLineEdit 
         widget.setDate(value)
-    elif isinstance(widget, (WDecimalEdit, QtGui.QSpinBox)):
+    elif isinstance(widget, (WDecimalEdit, QtWidgets.QSpinBox)):
         widget.setValue(value)
     elif isinstance(widget, WCatalogItemWidget):
         widget.setItem(value)
-    elif isinstance(widget, QtGui.QLineEdit):
+    elif isinstance(widget, QtWidgets.QLineEdit):
         widget.setText('' if value is None else str(value))
         widget.home(False)
-    elif isinstance(widget, QtGui.QPushButton):
+    elif isinstance(widget, QtWidgets.QPushButton):
         widget.setText(str(value))
-    elif isinstance(widget, QtGui.QLabel):
+    elif isinstance(widget, QtWidgets.QLabel):
         widget.setText(value)
-    elif isinstance(widget, QtGui.QComboBox):
+    elif isinstance(widget, QtWidgets.QComboBox):
         lineEdit = widget.lineEdit()
         if lineEdit: #Only editable combo boxes have a line edit
             lineEdit.setText(value)
@@ -56,20 +56,20 @@ def setValue(widget, value):
             return widget.lineEdit.setText(value)
         else: # find item with the given value and set it as current
             widget.setCurrentIndex(widget.findData(value))
-    elif isinstance(widget, QtGui.QSpinBox):
+    elif isinstance(widget, QtWidgets.QSpinBox):
         widget.setValue(int(value))
-    elif isinstance(widget, QtGui.QCheckBox):
+    elif isinstance(widget, QtWidgets.QCheckBox):
         widget.setChecked(value)
 
 
 def getValue(widget):
     """Automatically extract a widget's value depending on its type.
     """
-    if isinstance(widget, QtGui.QPlainTextEdit):
+    if isinstance(widget, QtWidgets.QPlainTextEdit):
         return widget.toPlainText()
-    elif isinstance(widget, QtGui.QTextEdit):
+    elif isinstance(widget, QtWidgets.QTextEdit):
         return widget.toHtml()
-    elif isinstance(widget, QtGui.QCheckBox):
+    elif isinstance(widget, QtWidgets.QCheckBox):
         return widget.isChecked()
     elif isinstance(widget, WDecimalEdit):
         return widget.value()
@@ -77,18 +77,18 @@ def getValue(widget):
         return widget.date()
     elif isinstance(widget, WCatalogItemWidget):
         return widget.item()
-    elif isinstance(widget, QtGui.QSpinBox):
+    elif isinstance(widget, QtWidgets.QSpinBox):
         return widget.value()
-    elif isinstance(widget, (QtGui.QLineEdit, QtGui.QPushButton)):
+    elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QPushButton)):
         return widget.text()
-    elif isinstance(widget, QtGui.QComboBox):
+    elif isinstance(widget, QtWidgets.QComboBox):
         if widget.isEditable(): # if the combo box is editable - return the text
             return widget.currentText()
         else: # otherwise return the value of the selectem item 
             return widget.itemData(widget.currentIndex())
-    elif isinstance(widget, QtGui.QSpinBox):
+    elif isinstance(widget, QtWidgets.QSpinBox):
         return widget.value()
-    elif isinstance(widget, QtGui.QCheckBox):
+    elif isinstance(widget, QtWidgets.QCheckBox):
         return widget.isChecked()
 
 
@@ -97,7 +97,7 @@ class WFormWidgetsProxy():
     I.e. instead of `form.checkBox.setChecked(True)`, you can write `form._.checkBox = True` or `form._['checkBox'] = True`.
     """
     def __init__(self, form):
-        assert isinstance(form, QtGui.QWidget)
+        assert isinstance(form, QtWidgets.QWidget)
         super().__setattr__('_form', form) # to bypass overriden __setattr__
 
     def __setattr__(self, name, value):
@@ -115,8 +115,7 @@ class WFormWidgetsProxy():
         self.__setattr__(name, value)
 
 
-
-class WForm(QtGui.QDialog):
+class WForm(QtWidgets.QDialog):
     """Base for user forms.
     """
 
@@ -162,7 +161,7 @@ class WForm(QtGui.QDialog):
             if saveButton: # change Save button's role
                 buttonBox.addButton(saveButton, buttonBox.ApplyRole)
                 saveButton.clicked.connect(self.onSave)
-                saveShortCut = QtGui.QShortcut(QtGui.QKeySequence('F2'), self)
+                saveShortCut = QtWidgets.QShortcut(QtGui.QKeySequence('F2'), self)
                 saveShortCut.activated.connect(saveButton.animateClick)
             resetButton = buttonBox.button(buttonBox.Reset)
             if resetButton:
@@ -174,13 +173,13 @@ class WForm(QtGui.QDialog):
 
     def onContextMenuRequested(self, coord):
         from wic import menus
-        menu = QtGui.QMenu(self)
+        menu = QtWidgets.QMenu(self)
         menus.addActionsToMenu(menu, (menus.createAction(menu, 'Save this form into a *.ui file.', self.saveFormToUi),))
         menu.popup(self.mapToGlobal(coord))
 
     def saveFormToUi(self):
-        from PyQt4.QtDesigner import QFormBuilder
-        filePath = QtGui.QFileDialog.getSaveFileName(parent = self, caption = 'Save file', directory = '', filter = 'Forms (*.ui)')
+        from PyQt5.QtDesigner import QFormBuilder
+        filePath = QtWidgets.QFileDialog.getSaveFileName(parent = self, caption = 'Save file', directory = '', filter = 'Forms (*.ui)')
         if filePath:
             file = QtCore.QFile(filePath)
             file.open(file.WriteOnly)
@@ -208,11 +207,11 @@ class WForm(QtGui.QDialog):
 
     def showWarning(self, title, text):
         """Convenience function to show a warning message box."""
-        QtGui.QMessageBox.warning(self, title, text)
+        QtWidgets.QMessageBox.warning(self, title, text)
 
     def showInformation(self, title, text):
         """Convenience function to show an information message box."""
-        QtGui.QMessageBox.information(self, title, text)
+        QtWidgets.QMessageBox.information(self, title, text)
 
 
 def openForm(FormClass, *args, modal = False, **kwargs):

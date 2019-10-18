@@ -1,9 +1,9 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets, QtWidgets
 from wic.datetime import RelDelta, Date, DateTime
 from . import ui_w_popup_calendar
 
 
-class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
+class WCalendarPopup(QtWidgets.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
     """Popup window to select date interactively by showing a month calendar.
     """
     def __init__(self, parent, persistent = False):
@@ -37,14 +37,14 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
             self.selectDate()
 
         self.calendarWidget.installEventFilter(self)
-        for child in self.calendarWidget.findChildren(QtGui.QWidget):
+        for child in self.calendarWidget.findChildren(QtWidgets.QWidget):
             child.installEventFilter(self)
 
         self.positionPopup()
         self.calendarWidget.setFocus()
 
     def showMenu(self):
-        menu = QtGui.QMenu(self)
+        menu = QtWidgets.QMenu(self)
         menu.addAction('Today', self.selectDate)
         menu.exec(QtGui.QCursor.pos())
 
@@ -69,7 +69,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
         parent = self.parent()
         if isinstance(parent, WDateEdit):
             pos = parent.mapToGlobal(parent.rect().bottomRight()) # bottom left corner of the lineedit widget
-            screen = QtGui.QApplication.desktop().availableGeometry()
+            screen = QtWidgets.QApplication.desktop().availableGeometry()
 
             y = pos.y()
             if y > screen.bottom() - self.height():
@@ -120,7 +120,7 @@ class WCalendarPopup(QtGui.QWidget, ui_w_popup_calendar.Ui_WPopupCalendar):
 
 
 
-class WDateEdit(QtGui.QLineEdit):
+class WDateEdit(QtWidgets.QLineEdit):
     """Custom widget for editing dates. Allows selecting a date using a popup calendar.
     """
 
@@ -132,13 +132,13 @@ class WDateEdit(QtGui.QLineEdit):
         self.setAlignment(QtCore.Qt.AlignRight)
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
-        self.menu = QtGui.QMenu(self) # context menu
+        self.menu = QtWidgets.QMenu(self) # context menu
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/calendar-blue.png'), 'Calendar', self.popupCalendar, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Copy', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/eraser.png'), 'Clear', self.interactiveClear)
 
-        self.selector = QtGui.QToolButton(self)
+        self.selector = QtWidgets.QToolButton(self)
         self.selector.setIcon(QtGui.QIcon(':/icons/fugue/calendar-blue.png'))
         self.selector.setCursor(QtCore.Qt.PointingHandCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
@@ -153,7 +153,7 @@ class WDateEdit(QtGui.QLineEdit):
 
     def resizeEvent(self, event):
         sz = self.selector.sizeHint()
-        frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+        frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
         self.selector.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height()) / 2)
 
@@ -161,7 +161,7 @@ class WDateEdit(QtGui.QLineEdit):
         return not self.selector.isHidden() # notice that isVisible() is not used (because widget can be non visible but not hidden)        
     def setSelectorVisible(self, value):
         self.selector.setVisible(value)
-        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
+        borderWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth) + 1
         selectorWidth = borderWidth + (self.selector.sizeHint().width() if value else 0)
         self.setStyleSheet('QLineEdit { padding-right: %ipx; }' % selectorWidth)
         fm = QtGui.QFontMetrics(self.font()) # font metrics
@@ -311,7 +311,7 @@ class WDateEdit(QtGui.QLineEdit):
 
 
 if __name__ == '__main__': # some tests
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     widget = WDateEdit(None)
     widget.show()
     app.exec()

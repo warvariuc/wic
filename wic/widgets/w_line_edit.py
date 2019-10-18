@@ -1,10 +1,11 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 
-class WLineEdit(QtGui.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit-with-a-clear-button/
+
+class WLineEdit(QtWidgets.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit-with-a-clear-button/
     def __init__(self, parent= None):
         super().__init__(parent)
     
-        self.clearButton = QtGui.QToolButton(self)
+        self.clearButton = QtWidgets.QToolButton(self)
         pixmap = QtGui.QPixmap(':/icons/fugue/cross-white.png')
         self.clearButton.setIcon(QtGui.QIcon(pixmap))
         self.clearButton.setIconSize(pixmap.size())
@@ -13,7 +14,7 @@ class WLineEdit(QtGui.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit
         self.clearButton.hide()
         self.clearButton.clicked.connect(self.clear)
         self.textChanged.connect(self.updateCloseButton)
-        frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+        frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
         self.setStyleSheet('QLineEdit { padding-right: %spx; } ' % str(self.clearButton.sizeHint().width() + frameWidth + 1))
         #self.setStyleSheet('QLineEdit { margin-right: %spx; } ' % str(self.clearButton.sizeHint().width() + frameWidth + 1))
         msz = self.minimumSizeHint()
@@ -23,7 +24,7 @@ class WLineEdit(QtGui.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit
 
     def resizeEvent(self, event):
         sz = self.clearButton.sizeHint()
-        frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+        frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
         self.clearButton.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height())/2)
 
@@ -34,7 +35,7 @@ class WLineEdit(QtGui.QLineEdit): # http://labs.qt.nokia.com/2007/06/06/lineedit
 
 if __name__ == '__main__': # some tests
     import w_widgets_rc
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     w = WLineEdit(None)
     w.show()
     app.exec()

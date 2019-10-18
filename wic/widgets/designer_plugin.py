@@ -7,7 +7,7 @@ Author: Victor Varvariuc <victor.varvariuc@gmail.com>
 import os, sys
 import importlib
 
-from PyQt4 import QtGui, QtDesigner
+from PyQt5 import QtGui, QtDesigner, QtWidgets
 
 
 print('Python version used:', sys.version)
@@ -86,7 +86,7 @@ class WCatalogItemWidgetPlugin(WDateEditPlugin):
 
 
 if __name__ == '__main__': # some tests
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     plugin = WDateEditPlugin()
     print(plugin)
     print(plugin.includeFile())

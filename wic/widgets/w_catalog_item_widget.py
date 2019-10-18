@@ -1,7 +1,7 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 
 
-class WCatalogItemWidget(QtGui.QLineEdit):
+class WCatalogItemWidget(QtWidgets.QLineEdit):
     """Custom widget - for keeping a catalog item."""
 
     changed = QtCore.pyqtSignal()
@@ -9,7 +9,7 @@ class WCatalogItemWidget(QtGui.QLineEdit):
     def __init__(self, parent = None):
         super().__init__(parent)
         self.setReadOnly(True)
-        self.selector = QtGui.QToolButton(self)
+        self.selector = QtWidgets.QToolButton(self)
         #self.selector.setToolTip('Click to open item list and pick one.\nDouble click to open currently selected item.')
         self.selector.setIcon(QtGui.QIcon(':/icons/fugue/card-address.png'))
         self.selector.setCursor(QtCore.Qt.PointingHandCursor)
@@ -74,7 +74,7 @@ class WCatalogItemWidget(QtGui.QLineEdit):
 
     def resizeEvent(self, event):
         sz = self.selector.sizeHint()
-        frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+        frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
         self.selector.move(frameWidth, (self.rect().bottom() + 1 - sz.height()) / 2)
 
     def _updateStyle(self):
@@ -83,7 +83,7 @@ class WCatalogItemWidget(QtGui.QLineEdit):
             borderWidth = 0
         else:
             selectorWidth = 0
-            borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
+            borderWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth) + 1
         self.setStyleSheet('QLineEdit { background-color: palette(alternate-base); padding-left: %ipx;}' % (selectorWidth + borderWidth))
 #        fm = QtGui.QFontMetrics(self.font()) # font metrics
 #        maxText = '9' * self._maxDigits + '. '
@@ -119,7 +119,7 @@ class WCatalogItemWidget(QtGui.QLineEdit):
         menu = getattr(self, 'menu', None)
         if not menu:
             from wic import menus
-            menu = QtGui.QMenu(self) # context menu
+            menu = QtWidgets.QMenu(self) # context menu
             menus.addActionsToMenu(menu, (
                 menus.createAction(menu, 'Select', self.selectItem, 'Insert', ':/icons/fugue/cards-stack.png'),
                 menus.createAction(menu, 'Open', self.openItem, 'Space', ':/icons/fugue/card-address.png'),

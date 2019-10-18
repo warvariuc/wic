@@ -2,7 +2,7 @@
 
 import os
 
-from PyQt4 import QtGui
+from PyQt5 import QtGui, QtWidgets
 
 
 class MainMenu():
@@ -117,7 +117,7 @@ class MainMenu():
         w_date_edit.WCalendarPopup(self.mainWindow, persistent = True).show()
 
     def onFileOpen(self):
-        filePath = QtGui.QFileDialog.getOpenFileName(self.mainWindow,
+        filePath = QtWidgets.QFileDialog.getOpenFileName(self.mainWindow,
                 'Open file', self.mainWindow.settings.lastUsedDirectory, 'Modules *.py(*.py);;Forms *.ui(*.ui);;All files *.*(*.*)')
         if filePath:
             self.mainWindow.settings.lastUsedDirectory = os.path.dirname(filePath)
@@ -150,7 +150,7 @@ class MainMenu():
 
 def createAction(parent, text, slot = None, shortcut = None, icon = None, tip = None, checkable = False, signal = 'triggered'):
     """Convenience function to create QActions"""
-    action = QtGui.QAction(text, parent)
+    action = QtWidgets.QAction(text, parent)
     if icon:
         action.setIcon(QtGui.QIcon(icon))
     if shortcut:
@@ -168,9 +168,9 @@ def addActionsToMenu(menu, items):
     """Add multiple actions/menus to a menu"""
     assert hasattr(items, '__iter__'), 'Items argument must an iterable'
     for item in items:
-        if isinstance(item, QtGui.QAction):
+        if isinstance(item, QtWidgets.QAction):
             menu.addAction(item)
-        elif isinstance(item, QtGui.QMenu):
+        elif isinstance(item, QtWidgets.QMenu):
             menu.addMenu(item)
         else:
             menu.addSeparator()

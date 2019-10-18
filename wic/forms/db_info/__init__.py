@@ -1,5 +1,5 @@
 import os, sys
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from wic import forms
 
@@ -18,9 +18,9 @@ class Form(forms.WForm):
                 raise orm.ConnectionError('Could not find suitable DB adapter for the protocol specified.')
             db.execute('SELECT 1;')
         except Exception as exc:
-            QtGui.QMessageBox.warning(self, 'Failure', '<b>Connection failure</b><br>%s\n%s' % (dbUri, exc))
+            QtWidgets.QMessageBox.warning(self, 'Failure', '<b>Connection failure</b><br>%s\n%s' % (dbUri, exc))
         else:
-            QtGui.QMessageBox.information(self, 'Success', '<b>Connection success</b><br>%s' % dbUri)
+            QtWidgets.QMessageBox.information(self, 'Success', '<b>Connection success</b><br>%s' % dbUri)
         
     def on_buttonBox_accepted(self):
         print('accepted')

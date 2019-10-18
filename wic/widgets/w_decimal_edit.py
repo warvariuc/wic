@@ -1,4 +1,4 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 import re
 from decimal import Decimal as Dec
 from . import ui_w_popup_calculator
@@ -10,7 +10,7 @@ def regularNotation(value):
     return v[0] + (v[1] + v[2]).rstrip('.0') # убираем последние нули в дробной части
 
 
-class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator):
+class WPopupCalculator(QtWidgets.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator):
     """Calculator window"""
     
     operators = '+-*/' # class attribute
@@ -148,7 +148,7 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
         parent = self.parent()
         if isinstance(parent, WDecimalEdit): 
             pos = parent.mapToGlobal(parent.rect().bottomRight())
-            screen = QtGui.QApplication.desktop().availableGeometry()
+            screen = QtWidgets.QApplication.desktop().availableGeometry()
     
             y = pos.y()
             if y > screen.bottom() - self.height():
@@ -161,7 +161,7 @@ class WPopupCalculator(QtGui.QWidget, ui_w_popup_calculator.Ui_WPopupCalculator)
 
 
 
-class WDecimalEdit(QtGui.QLineEdit):
+class WDecimalEdit(QtWidgets.QLineEdit):
     """Custom widget - for editing decimals. You can specify total number of digits, fractional part digits."""
     
     edited = QtCore.pyqtSignal()
@@ -170,7 +170,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         super().__init__(parent)
         #self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setAlignment(QtCore.Qt.AlignRight)
-        self.selector = QtGui.QToolButton(self)
+        self.selector = QtWidgets.QToolButton(self)
         self.selector.setIcon(QtGui.QIcon(':/icons/calculator.png'))
         self.selector.setCursor(QtCore.Qt.PointingHandCursor)
         self.selector.setStyleSheet('QToolButton { border: none; padding: 0px; }')
@@ -179,7 +179,7 @@ class WDecimalEdit(QtGui.QLineEdit):
         self.selector.clicked.connect(self.popupCalculator)
         self.textEdited.connect(self.onTextEdited)
         
-        self.menu = QtGui.QMenu(self) # context menu
+        self.menu = QtWidgets.QMenu(self) # context menu
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/calculator-scientific.png'), 'Calculator', self.popupCalculator, QtGui.QKeySequence(QtCore.Qt.Key_Insert))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/document-copy.png'), 'Copy', self.copy, QtGui.QKeySequence(QtGui.QKeySequence.Copy))
         self.menu.addAction(QtGui.QIcon(':/icons/fugue/clipboard-paste.png'), 'Paste', self.paste, QtGui.QKeySequence(QtGui.QKeySequence.Paste))
@@ -228,12 +228,12 @@ class WDecimalEdit(QtGui.QLineEdit):
 
     def resizeEvent(self, event):
         sz = self.selector.sizeHint()
-        frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+        frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
         self.selector.move(self.rect().right() - frameWidth - sz.width(),
                       (self.rect().bottom() + 1 - sz.height()) / 2)
 
     def _updateStyle(self):
-        borderWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) + 1
+        borderWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth) + 1
         selectorWidth = self.selector.sizeHint().width() if self.isSelectorVisible() else 0 
         self.setStyleSheet('QLineEdit { padding-right: %ipx; }' % (selectorWidth + borderWidth))
         fm = QtGui.QFontMetrics(self.font()) # font metrics
@@ -387,7 +387,7 @@ class WDecimalEdit(QtGui.QLineEdit):
 
 
 if __name__ == '__main__': # some tests
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     #m = WPopupCalculator(None, True)
     widget = WDecimalEdit(None)
     widget.show()

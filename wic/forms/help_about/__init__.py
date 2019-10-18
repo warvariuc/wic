@@ -1,6 +1,6 @@
 import os, sys
 import platform
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from wic import forms
 

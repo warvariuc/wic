@@ -1,6 +1,6 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from wic import forms
 import orm
 
@@ -46,7 +46,7 @@ class Form(forms.WForm):
         for item in items:
             rowNo = self.searchResults.rowCount()
             self.searchResults.insertRow(rowNo)
-            self.searchResults.setItem(rowNo, 0, QtGui.QTableWidgetItem('%s-%s' % (item.phone_prefix, item.phone_number)))
-            self.searchResults.setItem(rowNo, 1, QtGui.QTableWidgetItem('%s %s %s' % (item.last_name, item.first_name, item.middle_name)))
+            self.searchResults.setItem(rowNo, 0, QtWidgets.QTableWidgetItem('%s-%s' % (item.phone_prefix, item.phone_number)))
+            self.searchResults.setItem(rowNo, 1, QtWidgets.QTableWidgetItem('%s %s %s' % (item.last_name, item.first_name, item.middle_name)))
             
         self.searchResults.resizeColumnsToContents()

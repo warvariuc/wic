@@ -1,5 +1,5 @@
-import os, sys
-from PyQt4 import QtCore, QtGui
+# import os, sys
+# from PyQt4 import QtCore, QtGui
 
 from wic import forms
 import orm

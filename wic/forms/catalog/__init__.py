@@ -2,7 +2,7 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
 import sys
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 
 import orm
 from wic.datetime import DateTime
@@ -46,8 +46,8 @@ class CatalogItemForm(forms.WForm):
     def createWidgets(self):
         """Automatically create on the form widgets and labels for each catalog model field.
         """
-        formLayout = QtGui.QFormLayout(self)
-        formLayout.setMargin(2)
+        formLayout = QtWidgets.QFormLayout(self)
+        formLayout.setSpacing(2)
         for field in self._catalogItem.__class__:
             fieldName = field.name
             assert not hasattr(self, fieldName), 'Form already has attribute with name `%s`' % fieldName
@@ -59,8 +59,8 @@ class CatalogItemForm(forms.WForm):
             label.setBuddy(widget)
             formLayout.addRow(label, widget)
 
-        self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Reset
-                        | QtGui.QDialogButtonBox.Save | QtGui.QDialogButtonBox.Cancel)
+        self.buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Reset
+                        | QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel)
         self.buttonBox.setObjectName('buttonBox')
         formLayout.addRow(self.buttonBox)
         self.formLayout = formLayout
@@ -131,36 +131,36 @@ class CatalogItemForm(forms.WForm):
         assert isinstance(field, orm.Field)
         label = field.label
         if isinstance(field, (orm.CharField, orm.IntegerField, orm.IdField, orm.DateTimeField)):
-            widget = QtGui.QLineEdit()
+            widget = QtWidgets.QLineEdit()
         elif isinstance(field, orm.DecimalField):
             widget = widgets.WDecimalEdit()
         elif isinstance(field, orm.DateField):
             widget = widgets.WDateEdit()
         elif isinstance(field, orm.BooleanField):
-            widget = QtGui.QCheckBox(field.label)
+            widget = QtWidgets.QCheckBox(field.label)
             label = ''
         elif isinstance(field, orm.TextField):
-            widget = QtGui.QPlainTextEdit()
+            widget = QtWidgets.QPlainTextEdit()
         elif isinstance(field, orm.RecordField):
             widget = widgets.WCatalogItemWidget()
         else:
             raise Exception('Could not create a widget for field `%s`' % field)
-        return widget, QtGui.QLabel(label)
+        return widget, QtWidgets.QLabel(label)
 
 
     def setupWidgetForField(self, widget, field):
         """Set up a widget which corresponds to an model field - only the details related to data entering to appearance.
         The widget might be autocreated or one from a *.ui file.
         """
-        assert isinstance(field, orm.Field) and isinstance(widget, QtGui.QWidget)
+        assert isinstance(field, orm.Field) and isinstance(widget, QtWidgets.QWidget)
         if isinstance(field, orm.CharField):
-            if isinstance(widget, QtGui.QLineEdit):
+            if isinstance(widget, QtWidgets.QLineEdit):
                 widget.setMaxLength(field.column.precision)
         elif isinstance(field, orm.IdField):
-            if isinstance(widget, QtGui.QLineEdit):
+            if isinstance(widget, QtWidgets.QLineEdit):
                 widget.setValidator(QtGui.QIntValidator())
         elif isinstance(field, orm.DateTimeField):
-            if isinstance(widget, QtGui.QLineEdit):
+            if isinstance(widget, QtWidgets.QLineEdit):
                 widget.setInputMask('9999-99-99 99:99:99.999999')
         elif isinstance(field, orm.DecimalField):
             if isinstance(widget, widgets.WDecimalEdit):
@@ -210,24 +210,24 @@ class CatalogForm(forms.WForm):
     def createWidgets(self):
         """Automatically create widgets on the form.
         """
-        layout = QtGui.QVBoxLayout(self)
-        layout.setMargin(2)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setSpacing(2)
 
-        self.toolbar = QtGui.QToolBar()
+        self.toolbar = QtWidgets.QToolBar()
         self.setupToolbar(self.toolbar)
         layout.addWidget(self.toolbar)
 
-        self.tableView = QtGui.QTableView()
+        self.tableView = QtWidgets.QTableView()
         self.setupTableView(self.tableView)
         layout.addWidget(self.tableView)
 
-        self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Close)
+        self.buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close)
         layout.addWidget(self.buttonBox) # add standard button box at the bottom
 
         self.layout = layout
 
     def setupToolbar(self, toolbar):
-        assert isinstance(toolbar, QtGui.QToolBar)
+        assert isinstance(toolbar, QtWidgets.QToolBar)
         menu = Bunch()
         menu.createItem = menus.createAction(toolbar, 'Create new item', self.createItem, 'Insert', ':/icons/fugue/plus.png')
         menu.editItem = menus.createAction(toolbar, 'Edit selected item', self.editItem, 'Enter', ':/icons/fugue/pencil.png')
@@ -237,14 +237,14 @@ class CatalogForm(forms.WForm):
         self.menu = menu
 
     def setupTableView(self, tableView):
-        assert isinstance(tableView, QtGui.QTableView)
+        assert isinstance(tableView, QtWidgets.QTableView)
 
         catalogViewModel = self._viewModel(self._db, self._catalogModel) # create catalog view model
 
         tableView.setSelectionBehavior(tableView.SelectItems)
         tableView.setSelectionMode(tableView.SingleSelection)
         #self.tableView.verticalHeader().hide()
-        tableView.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+        tableView.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         #rowHeight = QtGui.QFontMetrics(QtGui.QApplication.font()).height() + 4 # font height and some spare pixels
         rowHeight = catalogViewModel.headerData(0, QtCore.Qt.Vertical, DefaultSectionSizeRole)
         tableView.verticalHeader().setDefaultSectionSize(rowHeight)
@@ -291,7 +291,7 @@ class CatalogForm(forms.WForm):
                 return True
         elif event.type() == QtCore.QEvent.Wheel: # received when scrolling on viewport is on the boundaries
             currentIndex = tableView.selectionModel().currentIndex()
-            rowNo = currentIndex.row() - int(event.delta() / 120)
+            rowNo = currentIndex.row() - int(event.angleDelta().y() / 120)
             rowNo = min(max(rowNo, 0), tableView.model().rowCount(None) - 1) # to be sure it's not out of boundaries
             tableView.setCurrentIndex(tableView.model().index(rowNo, currentIndex.column())) # when scrolling on the boundary - move the selection closer to that boundary
             return True
@@ -350,7 +350,7 @@ class CatalogForm(forms.WForm):
         self.menu.editItem.setEnabled(currentIndex.isValid())
 
     def onTableViewContextMenuRequested(self, coord):
-        menu = QtGui.QMenu(self.tableView)
+        menu = QtWidgets.QMenu(self.tableView)
         menus.addActionsToMenu(menu, (self.menu.createItem, self.menu.editItem, self.menu.deleteItem))
         menu.popup(self.tableView.viewport().mapToGlobal(coord))
 
@@ -371,8 +371,8 @@ class CatalogForm(forms.WForm):
             self.itemSelected.emit(catalogItem)
 
     def deleteItem(self):
-        if QtGui.QMessageBox.question(self, 'Delete', 'Are you sure?',
-                    QtGui.QMessageBox.Yes | QtGui.QMessageBox.Cancel) == QtGui.QMessageBox.Yes:
+        if QtWidgets.QMessageBox.question(self, 'Delete', 'Are you sure?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel) == QtWidgets.QMessageBox.Yes:
             currentIndex = self.tableView.selectionModel().currentIndex()
             catalogItem = self.tableView.model().item(currentIndex.row())
             catalogItem.delete()

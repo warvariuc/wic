@@ -1,10 +1,11 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
+
 
 class WSettings():
     def __init__(self, mainWindow):
         self.mainWindow = mainWindow
 
-        self.path = QtGui.QDesktopServices.storageLocation(QtGui.QDesktopServices.DataLocation)
+        self.path = QtCore.QStandardPaths.standardLocations(QtCore.QStandardPaths.DataLocation)[0]
         #self.settings = QtCore.QSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'vic', 'wic')
         #path = 'd:\\wic_settings.ini'
         self.settings = QtCore.QSettings(self.path, QtCore.QSettings.IniFormat, self.mainWindow)

@@ -1,10 +1,9 @@
 __author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
 
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
 from wic.widgets import WDateEdit, WDecimalEdit
-
 
 
 class WItemStyle():
@@ -145,9 +144,7 @@ class WTableRow(): # maybe subclass list instead of wrapping it?
         return self._values
 
 
-
-
-class WItemDelegate(QtGui.QStyledItemDelegate):
+class WItemDelegate(QtWidgets.QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         data = index.data(QtCore.Qt.EditRole)
         if isinstance(data, Date):
@@ -174,7 +171,7 @@ class WItemDelegate(QtGui.QStyledItemDelegate):
     def commitAndCloseEditor(self):
         editor = self.sender()
         self.commitData.emit(editor)
-        self.closeEditor.emit(editor, QtGui.QAbstractItemDelegate.NoHint)
+        self.closeEditor.emit(editor, QtWidgets.QAbstractItemDelegate.NoHint)
 
 
 
@@ -189,7 +186,7 @@ class WTable():
     wItemDelegate = WItemDelegate() # class attribute
 
     def __init__(self, tableView = None):
-        assert tableView is None or isinstance(tableView, QtGui.QTableView), 'Pass a QtGui.QTableView'
+        assert tableView is None or isinstance(tableView, QtWidgets.QTableView), 'Pass a QtGui.QTableView'
         super().__init__()
         self._columns = []
         self._rows = []
@@ -381,9 +378,9 @@ class WTableModel(QtCore.QAbstractTableModel):
 
 
 if __name__ == '__main__': # some tests
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
 
-    tableView = QtGui.QTableView(None)
+    tableView = QtWidgets.QTableView(None)
 
     table = WTable(tableView)
     table.newColumn('column1', label = 'int', default = 0, width = 50)

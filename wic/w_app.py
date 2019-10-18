@@ -1,9 +1,9 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 import wic
 
 
-class WApp(QtGui.QApplication):
+class WApp(QtWidgets.QApplication):
 
     _organizationName = 'vic'
     _applicationName = 'wic'

@@ -14,7 +14,7 @@ import sys
 import subprocess
 import py_compile
 
-from PyQt4 import QtGui
+from PyQt5 import QtWidgets
 
 
 def build(path, recurse, remove_source=True):
@@ -45,9 +45,6 @@ def _build(dir_path, file_name, remove_source=True):
     target = os.path.join(dir_path, target_name)
 
     args = ["-o", target, source]
-    if command == pyrcc4:
-        args.insert(0, "-py3")
-
     try:
         command += ' ' + ' '.join(args)
         output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
@@ -126,7 +123,7 @@ def _clean(dir_path, file_name):
 is_windows = sys.platform.lower().startswith(('win', 'microsoft'))
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-PATH = QtGui.QApplication([]).applicationDirPath()
+PATH = QtWidgets.QApplication([]).applicationDirPath()
 
 if is_windows:
     PATH = os.path.join(os.path.dirname(sys.executable), 'Lib/site-packages/PyQt4')
@@ -143,8 +140,10 @@ if is_windows:
     PYRCC4 = PYRCC4.replace('/', '\\') + b'.exe'
     PYLUPDATE4 = PYLUPDATE4.replace('/', '\\') + b'.exe'
 
-pyuic4 = PYUIC4
-pyrcc4 = PYRCC4
+# pyuic4 = PYUIC4
+# pyrcc4 = PYRCC4
+pyuic4 = 'pyuic5'
+pyrcc4 = 'pyrcc5'
 
 print('Be aware that some IDEs might automatically delete the resulting *.pyc files.\n')
 
