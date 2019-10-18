@@ -1,12 +1,9 @@
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
-
 from PyQt5 import QtGui, QtCore, QtWidgets
 # from decimal import Decimal as Dec
 from wic.datetime import Date, _format as formatDate
 import traceback, time, inspect, sys
 
 import orm, wic
-
 
 
 class Role():
@@ -27,6 +24,7 @@ class Role():
 
 DefaultSectionSizeRole = QtCore.Qt.UserRole
 
+
 class Styles:
 
     class Style():
@@ -36,18 +34,19 @@ class Styles:
             self.__dict__.update(kwargs)
             self.getRoles()
     #        print(self.data)
-    
+
         @Role(QtCore.Qt.DisplayRole)
         def display(self, value): # data to be rendered in the form of text
             return value
             #return None if value is None else str(value)
-    
+
         @Role(QtCore.Qt.ToolTipRole)
         def toolTip(self, value):
             return value
             #return None if value is None else str(value)
     
-        textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
+        textAlignment = Role(
+            QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
         decoration = Role(QtCore.Qt.DecorationRole, None)
         checkState = Role(QtCore.Qt.CheckStateRole, None)
         sizeHint = Role(QtCore.Qt.SizeHintRole, None)
@@ -61,8 +60,7 @@ class Styles:
                     assert attrValue.QtRole not in roles, 'The same role is met twice with different names.'
                     roles[attrValue.QtRole] = attrValue.value
             self.data = roles
-    
-    
+
     class DecimalStyle(Style):
         """Style for items with Decimal values.
         """
@@ -76,26 +74,26 @@ class Styles:
                     format_ = format_[:-1]
                 return format(value, format_)
     
-        textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
-    
-    
+        textAlignment = Role(
+            QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
+
     class DateStyle(Style):
         """Style for items with Date values.
         """
         display = Role(QtCore.Qt.DisplayRole, formatDate)
-        textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
-    
-    
+        textAlignment = Role(
+            QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
+
     class BoolStyle(Style):
         """Style for items with bool values.
         """
         @Role(QtCore.Qt.CheckStateRole)
-        def checkState(self, value, checked = QtCore.Qt.Checked, unchecked = QtCore.Qt.Unchecked): # attr lookup optimization
+        # attr lookup optimization
+        def checkState(self, value, checked=QtCore.Qt.Checked, unchecked=QtCore.Qt.Unchecked):
             return checked if value else unchecked
     
         textAlignment = Role(QtCore.Qt.TextAlignmentRole, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter)
         display = Role(QtCore.Qt.DisplayRole, None)
-    
     
     class RecordStyle(Style):
         """Style for items which contains record ids.
@@ -103,17 +101,14 @@ class Styles:
         @Role(QtCore.Qt.DisplayRole)
         def display(self, record):
             return None if record is None else str(record)
-    
-    
-    
+
     class HHeaderStyle(Style):
         """Style for a horizontal header.
         """
         def __init__(self, *args, field, **kwargs):
             self.display = Role(QtCore.Qt.DisplayRole, field.label) # title is constant - override display
             super().__init__(*args, **kwargs)
-    
-    
+
     class VHeaderStyle(Style):
         """Style for a vertical header.
         """
@@ -121,7 +116,6 @@ class Styles:
             rowHeight = QtGui.QFontMetrics(QtWidgets.QApplication.font()).height() + 4 # font height and some spare pixels
             self.defaultSectionSize = Role(DefaultSectionSizeRole, rowHeight)
             super().__init__(*args, **kwargs)
-
 
     @classmethod
     def createStyleForField(cls, field):
@@ -139,9 +133,6 @@ class Styles:
             return cls.Style(fieldName = field.name)
 
 
-
-
-
 class CatalogModel(orm.Model):
     """Base model for all catalogs.
     """
@@ -152,16 +143,18 @@ class CatalogModel(orm.Model):
         """Default implementation of situation when upon checking there was not found the table 
         corresponding to this model in the db.
         """
-        if QtWidgets.QMessageBox.question(wic.app.mainWindow, 'Automatically create table?',
-                'Table `%s` which corresponds to model `%s.%s` does not exist in the database `%s`.\n\n'
-                'Do you want it to be automatically created?'
-                % (cls, cls.__module__, cls.__name__, db.uri), QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+        if QtWidgets.QMessageBox.question(
+                wic.app.mainWindow, 'Automatically create table?',
+                'Table `%s` which corresponds to model `%s.%s` does not exist in the database '
+                '`%s`.\n\nDo you want it to be automatically created?'
+                % (cls, cls.__module__, cls.__name__, db.uri),
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
                 QtWidgets.QMessageBox.Yes) == QtWidgets.QMessageBox.Yes:
             db.execute(db.getCreateTableQuery(cls))
-            QtWidgets.QMessageBox.information(wic.app.mainWindow, 'Done', 'The table was successfully created.')
+            QtWidgets.QMessageBox.information(
+                wic.app.mainWindow, 'Done', 'The table was successfully created.')
         else:
             super()._handleTableMissing(db)
-
 
 
 class WCatalogViewModel(QtCore.QAbstractTableModel):
@@ -170,9 +163,10 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
     _styles = Styles
     
     def __init__(self, db, catalogModel, where = None):
-        assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), 'Pass a CatalogModel subclass'
-        super().__init__(None) # no parent
-        self.vHeaderStyle = self._styles.VHeaderStyle() # one style for all rows
+        assert isinstance(catalogModel, type) and issubclass(catalogModel, CatalogModel), \
+            'Pass a CatalogModel subclass'
+        super().__init__(None)  # no parent
+        self.vHeaderStyle = self._styles.VHeaderStyle()  # one style for all rows
         self.hHeaderStyles = []
         self.columnStyles = []
         for field in catalogModel:
@@ -207,13 +201,15 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
         """Get an item from the cache. If it's not in the cache, fetch a range from DB and update the cache.
         @param rowNo: row number from the view for which to get the item
         """
-        try: # find the row in the cache
+        try:  # find the row in the cache
             return self._cache[rowNo][0]
         except KeyError: # fill the cache
             #print('Trying to retrieve row %d', rowNo)
             self._updateTimer.stop()
             rangeStart = max(rowNo - self._fetchCount // 3, 0)
-            items = self._catalogModel.get(self._db, where = self._where, limit = (rangeStart, self._fetchCount), select_related = True)
+            items = self._catalogModel.get(
+                self._db, where=self._where, limit=(rangeStart, self._fetchCount),
+                select_related=True)
             now = time.time()
             expiredTime = now - self._updatePeriod
             cache = self._cache
@@ -243,7 +239,7 @@ class WCatalogViewModel(QtCore.QAbstractTableModel):
     def rowCount(self, parent):
         _rowCount = self._rowCount # cached row count
         if _rowCount is None: # if it's not filled yet - fetch it from the db
-            _rowCount = self._rowCount = self._catalogModel.getCount(self._db, where = self._where)
+            _rowCount = self._rowCount = self._catalogModel.getCount(self._db, where=self._where)
             #print('rowCount', _rowsCount)
         return _rowCount
 

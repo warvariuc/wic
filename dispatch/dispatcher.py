@@ -11,7 +11,7 @@ def _make_id(target):
     return id(target)
 
 
-class Signal(object):
+class Signal():
     """
     Base class for all signals
     

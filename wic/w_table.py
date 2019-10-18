@@ -1,4 +1,4 @@
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
+
 
 from PyQt5 import QtGui, QtCore, QtWidgets
 from decimal import Decimal as Dec

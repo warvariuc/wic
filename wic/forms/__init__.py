@@ -1,4 +1,4 @@
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
+
 
 import os, sys, traceback
 from PyQt5 import QtGui, QtCore, uic, QtWidgets

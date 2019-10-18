@@ -1,4 +1,4 @@
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
+
 
 from datetime import datetime as DateTime, date as Date
 from decimal import Decimal

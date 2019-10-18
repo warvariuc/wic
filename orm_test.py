@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-__author__ = "Victor Varvariuc <victor.varvariuc@gmail.com>"
+
 
 import pprint
 from decimal import Decimal
