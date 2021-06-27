@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from wic import forms
 
 
-class Form(forms.WForm):
+class Form(forms.Form):
     """"""
 
     @QtCore.pyqtSlot()

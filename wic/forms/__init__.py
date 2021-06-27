@@ -1,11 +1,9 @@
-
-
 import os, sys, traceback
+
 from PyQt5 import QtGui, QtCore, uic, QtWidgets
-import orm
-from orm import Nil
+
 import wic
-from wic.widgets import WDateEdit, WDecimalEdit, WCatalogItemWidget
+import wic.widgets
 
 
 class FormNotFoundError(Exception):
@@ -13,18 +11,19 @@ class FormNotFoundError(Exception):
     """
 
 
-def value(widget, value = Nil):
+def value(widget, value=wic.MISSING):
     """Get/set widget value depending on its type.
-    @param widget: QWidget from/which to get/set a value
-    @param value: if specified - set that value, otherwise get widget's value
+
+    Args:
+        widget(QWidget): widget from/which to get/set a value
+        value: if specified - set that value, otherwise get widget's value
     """
-    if value is Nil:
-        return getValue(widget)
-    else:
-        return setValue(widget, value)
+    if value is wic.MISSING:
+        return get_value(widget)
+    return set_value(widget, value)
 
 
-def setValue(widget, value):
+def set_value(widget, value):
     """Automatically set a widget's value depending on its type.
     """
     if isinstance(widget, QtWidgets.QPlainTextEdit):
@@ -32,14 +31,16 @@ def setValue(widget, value):
     elif isinstance(widget, QtWidgets.QTextEdit):
         widget.setHtml('' if value is None else str(value))
     elif isinstance(widget, QtWidgets.QCheckBox):
-        widget.blockSignals(True) # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
+        # http://stackoverflow.com/questions/1856544/qcheckbox-is-it-really-not-possible-to-differentiate-between-user-induced-change
+        widget.blockSignals(True)
         widget.setChecked(bool(value))
         widget.blockSignals(False)
-    elif isinstance(widget, WDateEdit): # this goes before checking QLineEdit, because WDateEdit is subclass of QLineEdit 
+    # this goes before checking QLineEdit, because WDateEdit is subclass of QLineEdit
+    elif isinstance(widget, wic.widgets.DateEdit):
         widget.setDate(value)
-    elif isinstance(widget, (WDecimalEdit, QtWidgets.QSpinBox)):
+    elif isinstance(widget, (wic.widgets.DecimalEdit, QtWidgets.QSpinBox)):
         widget.setValue(value)
-    elif isinstance(widget, WCatalogItemWidget):
+    elif isinstance(widget, wic.widgets.CatalogItemWidget):
         widget.setItem(value)
     elif isinstance(widget, QtWidgets.QLineEdit):
         widget.setText('' if value is None else str(value))
@@ -50,11 +51,14 @@ def setValue(widget, value):
         widget.setText(value)
     elif isinstance(widget, QtWidgets.QComboBox):
         lineEdit = widget.lineEdit()
-        if lineEdit: #Only editable combo boxes have a line edit
+        if lineEdit:
+            # Only editable combo boxes have a line edit
             lineEdit.setText(value)
-        if widget.isEditable(): # if the combo box is editable - set the text 
+        if widget.isEditable():
+            # if the combo box is editable - set the text
             return widget.lineEdit.setText(value)
-        else: # find item with the given value and set it as current
+        else:
+            # find item with the given value and set it as current
             widget.setCurrentIndex(widget.findData(value))
     elif isinstance(widget, QtWidgets.QSpinBox):
         widget.setValue(int(value))
@@ -62,7 +66,7 @@ def setValue(widget, value):
         widget.setChecked(value)
 
 
-def getValue(widget):
+def get_value(widget):
     """Automatically extract a widget's value depending on its type.
     """
     if isinstance(widget, QtWidgets.QPlainTextEdit):
@@ -71,20 +75,22 @@ def getValue(widget):
         return widget.toHtml()
     elif isinstance(widget, QtWidgets.QCheckBox):
         return widget.isChecked()
-    elif isinstance(widget, WDecimalEdit):
+    elif isinstance(widget, wic.widgets.DecimalEdit):
         return widget.value()
-    elif isinstance(widget, WDateEdit):
+    elif isinstance(widget, wic.widgets.DateEdit):
         return widget.date()
-    elif isinstance(widget, WCatalogItemWidget):
+    elif isinstance(widget, wic.widgets.CatalogItemWidget):
         return widget.item()
     elif isinstance(widget, QtWidgets.QSpinBox):
         return widget.value()
     elif isinstance(widget, (QtWidgets.QLineEdit, QtWidgets.QPushButton)):
         return widget.text()
     elif isinstance(widget, QtWidgets.QComboBox):
-        if widget.isEditable(): # if the combo box is editable - return the text
+        if widget.isEditable():
+            # if the combo box is editable - return the text
             return widget.currentText()
-        else: # otherwise return the value of the selectem item 
+        else:
+            # otherwise return the value of the selectem item
             return widget.itemData(widget.currentIndex())
     elif isinstance(widget, QtWidgets.QSpinBox):
         return widget.value()
@@ -92,7 +98,7 @@ def getValue(widget):
         return widget.isChecked()
 
 
-class WFormWidgetsProxy():
+class FormWidgetsProxy():
     """Proxy for form widgets. 
     I.e. instead of `form.checkBox.setChecked(True)`, you can write `form._.checkBox = True` or `form._['checkBox'] = True`.
     """
@@ -102,11 +108,11 @@ class WFormWidgetsProxy():
 
     def __setattr__(self, name, value):
         widget = getattr(self._form, name)
-        setValue(widget, value)
+        set_value(widget, value)
 
     def __getattr__(self, name):
         widget = getattr(self._form, name)
-        return getValue(widget)
+        return get_value(widget)
 
     def __getitem__(self, name):
         return self.__getattr__(name)
@@ -115,33 +121,39 @@ class WFormWidgetsProxy():
         self.__setattr__(name, value)
 
 
-class WForm(QtWidgets.QDialog):
-    """Base for user forms.
+class Form(QtWidgets.QDialog):
+    """Base class for user forms.
     """
-
-    _uiFilePath = 'form.ui' # absolute or relative path to the ui file
+    _ui_file_path = 'form.ui' # absolute or relative path to the ui file
     _iconPath = ':/icons/fugue/application-form.png'
-    _formTitle = 'Form'
+    _form_title = 'Form'
+    # Name of the form's default button box widget which usually has button "Reset", "
+    _button_box_name = 'button_box'
 
-    closed = QtCore.pyqtSignal() # emitted when the form is closing
+    # emitted when the form is closing
+    closed = QtCore.pyqtSignal()
 
     def __init__(self, **kwargs):
-        super().__init__(None) # no parent upon creation
+        super().__init__(None)  # no parent upon creation
         self.__dict__.update(kwargs)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.button_box = None
 
-        if self._uiFilePath: # not autogenerated
-            if not os.path.isabs(self._uiFilePath): # ui file path is relative. extract module path
-                module = sys.modules[self.__class__.__module__] # module in which the Form class was defined
-                moduleDir = os.path.dirname(os.path.abspath(module.__file__))
-                self._uiFilePath = os.path.join(moduleDir, self._uiFilePath)
+        if self._ui_file_path:
+            # not autogenerated
+            if not os.path.isabs(self._ui_file_path):
+                # ui file path is relative. extract module path
+                # module in which the Form class was defined
+                module = sys.modules[self.__class__.__module__]
+                module_dir = os.path.dirname(os.path.abspath(module.__file__))
+                self._ui_file_path = os.path.join(module_dir, self._ui_file_path)
 
         self.setupUi()
 
-        self._ = WFormWidgetsProxy(self)
+        self._ = FormWidgetsProxy(self)
 
         try:
-            self.onOpen()
+            self.on_open()
         except Exception:
             traceback.print_exc()
 
@@ -149,82 +161,98 @@ class WForm(QtWidgets.QDialog):
         """Initial setting up of the form. 
         Catalog item forms fill form fields with data from DB.
         """
-        if not self.windowTitle(): # if the title was not set yet
-            self.setWindowTitle(self._formTitle)
+        if not self.windowTitle():
+            # the title was not set yet
+            self.setWindowTitle(self._form_title)
         self.setWindowIcon(QtGui.QIcon(self._iconPath))
-        if self._uiFilePath: # not autogenerated
-            uic.loadUi(self._uiFilePath, self)
-
-        buttonBox = getattr(self, 'buttonBox', None)
-        if buttonBox: # if button box is present - listen to its signals
-            saveButton = buttonBox.button(buttonBox.Save)
-            if saveButton: # change Save button's role
-                buttonBox.addButton(saveButton, buttonBox.ApplyRole)
-                saveButton.clicked.connect(self.onSave)
-                saveShortCut = QtWidgets.QShortcut(QtGui.QKeySequence('F2'), self)
-                saveShortCut.activated.connect(saveButton.animateClick)
-            resetButton = buttonBox.button(buttonBox.Reset)
-            if resetButton:
-                resetButton.clicked.connect(self.onReset)
-            buttonBox.rejected.connect(self.reject)
-
+        if self._ui_file_path:
+            # not autogenerated
+            uic.loadUi(self._ui_file_path, self)
+        self._setup_button_box()
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.onContextMenuRequested)
+        self.customContextMenuRequested.connect(self.on_context_menu_requested)
 
-    def onContextMenuRequested(self, coord):
+    def _setup_button_box(self):
+        # if button box is present - listen to its signals
+        button_box = getattr(self, self._button_box_name, None)
+        if not button_box:
+            return
+        save_button = button_box.button(button_box.Save)
+        if save_button:
+            # change Save button's role
+            button_box.addButton(save_button, button_box.ApplyRole)
+            save_button.clicked.connect(self.onSave)
+            save_shortCut = QtWidgets.QShortcut(QtGui.QKeySequence('F2'), self)
+            save_shortCut.activated.connect(save_button.animateClick)
+        reset_button = button_box.button(button_box.Reset)
+        if reset_button:
+            reset_button.clicked.connect(self.on_reset)
+        button_box.rejected.connect(self.reject)
+
+    def on_context_menu_requested(self, coord):
         from wic import menus
+
         menu = QtWidgets.QMenu(self)
-        menus.addActionsToMenu(menu, (menus.createAction(menu, 'Save this form into a *.ui file.', self.saveFormToUi),))
+        menus.add_actions_to_menu(menu, menus.create_action(
+            menu, 'Save this form into a *.ui file.', self.save_form_to_ui_file))
         menu.popup(self.mapToGlobal(coord))
 
-    def saveFormToUi(self):
+    def save_form_to_ui_file(self):
         from PyQt5.QtDesigner import QFormBuilder
-        filePath = QtWidgets.QFileDialog.getSaveFileName(parent = self, caption = 'Save file', directory = '', filter = 'Forms (*.ui)')
-        if filePath:
-            file = QtCore.QFile(filePath)
-            file.open(file.WriteOnly)
-            formBuilder = QFormBuilder()
-            formBuilder.save(file, self)
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            parent=self, caption='Save file', directory='', filter='Forms (*.ui)')
+        if not file_path:
+            return
+        file = QtCore.QFile(file_path)
+        file.open(file.WriteOnly)
+        form_builder = QFormBuilder()
+        form_builder.save(file, self)
 
-    def done(self, resultCode): # accept/reject by default bypasses closeEvent
+    def done(self, resultCode):
+        # accept/reject by default bypasses closeEvent
         super().done(resultCode)
         self.close()
 
     def closeEvent(self, event):
-        if self.onClose() == False: # вызов предопределенной процедуры
+        # check the callback
+        if self.on_close() is False:
             event.ignore()
             return
         self.closed.emit()
 
-    def onClose(self):
-        ""
+    def on_close(self):
+        """Callback called when the form is about to close. If it returns False, the app
+        prevents the closing.
+        """
 
-    def onOpen(self):
-        ""
+    def on_open(self):
+        """Callback called when the form is about to open.
+        """
 
-    def onReset(self):
-        ""
+    def on_reset(self):
+        """Callback called when the form's "Reset" button is clicked.
+        """
 
-    def showWarning(self, title, text):
-        """Convenience function to show a warning message box."""
+    def show_warning(self, title, text):
+        """Convenience function to show a warning message box.
+        """
         QtWidgets.QMessageBox.warning(self, title, text)
 
-    def showInformation(self, title, text):
-        """Convenience function to show an information message box."""
+    def show_information(self, title, text):
+        """Convenience function to show an information message box.
+        """
         QtWidgets.QMessageBox.information(self, title, text)
 
 
-def openForm(FormClass, *args, modal = False, **kwargs):
+def open_form(FormClass, modal=False, **kwargs):
     if isinstance(FormClass, str):
-        FormClass = wic.getObjectByPath(FormClass)
-    assert issubclass(FormClass, WForm), 'This is not a WForm.'
-    form = FormClass(*args, **kwargs) # no parent widget for now
+        FormClass = wic.get_object_by_path(FormClass)
+    assert issubclass(FormClass, Form), 'This is not a WForm.'
+    form = FormClass(**kwargs)  # no parent widget for now
     if modal:
         return form.exec()
-    wic.app.addSubWindow(form)
+    wic._app.addSubWindow(form)
     return form
 
 
-
 from . import catalog
-from .catalog import openCatalogForm, openCatalogItemForm, CatalogItemForm

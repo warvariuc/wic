@@ -7,7 +7,7 @@ import os, sys
 cur_dir = os.path.dirname(__file__)
 icons_dir = os.path.join(cur_dir, 'icons')
 
-qrc_file = open(os.path.join(cur_dir, 'w_widgets.qrc'), 'w')
+qrc_file = open(os.path.join(cur_dir, 'widgets.qrc'), 'w')
 
 qrc_file.write("""
 <RCC>

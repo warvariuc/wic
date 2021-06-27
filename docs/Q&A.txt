@@ -1,4 +1,6 @@
-﻿Built-in function `print` is set up to redirect printed text to messages window. If printed text starts with '<>' it is printed to messages window as as, otherwise it is escaped (`>` -> `&gt;`, etc.)
+﻿Built-in function `print` is set up to redirect printed text to messages window.
+If printed text starts with '<>' it is printed to messages window as as, otherwise it is
+escaped (`>` -> `&gt;`, etc.)
 
 
 to pass - проводить (документ)
@@ -7,7 +9,9 @@ catalog - справочник
 record - запись (элемент) справочника
 
 
-Do not specify initial values for a form in the .ui file. This sometimes doesn't work as expected (f.e., setting a string of '12' on a WDecimalWidget with maxDigits=3 and fractionDigits=0 chops the text to '1' on opening the form, because... )
+Do not specify initial values for a form in the .ui file. This sometimes doesn't work as expected
+(f.e., setting a string of '12' on a DecimalWidget with maxDigits=3 and fractionDigits=0 chops
+the text to '1' on opening the form, because... )
 
 
 Q. Why be slots are called twice?
@@ -22,6 +26,3 @@ A. 1. Check the paths (PYQTDESIGNERPATH environment variable).
    2. Be sure you have designer for Python 3. Your linux package manager may overwrite it with a version
    for Python 2.
 
-
-http://developers.slashdot.org/story/10/12/06/0124241/I-Just-Need-a-Programmer
-Most of the good tech companies, major web companies, etc. have gotten their start not because of an idea person, but because of a programmer who had an idea. Programmers (and, to some degree, non-programmer computer power users) are much more likely to have a concept of what's possible, practical, and useful in technology. The farther you get from that, the less likely you are to have a good idea. Either way, the first thing you should do if you have an idea is to discuss it with people who do have a background in programming. Don't be surprised if it gets shot down as impossible or impractical.

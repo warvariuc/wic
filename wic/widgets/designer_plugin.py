@@ -23,8 +23,8 @@ class WDateEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
     """Designer plugin for WDateEdit. 
     Also serves as base class for other custom widget plugins:"""
 
-    _module = 'wic.widgets.w_date_edit' # path to the widget's module
-    _class = 'WDateEdit' # name of the widget class
+    _module = 'wic.widgets.date_edit'  # path to the widget's module
+    _class = 'DateEdit'  # name of the widget class
     _icon = ':/icons/fugue/calendar-blue.png' # path to the icon in the resources
 
     def __init__(self, parent = None):
@@ -67,25 +67,21 @@ class WDateEditPlugin(QtDesigner.QPyDesignerCustomWidgetPlugin):
         return Klass(parent)
 
 
-
 class WDecimalEditPlugin(WDateEditPlugin):
 
-    _module = 'wic.widgets.w_decimal_edit'
-    _class = 'WDecimalEdit'
+    _module = 'wic.widgets.decimal_edit'
+    _class = 'DecimalEdit'
     _icon = ':/icons/calculator.png'
-
 
 
 class WCatalogItemWidgetPlugin(WDateEditPlugin):
 
-    _module = 'wic.widgets.w_catalog_item_widget'
-    _class = 'WCatalogItemWidget'
+    _module = 'wic.widgets.catalog_item_widget'
+    _class = 'CatalogItemWidget'
     _icon = ':/icons/fugue/card-address.png'
 
 
-
-
-if __name__ == '__main__': # some tests
+def test():
     app = QtWidgets.QApplication([])
     plugin = WDateEditPlugin()
     print(plugin)
@@ -95,3 +91,7 @@ if __name__ == '__main__': # some tests
     widget = plugin.createWidget(None)
     widget.show()
     app.exec()
+
+
+if __name__ == '__main__':
+    test()

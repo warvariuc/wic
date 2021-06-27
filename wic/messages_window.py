@@ -20,13 +20,17 @@ class MessagesWindow(QtWidgets.QDockWidget):
         self.setWidget(self.textEdit)
 
     def showContextMenu(self, coord):
-        if not hasattr(self, 'menu'): # create the context menu for Message Window
+        if not hasattr(self, 'menu'):
+            # create the context menu for Message Window
             self.menu = QtWidgets.QMenu(self.textEdit)
-            menus.addActionsToMenu(self.menu, (
-                menus.createAction(self.textEdit, 'Clear', self.textEdit.clear, icon = ':/icons/fugue/eraser.png'),
-                menus.createAction(self.textEdit, 'Copy', self.textEdit.copy, QtGui.QKeySequence.Copy, ':/icons/fugue/document-copy.png'),
-                menus.createAction(self.textEdit, 'Select all', self.textEdit.selectAll, QtGui.QKeySequence.SelectAll, ':/icons/fugue/selection-select.png'),
-            ))
+            menus.add_actions_to_menu(self.menu,
+                menus.create_action(self.textEdit, 'Clear', self.textEdit.clear,
+                                    icon=':/icons/fugue/eraser.png'),
+                menus.create_action(self.textEdit, 'Copy', self.textEdit.copy,
+                                    QtGui.QKeySequence.Copy, ':/icons/fugue/document-copy.png'),
+                menus.create_action(self.textEdit, 'Select all', self.textEdit.selectAll,
+                                    QtGui.QKeySequence.SelectAll, ':/icons/fugue/selection-select.png'),
+            )
         self.menu.popup(self.textEdit.mapToGlobal(coord))
 
     def printMessage(self, txt, showDateTime = False, autoPopup = True, end = '\n'):

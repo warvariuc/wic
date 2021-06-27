@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>372</width>
+    <height>295</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>372</width>
+    <height>295</height>
+   </size>
+  </property>
+  <widget class="QLabel" name="label_3">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>94</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="text">
+    <string>DecimalEdit</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>10</y>
+     <width>71</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="text">
+    <string>DateEdit</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="dteShowSelector">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>60</y>
+     <width>130</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Popup button</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Close">
+   <property name="geometry">
+    <rect>
+     <x>280</x>
+     <y>260</y>
+     <width>80</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="testGm">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>262</y>
+     <width>151</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Call global function</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="dceNonNegative">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>155</y>
+     <width>149</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Non-negative</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="dceSeparateThousands">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>183</y>
+     <width>149</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Group thousands</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="dceShowSelector">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>127</y>
+     <width>130</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Popup button</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>63</y>
+     <width>42</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Length</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>95</y>
+     <width>64</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Precision</string>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="dceTotalDigits">
+   <property name="geometry">
+    <rect>
+     <x>92</x>
+     <y>63</y>
+     <width>44</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
+   <property name="maximum">
+    <number>28</number>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="dceFractionDigits">
+   <property name="geometry">
+    <rect>
+     <x>92</x>
+     <y>95</y>
+     <width>44</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>-1</number>
+   </property>
+   <property name="maximum">
+    <number>28</number>
+   </property>
+  </widget>
+  <widget class="DateEdit" name="dateEdit">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>30</y>
+     <width>152</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="DecimalEdit" name="decimalEdit">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>30</y>
+     <width>155</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DateEdit</class>
+   <extends>QLineEdit</extends>
+   <header>wic.widgets.date_edit</header>
+  </customwidget>
+  <customwidget>
+   <class>DecimalEdit</class>
+   <extends>QLineEdit</extends>
+   <header>wic.widgets.decimal_edit</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>decimalEdit</tabstop>
+  <tabstop>dateEdit</tabstop>
+  <tabstop>dceTotalDigits</tabstop>
+  <tabstop>dceFractionDigits</tabstop>
+  <tabstop>dceShowSelector</tabstop>
+  <tabstop>dceNonNegative</tabstop>
+  <tabstop>dceSeparateThousands</tabstop>
+  <tabstop>dteShowSelector</tabstop>
+  <tabstop>testGm</tabstop>
+  <tabstop>Close</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>Close</sender>
+   <signal>clicked()</signal>
+   <receiver>Dialog</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>327</x>
+     <y>271</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>185</x>
+     <y>147</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

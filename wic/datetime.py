@@ -1,9 +1,16 @@
-from datetime import timedelta as TimeDelta, date as Date, datetime as DateTime 
-from dateutil.relativedelta import relativedelta as RelDelta
+import datetime
+
+import dateutil.relativedelta
+
+
+RelDelta = dateutil.relativedelta.relativedelta
 TimeInterval = RelDelta
+TimeDelta = datetime.timedelta
+Date = datetime.date
+DateTime = datetime.datetime
 
 
-def _format(date):
+def format(date):
     if date is None:
         return '  .  .    '
     elif isinstance(date, Date):

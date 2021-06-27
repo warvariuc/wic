@@ -14,7 +14,7 @@
    <string>About</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../widgets/w_widgets.qrc">
+   <iconset resource="../widgets/widgets.qrc">
     <normaloff>:/icons/fugue/question-white.png</normaloff>:/icons/fugue/question-white.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -119,7 +119,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../widgets/w_widgets.qrc"/>
+  <include location="../widgets/widgets.qrc"/>
  </resources>
  <connections>
   <connection>

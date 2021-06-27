@@ -14,7 +14,7 @@
    <string>База данных</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../widgets/w_widgets.qrc">
+   <iconset resource="../widgets/widgets.qrc">
     <normaloff>:/icons/fugue/database.png</normaloff>:/icons/fugue/database.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
@@ -73,7 +73,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../widgets/w_widgets.qrc"/>
+  <include location="../widgets/widgets.qrc"/>
  </resources>
  <connections>
   <connection>

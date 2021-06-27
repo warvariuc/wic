@@ -1,5 +1,3 @@
-"""Author: Victor Varvariuc <victor.varvariuc@gmail.com>"""
-
 import os
 
 from PyQt5 import QtGui, QtWidgets
@@ -7,149 +5,185 @@ from PyQt5 import QtGui, QtWidgets
 
 class MainMenu():
 
-    def __init__(self, mainWindow):
-        self.mainWindow = mainWindow
+    def __init__(self, main_window):
+        self.main_window = main_window
 
-        self.file = self.addMenu('File')
-        self.open = createAction(mainWindow, 'Open…', self.onFileOpen, QtGui.QKeySequence.Open, ':/icons/fugue/folder-open-document-text.png')
-        self.save = createAction(mainWindow, 'Save', self.onFileSave, QtGui.QKeySequence.Save, ':/icons/fugue/disk-black.png')
-        self.quitApp = createAction(mainWindow, 'Quit', mainWindow.close, QtGui.QKeySequence.Quit, ':/icons/fugue/cross-button.png')
+        self.file = self.add_menu('File')
+        self.open = create_action(
+            main_window, 'Open…', self.on_file_open, QtGui.QKeySequence.Open,
+            icon=':/icons/fugue/folder-open-document-text.png')
+        self.save = create_action(
+            main_window, 'Save', self.onFileSave, QtGui.QKeySequence.Save,
+            icon=':/icons/fugue/disk-black.png')
+        self.quitApp = create_action(
+            main_window, 'Quit', main_window.close, QtGui.QKeySequence.Quit,
+            icon=':/icons/fugue/cross-button.png')
 
-        addActionsToMenu(self.file, (self.open,))
-        self.recentFiles = self.file.addMenu(QtGui.QIcon(':/icons/fugue/folders-stack.png'), 'Recent files')
-        self.recentFiles.aboutToShow.connect(self.updateRecentFiles)
-        addActionsToMenu(self.file, (self.save, self.quitApp))
+        add_actions_to_menu(self.file, self.open)
+        self.recent_files = self.file.addMenu(
+            QtGui.QIcon(':/icons/fugue/folders-stack.png'), 'Recent files')
+        self.recent_files.aboutToShow.connect(self.make_recent_files)
+        add_actions_to_menu(self.file, self.save, self.quitApp)
 
-        self.service = self.addMenu('Service')
-        addActionsToMenu(self.service, (
-            createAction(mainWindow, 'Calculator', self.showCalculator, 'Ctrl+F2', ':/icons/fugue/calculator-scientific.png'),
-            createAction(mainWindow, 'Calendar', self.showCalendar, icon = ':/icons/fugue/calendar-blue.png'),
+        self.service = self.add_menu('Service')
+        add_actions_to_menu(self.service,
+            create_action(main_window, 'Calculator', self.show_calculator, 'Ctrl+F2',
+                          icon=':/icons/fugue/calculator-scientific.png'),
+            create_action(main_window, 'Calendar', self.show_calendar, None,
+                          icon=':/icons/fugue/calendar-blue.png'),
             None,
-            createAction(mainWindow, 'Database…', self.editDbInfo, None, ':/icons/fugue/database.png', 'Database connection'),
-            createAction(mainWindow, 'Qt Designer', self.openQtDesigner, None, ':/icons/fugue/application-form.png', 'Run Designer with custom widgets'),
-        ))
-
-        self.catalogs = self.addMenu('Catalogs')
-        self.reports = self.addMenu('Reports')
-        self.windows = self.addMenu('Windows')
-
-        self.help = self.addMenu('Help')
-        addActionsToMenu(self.help, (
-            createAction(mainWindow, 'About application', self.helpAbout, 'F1', ':/icons/fugue/question-button.png', 'See information about this application'),
-        ))
-
-        self.showMessagesWindow = createAction(mainWindow, 'Messages window', self.showMessagesWindow, 'F12', tip = 'Show/hide messages window', checkable = True)
-
-        self.windowsStandard = (
-            createAction(mainWindow, 'Next', mainWindow.mdiArea.activateNextSubWindow, QtGui.QKeySequence.NextChild),
-            createAction(mainWindow, 'Previous', mainWindow.mdiArea.activatePreviousSubWindow, QtGui.QKeySequence.PreviousChild),
-            createAction(mainWindow, 'Cascade', mainWindow.mdiArea.cascadeSubWindows),
-            createAction(mainWindow, 'Tile', mainWindow.mdiArea.tileSubWindows),
-            createAction(mainWindow, 'Restore All', mainWindow.restoreSubwindows),
-            createAction(mainWindow, 'Iconize All', mainWindow.minimizeSubwindows),
-            None, # separator
-            createAction(mainWindow, 'Close', mainWindow.mdiArea.closeActiveSubWindow, QtGui.QKeySequence.Close, ':/icons/fugue/cross-white.png', 'Закрыть активное окно'),
-            None, # separator
-            self.showMessagesWindow,
+            create_action(main_window, 'Database…', self.edit_db_info, None,
+                          icon=':/icons/fugue/database.png', tip='Database connection'),
+            create_action(main_window, 'Qt Designer', self.openQtDesigner, None,
+                          icon=':/icons/fugue/application-form.png',
+                          tip='Run Designer with custom widgets'),
         )
-        self.windows.aboutToShow.connect(self.updateWindowMenu) # Before window menu is shown, update the menu with the titles of each open window
 
-    def addMenu(self, *args):
-        return self.mainWindow.menuBar().addMenu(*args)
+        self.catalogs = self.add_menu('Catalogs')
+        self.reports = self.add_menu('Reports')
+        self.windows = self.add_menu('Windows')
 
-    def updateWindowMenu(self):
-        """Create windows menu with actions to jump to any open subwindow."""
-        self.showMessagesWindow.setChecked(self.mainWindow.messagesWindow.isVisible()) # set checked here instead of catching visibilitychanged event
+        self.help = self.add_menu('Help')
+        add_actions_to_menu(self.help,
+            create_action(main_window, 'About application', self.help_about, 'F1',
+                          icon=':/icons/fugue/question-button.png',
+                          tip='See information about this application'))
+
+        self.show_messages_window_action = create_action(
+            main_window, 'Messages window', self.show_messages_window, 'F12',
+            tip='Show/hide messages window', checkable=True)
+
+        self.windows_standard_menu = (
+            create_action(main_window, 'Next', main_window.mdiArea.activateNextSubWindow,
+                          QtGui.QKeySequence.NextChild),
+            create_action(main_window, 'Previous', main_window.mdiArea.activatePreviousSubWindow,
+                          QtGui.QKeySequence.PreviousChild),
+            create_action(main_window, 'Cascade', main_window.mdiArea.cascadeSubWindows),
+            create_action(main_window, 'Tile', main_window.mdiArea.tileSubWindows),
+            create_action(main_window, 'Restore All', main_window.restoreSubwindows),
+            create_action(main_window, 'Iconize All', main_window.minimizeSubwindows),
+            None,  # separator
+            create_action(main_window, 'Close', main_window.mdiArea.closeActiveSubWindow,
+                          QtGui.QKeySequence.Close,
+                          icon=':/icons/fugue/cross-white.png', tip='Close the active window.'),
+            None,  # separator
+            self.show_messages_window_action,
+        )
+        # Before window menu is shown, update the menu with the titles of each open window
+        self.windows.aboutToShow.connect(self.update_window_menu)
+
+    def add_menu(self, *args):
+        return self.main_window.menuBar().addMenu(*args)
+
+    def update_window_menu(self):
+        """Create windows menu with actions to jump to any open subwindow.
+        """
+        # set checked here instead of catching visibilitychanged event
+        self.show_messages_window_action.setChecked(self.main_window.messagesWindow.isVisible())
         menu = self.windows
         menu.clear()
-        addActionsToMenu(menu, self.windowsStandard)
-        windows = self.mainWindow.mdiArea.subWindowList()
-        if windows:
-            menu.addSeparator()
-            for i, window in enumerate(windows):
-                title = window.windowTitle()
-                if i == 10:
-                    menu.addSeparator()
-                    menu = menu.addMenu('&More')
-                accel = ''
-                if i < 10:
-                    accel = '&%i ' % i
-                elif i < 36:
-                    accel = '&%c ' % chr(i + ord('@') - 9)
-                menu.addAction('%s%s' % (accel, title), lambda w = window: self.mainWindow.mdiArea.setActiveSubWindow(w))
+        add_actions_to_menu(menu, self.windows_standard_menu)
+        windows = self.main_window.mdiArea.subWindowList()
+        if not windows:
+            return
+        menu.addSeparator()
+        for i, window in enumerate(windows):
+            title = window.windowTitle()
+            if i == 10:
+                menu.addSeparator()
+                menu = menu.addMenu('&More')
+            accel = ''
+            if i < 10:
+                accel = '&%i ' % i
+            elif i < 36:
+                accel = '&%c ' % chr(i + ord('@') - 9)
+            menu.addAction(f'{accel}{title}', lambda w = window: self.main_window.mdiArea.setActiveSubWindow(w))
 
-    def updateRecentFiles(self, filePath = ''):
-        """Add a file to recent files list if file path given, otherwise update the menu."""
-        recentFiles = list(filter(os.path.isfile, self.mainWindow.settings.recentFiles)) # remove from the list non existing files
+    def add_to_recent_files(self, file_path):
+        """Add a file to recent files list.
+        """
+        # remove from the list non existing files
+        recent_files = list(filter(os.path.isfile, self.main_window.settings.recent_files))
 
-        if filePath:
-            filePath = os.path.abspath(filePath)
-            try: recentFiles.remove(filePath)
-            except ValueError: pass
-            recentFiles.insert(0, filePath)
-            del recentFiles[10:] # keep only 10 of recently used files
+        file_path = os.path.abspath(file_path)
+        try:
+            recent_files.remove(file_path)
+        except ValueError:
+            pass
+        recent_files.insert(0, file_path)
+        # keep only 10 of recently used files
+        del recent_files[10:]
+
+        self.main_window.settings.recent_files = recent_files
+
+    def make_recent_files(self, file_path=''):
+        recent_files = list(filter(os.path.isfile, self.main_window.settings.recent_files))
+        menu = self.recent_files
+        menu.clear()
+        for file in recent_files:
+            menu.addAction(QtGui.QIcon(':/icons/fugue/blue-folder-open-document-text.png'),
+                           file, lambda f = file: self._open_file(f))
+        if menu.isEmpty():
+            no_items_action = menu.addAction('Пусто')
+            no_items_action.setEnabled(False)
+
+    def edit_db_info(self):
+        from wic.forms import open_form, db_info
+        open_form(db_info.Form)
+
+    def help_about(self):
+        from wic.forms import open_form, help_about
+        open_form(help_about.Form, modal=True)
+
+    def show_calculator(self):
+        from wic.widgets import PopupCalculator
+        PopupCalculator(self.main_window, persistent = True).show()
+
+    def show_calendar(self):
+        from wic.widgets import date_edit
+        date_edit.CalendarPopup(self.main_window, persistent = True).show()
+
+    def on_file_open(self):
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self.main_window, 'Open file', self.main_window.settings.last_used_dir,
+            'Modules *.py(*.py);;Forms *.ui(*.ui);;All files *.*(*.*)')
+        if not file_path:
+            return
+        self.main_window.settings.last_used_dir = os.path.dirname(file_path)
+        self._open_file(file_path)
+        # add to recent files if the opening was successful
+        self.add_to_recent_files(file_path)
+
+    def _open_file(self, file_path):
+        if file_path.endswith('.ui'):
+            self.openQtDesigner(file_path)
         else:
-            menu = self.recentFiles
-            menu.clear()
-            for file in recentFiles:
-                menu.addAction(QtGui.QIcon(':/icons/fugue/blue-folder-open-document-text.png'),
-                               file, lambda f = file: self._openFile(f))
-            if menu.isEmpty():
-                noItemsAction = menu.addAction('Пусто')
-                noItemsAction.setEnabled(False)
+            print(file_path)
 
-
-
-    def editDbInfo(self):
-        from wic.forms import openForm, db_info
-        openForm(db_info.Form)
-
-    def helpAbout(self):
-        from wic.forms import openForm, help_about
-        openForm(help_about.Form, modal = True)
-
-    def showCalculator(self):
-        from wic.widgets import WPopupCalculator
-        WPopupCalculator(self.mainWindow, persistent = True).show()
-
-    def showCalendar(self):
-        from wic.widgets import w_date_edit
-        w_date_edit.WCalendarPopup(self.mainWindow, persistent = True).show()
-
-    def onFileOpen(self):
-        filePath = QtWidgets.QFileDialog.getOpenFileName(self.mainWindow,
-                'Open file', self.mainWindow.settings.lastUsedDirectory, 'Modules *.py(*.py);;Forms *.ui(*.ui);;All files *.*(*.*)')
-        if filePath:
-            self.mainWindow.settings.lastUsedDirectory = os.path.dirname(filePath)
-            self._openFile(filePath)
-            self.updateRecentFiles(filePath) # add to recent files if the opening was successful
-
-    def _openFile(self, filePath):
-        if filePath.endswith('.ui'):
-            self.openQtDesigner(filePath)
-        else:
-            print(filePath)
-
-    def openQtDesigner(self, filePath = ''):
+    def openQtDesigner(self, file_path =''):
         import sys, subprocess, wic
-        os.putenv('PYQTDESIGNERPATH', os.path.join(wic.wicDir, 'widgets'))
+
+        os.putenv('PYQTDESIGNERPATH', os.path.join(wic.wic_dir, 'widgets'))
         os.putenv('PATH', os.getenv('PATH', '') + ';' + os.path.dirname(sys.executable)) # designer needs python.dll to use PyQt widgets. on windows the dll is not in system32
         params = ['designer']
-        if filePath:
-            params.append(filePath)
+        if file_path:
+            params.append(file_path)
         subprocess.Popen(params)
 
 
     def onFileSave(self):
-        self.mainWindow.showWarning('Not implemented', 'This feature is not yet implemented')
+        self.main_window.show_warning('Not implemented', 'This feature is not yet implemented')
 
-    def showMessagesWindow(self):
-        self.mainWindow.messagesWindow.setVisible(self.showMessagesWindow.isChecked())
+    def show_messages_window(self):
+        self.main_window.messagesWindow.setVisible(self.show_messages_window_action.isChecked())
 
 
 
-def createAction(parent, text, slot = None, shortcut = None, icon = None, tip = None, checkable = False, signal = 'triggered'):
-    """Convenience function to create QActions"""
+def create_action(
+        parent, text, slot=None, shortcut= None, icon=None, tip=None, checkable=False,
+        signal='triggered'):
+    """Helper to create a QAction.
+    """
     action = QtWidgets.QAction(text, parent)
     if icon:
         action.setIcon(QtGui.QIcon(icon))
@@ -164,8 +198,9 @@ def createAction(parent, text, slot = None, shortcut = None, icon = None, tip = 
     return action
 
 
-def addActionsToMenu(menu, items):
-    """Add multiple actions/menus to a menu"""
+def add_actions_to_menu(menu, *items):
+    """Add multiple actions/menus to a menu.
+    """
     assert hasattr(items, '__iter__'), 'Items argument must an iterable'
     for item in items:
         if isinstance(item, QtWidgets.QAction):

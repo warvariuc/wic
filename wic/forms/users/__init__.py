@@ -1,20 +1,19 @@
-import os, sys
+import peewee
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-import orm
 from wic import forms
 
 
-
-class Users(forms.catalog.CatalogModel):
-    name = orm.CharField(maxLength=20)
-    full_name = orm.CharField(maxLength=50)
-    password_hash = orm.CharField(maxLength=32)
-    is_enabled = orm.BooleanField()
+class User(forms.catalog.CatalogModel):
+    name = peewee.CharField(max_length=20)
+    full_name = peewee.CharField(max_length=50)
+    password_hash = peewee.CharField(max_length=32)
+    is_enabled = peewee.BooleanField()
 
 
 class Form(forms.CatalogItemForm):
-    """"""
+    """
+    """
 
     @QtCore.pyqtSlot()
     def on_buttonTestConnection_clicked(self):
@@ -38,8 +37,3 @@ class Form(forms.CatalogItemForm):
         #self.setWindowIcon(QtGui.QIcon(self._iconPath))
         #self.setWindowIcon(QtGui.QIcon(":/icons/calculator.png"))    
 
-
-
-
-import hashlib
-hashlib.md5("Nobody inspects the spammish repetition".encode()).hexdigest()
