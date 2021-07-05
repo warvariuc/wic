@@ -17,6 +17,7 @@ class Form(wic.forms.Form):
         self.dt.show()
         self.dt.antialiasing = True
         self._.antialiasing = True
+        self.buttonStart.animateClick()
     
     @QtCore.pyqtSlot()
     def on_buttonStart_clicked(self): 
@@ -29,7 +30,7 @@ class Form(wic.forms.Form):
     
     @QtCore.pyqtSlot()
     def on_buttonReset_clicked(self): 
-        self.dt.resetParams()
+        self.dt.reset_params()
     
     def on_antialiasing_stateChanged(self, state): 
         self.dt.antialiasing = state
@@ -42,7 +43,7 @@ class Liss(QtWidgets.QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.next_step)
 
-        self.resetParams()
+        self.reset_params()
 
         self.painter = QtGui.QPainter()
         self.antialiasing = True
@@ -58,7 +59,7 @@ class Liss(QtWidgets.QWidget):
     def stop(self):
         self.timer.stop()
 
-    def resetParams(self):
+    def reset_params(self):
         # Set default values
         self.M = random.randint(10, 10000)
         self.L = random.randint(10, 10000)
@@ -83,7 +84,8 @@ class Liss(QtWidgets.QWidget):
             self.M += self.step_direction
             self.L += self.step_direction
             self.pause = 20
-        self.d = 0.5 * (1 - math.cos(math.pi * self.step / self.steps_per_transition)) # angular step
+        # angular step
+        self.d = 0.5 * (1 - math.cos(math.pi * self.step / self.steps_per_transition))
         self.l = (self.L + self.d) * self.B
         self.m = (self.M + self.d) * self.B
         self.update()

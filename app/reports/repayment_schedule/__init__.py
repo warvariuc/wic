@@ -12,7 +12,7 @@ DAYS_IN_YEAR = 365
 class Form(forms.Form):
     
     _form_title = 'Repayment Schedule'
-    _iconPath = ':/icons/fugue/receipt-invoice.png'
+    _icon_path = ':/icons/fugue/receipt-invoice.png'
     
     def on_open(self): # called by the system after it loads the Form
 

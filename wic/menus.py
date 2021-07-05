@@ -54,16 +54,16 @@ class MainMenu():
             tip='Show/hide messages window', checkable=True)
 
         self.windows_standard_menu = (
-            create_action(main_window, 'Next', main_window.mdiArea.activateNextSubWindow,
+            create_action(main_window, 'Next', main_window.mdi_area.activateNextSubWindow,
                           QtGui.QKeySequence.NextChild),
-            create_action(main_window, 'Previous', main_window.mdiArea.activatePreviousSubWindow,
+            create_action(main_window, 'Previous', main_window.mdi_area.activatePreviousSubWindow,
                           QtGui.QKeySequence.PreviousChild),
-            create_action(main_window, 'Cascade', main_window.mdiArea.cascadeSubWindows),
-            create_action(main_window, 'Tile', main_window.mdiArea.tileSubWindows),
-            create_action(main_window, 'Restore All', main_window.restoreSubwindows),
-            create_action(main_window, 'Iconize All', main_window.minimizeSubwindows),
+            create_action(main_window, 'Cascade', main_window.mdi_area.cascadeSubWindows),
+            create_action(main_window, 'Tile', main_window.mdi_area.tileSubWindows),
+            create_action(main_window, 'Restore All', main_window.restore_subwindows),
+            create_action(main_window, 'Iconize All', main_window.minimize_subwindows),
             None,  # separator
-            create_action(main_window, 'Close', main_window.mdiArea.closeActiveSubWindow,
+            create_action(main_window, 'Close', main_window.mdi_area.closeActiveSubWindow,
                           QtGui.QKeySequence.Close,
                           icon=':/icons/fugue/cross-white.png', tip='Close the active window.'),
             None,  # separator
@@ -83,7 +83,7 @@ class MainMenu():
         menu = self.windows
         menu.clear()
         add_actions_to_menu(menu, self.windows_standard_menu)
-        windows = self.main_window.mdiArea.subWindowList()
+        windows = self.main_window.mdi_area.subWindowList()
         if not windows:
             return
         menu.addSeparator()
@@ -97,7 +97,7 @@ class MainMenu():
                 accel = '&%i ' % i
             elif i < 36:
                 accel = '&%c ' % chr(i + ord('@') - 9)
-            menu.addAction(f'{accel}{title}', lambda w = window: self.main_window.mdiArea.setActiveSubWindow(w))
+            menu.addAction(f'{accel}{title}', lambda w = window: self.main_window.mdi_area.setActiveSubWindow(w))
 
     def add_to_recent_files(self, file_path):
         """Add a file to recent files list.

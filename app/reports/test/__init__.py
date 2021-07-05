@@ -7,7 +7,7 @@ import app
 
 class Form(Form):
 
-    _iconPath = ':/icons/fugue/leaf-wormhole.png'
+    _icon_path = ':/icons/fugue/leaf-wormhole.png'
     _formTitle = 'Test module and form'
 
     def onOpen(self): # called by the system after it loads the Form

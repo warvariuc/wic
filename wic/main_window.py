@@ -1,49 +1,51 @@
-import sys, traceback, html
+import html
+import sys
+import traceback
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    _windowIcon = ':/icons/fugue/leaf-plant.png'
-    _windowTitle = 'wic'
-    _authenticationEnabled = True
+    _window_icon = ':/icons/fugue/leaf-plant.png'
+    _window_title = 'wic'
+    _authentication_enabled = True
     # whether to allow unconditional quit (if some forms didn't close)
-    _unconditionalQuit = True
+    _unconditional_quit = True
 
     def __init__(self, parent = None):
         super().__init__(parent)
 
-        self.setWindowTitle(self._windowTitle)
-        self.setWindowIcon(QtGui.QIcon(self._windowIcon))
+        self.setWindowTitle(self._window_title)
+        self.setWindowIcon(QtGui.QIcon(self._window_icon))
 
-        mdiArea = QtWidgets.QMdiArea()
-        mdiArea.setDocumentMode(True)
-        mdiArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        mdiArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        mdiArea.setViewMode(mdiArea.TabbedView)
-        mdiArea.setTabPosition(QtWidgets.QTabWidget.North)
-        mdiArea.setActivationOrder(mdiArea.ActivationHistoryOrder)
-        mdiArea.subWindowActivated.connect(self.onSubwindowActivated)
-        self.setCentralWidget(mdiArea)
-        self.mdiArea = mdiArea
+        mdi_area = QtWidgets.QMdiArea()
+        mdi_area.setDocumentMode(True)
+        mdi_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        mdi_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        mdi_area.setViewMode(mdi_area.TabbedView)
+        mdi_area.setTabPosition(QtWidgets.QTabWidget.North)
+        mdi_area.setActivationOrder(mdi_area.ActivationHistoryOrder)
+        mdi_area.subWindowActivated.connect(self.onSubwindowActivated)
+        self.setCentralWidget(mdi_area)
+        self.mdi_area = mdi_area
 
-        tabBar = mdiArea.findChildren(QtWidgets.QTabBar)[0] # hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
-        tabBar.setTabsClosable(True)
-        tabBar.setExpanding(False)
-        tabBar.setMovable(True)
-        tabBar.setDrawBase(True)
-        #tabBar.setShape(tabBar.TriangularSouth)
-        #tabBar.setIconSize(QtCore.QSize(16, 16))
-        self.tabBar = tabBar
+        # hack: http://www.qtforum.org/article/31711/close-button-on-tabs-of-mdi-windows-qmdiarea-qmdisubwindow-workaround.html
+        tab_bar = mdi_area.findChildren(QtWidgets.QTabBar)[0]
+        tab_bar.setTabsClosable(True)
+        tab_bar.setExpanding(False)
+        tab_bar.setMovable(True)
+        tab_bar.setDrawBase(True)
+        #tab_bar.setShape(tabBar.TriangularSouth)
+        #tab_bar.setIconSize(QtCore.QSize(16, 16))
+        self.tabBar = tab_bar
 
-        tabBarEventFilter = TabBarEventFilter(self)
-        tabBar.installEventFilter(tabBarEventFilter)
+        tab_bar_event_filter = TabBarEventFilter(self)
+        tab_bar.installEventFilter(tab_bar_event_filter)
 
         self.statusBar() # create status bar
 
-        from wic.messages_window import MessagesWindow
-        self.messagesWindow = MessagesWindow(self)
+        self.messagesWindow = messages_window.MessagesWindow(self)
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.messagesWindow)
 
         self.printMessage = self.messagesWindow.printMessage # not nice
@@ -51,20 +53,16 @@ class MainWindow(QtWidgets.QMainWindow):
         sys.stdout = MessagesOut(self.printMessage)  # hook the real STDOUT
         sys.excepthook = exception_hook # set our exception hook
 
-
-        from wic import settings
         self.settings = settings.Settings(self)
 
         self.setupMenu()
 
-        if self._authenticationEnabled:
+        if self._authentication_enabled:
             self.authenticate()
         # when event loop is working
         QtCore.QTimer.singleShot(0, self.on_system_started)
 
     def setupMenu(self):
-        from wic import menus
-
         self.menu = menus.MainMenu(self)
 
     def onSubwindowActivated(self, subWindow): # http://doc.trolltech.com/latest/qmdiarea.html#subWindowActivated
@@ -73,15 +71,15 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.fileSaveAction.setEnabled(saveActive)
 
     def onTabBarLeftDblClick(self):
-        subWindow = self.mdiArea.currentSubWindow()
-        if subWindow.isMaximized():
-            subWindow.showNormal()
+        sub_window = self.mdi_area.currentSubWindow()
+        if sub_window.isMaximized():
+            sub_window.showNormal()
         else:
-            subWindow.showMaximized()
+            sub_window.showMaximized()
 
     def closeEvent(self, event):
-        self.mdiArea.closeAllSubWindows() # Passes a close event from main window to all subwindows.
-        if self.mdiArea.subWindowList(): # there are still open subwindows
+        self.mdi_area.closeAllSubWindows() # Passes a close event from main window to all subwindows.
+        if self.mdi_area.subWindowList(): # there are still open subwindows
             event.ignore()
             return
         if self.on_system_about_to_quit() is False: # именно False, иначе None тоже считается отрицательным
@@ -89,27 +87,26 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self.settings.save()
 
-    def restoreSubwindows(self):
-        for window in self.mdiArea.subWindowList():
+    def restore_subwindows(self):
+        for window in self.mdi_area.subWindowList():
             window.showNormal()
 
-    def minimizeSubwindows(self):
-        for window in self.mdiArea.subWindowList():
+    def minimize_subwindows(self):
+        for window in self.mdi_area.subWindowList():
             window.showMinimized()
 
-    def addSubWindow(self, widget): # https://bugreports.qt.nokia.com/browse/QTBUG-9462
+    def add_subwindow(self, widget): # https://bugreports.qt.nokia.com/browse/QTBUG-9462
         """Add a new subwindow with the given widget
         """
-        subWindow = QtWidgets.QMdiSubWindow() # no parent
-        subWindow.setWidget(widget)
-        subWindow.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.mdiArea.addSubWindow(subWindow)
-        subWindow.setWindowIcon(widget.windowIcon())
-        subWindow.show()
-        from wic import forms
+        sub_window = QtWidgets.QMdiSubWindow() # no parent
+        sub_window.setWidget(widget)
+        sub_window.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.mdi_area.addSubWindow(sub_window)
+        sub_window.setWindowIcon(widget.windowIcon())
+        sub_window.show()
         if isinstance(widget, forms.Form):
-            widget.closed.connect(subWindow.close) # when form closes - close subWindow too
-        return subWindow
+            widget.closed.connect(sub_window.close) # when form closes - close subWindow too
+        return sub_window
 
     def authenticate(self):
         """Ask for credentials and check if the user is allowed to enter the system.
@@ -119,7 +116,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """Request application quit.
         """
         #self._unconditionalQuit = unconditional
-        self.close() # TODO: check for self._unconditionalQuit when closing forms and mainWindow
+        # TODO: check for self._unconditionalQuit when closing forms and mainWindow
+        self.close()
 
     def on_system_started(self):
         """Called on startup when everything is ready.
@@ -151,10 +149,10 @@ class TabBarEventFilter(QtCore.QObject):
         return super().eventFilter(tabBar, event)  # standard event processing
 
 
-def exception_hook(excType, excValue, excTraceback): 
+def exception_hook(exc_type, exc_value, exc_traceback):
     """Global function to catch unhandled exceptions (mostly in user modules).
     """
-    info = ''.join(traceback.format_exception(excType, excValue, excTraceback))
+    info = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
     print(info)
 
 
@@ -162,14 +160,21 @@ class MessagesOut():
     """Our replacement for stdout. It prints messages also the the messages window. 
     If txt does not start with '<>' it is escaped to be properly shown in QTextEdit.
     """
-    def __init__(self, printMessageFunc):
-        self.printMessage = printMessageFunc
+    def __init__(self, print_message_func):
+        self.print_message = print_message_func
 
     def write(self, txt):
-        print(txt, end = '', file = sys.__stdout__)
+        print(txt, end='', file=sys.__stdout__)
         if not txt.startswith('<>'):
             txt = html.escape(txt)
-        self.printMessage(txt, end = '')
+        self.print_message(txt, end='')
 
     def flush(self):
         sys.__stdout__.flush()
+
+
+from wic import messages_window
+from wic import settings
+from wic import forms
+from wic import menus
+

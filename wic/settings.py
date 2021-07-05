@@ -35,4 +35,3 @@ class Settings():
         self.settings.setValue('showMessagesWindow', int(self.main_window.messagesWindow.isVisible()))
         self.settings.setValue('recentFiles', self.recent_files)
         self.settings.setValue('lastUsedDirectory', self.last_used_dir)
-
