@@ -4,7 +4,7 @@ from wic.datetime import RelDelta, Date, DateTime
 from . import ui_popup_calendar
 
 
-class CalendarPopup(QtWidgets.QWidget, ui_popup_calendar.Ui_WPopupCalendar):
+class CalendarPopup(QtWidgets.QWidget, ui_popup_calendar.Ui_PopupCalendar):
     """Popup window to select date interactively by showing a month calendar.
     """
     def __init__(self, parent, persistent = False):

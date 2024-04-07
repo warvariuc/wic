@@ -242,7 +242,12 @@ class CatalogViewModel(QtCore.QAbstractTableModel):
                 return data
 
             item = self.item(index.row())
-            value = getattr(item, style.field_name)
+            try:
+                value = getattr(item, style.field_name)
+            except peewee.DoesNotExist:
+                # TODO: use a function to not print duplicate messages
+                print(f"`{style.field_name}` relation does not exist")
+                value = None
 
             return data(style, value) # call the function
 
